@@ -1,6 +1,4 @@
-\# MeatFlicks
+# MeatFlicks
 
-
-
-\## A movie \& tv-series streaming website.
+### A movie & tv-series streaming website.
 
