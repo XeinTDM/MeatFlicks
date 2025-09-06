@@ -27,7 +27,7 @@
 
   <div class="relative">
     <div class="relative overflow-hidden">
-      <div class="flex w-full flex-nowrap overflow-x-auto justify-center">
+      <div class="flex w-full flex-nowrap overflow-x-auto overflow-y-hidden justify-center">
         {#each movies as movie (movie.id)}
           <div class="flex-shrink-0 w-64 px-2">
             <MovieCard {movie} />
