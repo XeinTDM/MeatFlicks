@@ -19,7 +19,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ message: 'Movie not found' }, { status: 404 });
     }
 
-    // Fetch additional data from TMDB
     const tmdbResponse = await fetch(
       `https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${env.TMDB_API_KEY}&append_to_response=credits,videos`,
     );

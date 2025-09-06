@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
 
   let query = '';
-  let movies: any[] = []; // Define Movie type properly later
+  let movies: any[] = [];
   let loading = false;
   let error: string | null = null;
   let debounceTimeout: ReturnType<typeof setTimeout>;

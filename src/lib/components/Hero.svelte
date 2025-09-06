@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   import { watchlist } from '$lib/contexts/watchlistStore';
 
-  export let movie: any; // Using any for now, will define Movie type later
+  export let movie: any;
 
   $: isAuthenticated = !!$page.data.session?.user;
   $: isInWatchlist = $watchlist.isInWatchlist(movie.id);

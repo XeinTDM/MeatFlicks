@@ -1,8 +1,7 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-// Define a simple Movie type for now, assuming it will be properly defined elsewhere
-type Movie = { id: string; /* ... other movie properties */ };
+type Movie = { id: string; title: string; posterPath: string; backdropPath: string; overview: string; releaseDate: string, rating: number, genres: string[], trailerUrl?: string };
 
 interface WatchlistStore {
   watchlist: Movie[];
@@ -23,9 +22,8 @@ function createWatchlistStore() {
     isInWatchlist: () => false,
   });
 
-  let isAuthenticated = false; // Placeholder for authentication status
+  let isAuthenticated = false;
 
-  // Function to set authentication status (will be called from layout or similar)
   const setAuthStatus = (status: boolean) => {
     isAuthenticated = status;
     if (isAuthenticated) {
@@ -119,7 +117,6 @@ function createWatchlistStore() {
     return isPresent;
   };
 
-  // Initial fetch if already authenticated (e.g., on page load after SSR)
   if (browser && isAuthenticated) {
     fetchWatchlist();
   }
@@ -130,7 +127,7 @@ function createWatchlistStore() {
     addToWatchlist,
     removeFromWatchlist,
     isInWatchlist,
-    fetchWatchlist, // Expose fetchWatchlist for manual refresh if needed
+    fetchWatchlist,
   };
 }
 

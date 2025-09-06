@@ -3,7 +3,7 @@
   import MovieScrollContainer from './MovieScrollContainer.svelte';
 
   export let title: string;
-  export let movies: any[]; // Define Movie type properly later
+  export let movies: any[];
   export let linkTo: string | undefined = undefined;
 
   $: isTrendingNow = title === "Trending Now";

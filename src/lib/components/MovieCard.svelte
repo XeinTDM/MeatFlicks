@@ -5,9 +5,9 @@
   import { watchlist } from '$lib/contexts/watchlistStore';
   import { error as errorStore } from '$lib/contexts/errorStore';
 
-  export let movie: any; // Define Movie type properly later
+  export let movie: any;
 
-  let session: any = { user: true }; // Placeholder for session, replace with actual SvelteKit auth
+  let session: any = { user: true };
 
   $: isInWatchlist = $watchlist.isInWatchlist(movie.id);
 
@@ -52,7 +52,7 @@
       />
     {:else}
       <div class="flex h-full w-full items-center justify-center rounded-lg bg-gray-800">
-        <img src="/globe.svg" alt="" width="96" height="96" class="text-gray-400" />
+        <img src="" alt="" width="96" height="96" class="text-gray-400" />
       </div>
     {/if}
   </div>

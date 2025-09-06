@@ -146,13 +146,13 @@
             </h4>
             <div class="bg-bg-color border-border-color flex rounded-md border p-0.5">
               <button
-                class={`flex-1 rounded-md p-2 text-xs font-medium transition-all duration-300 ${$theme === 'dark' ? 'bg-primary-color text-text-color' : ''}`}
+                class={`flex-1 rounded-md p-2 text-xs font-medium transition-all duration-300 hover:bg-primary-color-dark ${$theme === 'dark' ? 'bg-primary-color text-white' : 'text-white'}`}
                 on:click={() => handleThemeChange('dark')}
               >
                 Dark
               </button>
               <button
-                class={`flex-1 rounded-md p-2 text-xs font-medium transition-all duration-300 ${$theme === 'light' ? 'bg-primary-color text-text-color' : ''}`}
+                class={`flex-1 rounded-md p-2 text-xs font-medium transition-all duration-300 hover:bg-primary-color-dark ${$theme === 'light' ? 'bg-primary-color text-white' : 'text-white'}`}
                 on:click={() => handleThemeChange('light')}
               >
                 Light

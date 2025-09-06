@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../app.css';
+  import '../routes/globals.css';
   
   import Header from '$lib/components/Header.svelte';
   import Footer from '$lib/components/Footer.svelte';
@@ -7,9 +8,6 @@
   import ThemeContext from '$lib/contexts/ThemeContext.svelte';
   import WatchlistContext from '$lib/contexts/WatchlistContext.svelte';
   import ErrorContext from '$lib/contexts/ErrorContext.svelte';
-
-  // Metadata (equivalent to Next.js metadata export)
-  // This can also be handled in +layout.ts or +layout.server.ts for dynamic metadata
 </script>
 
 <svelte:head>

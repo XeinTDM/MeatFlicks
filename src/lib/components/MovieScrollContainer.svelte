@@ -4,7 +4,7 @@
   import MovieCard from './MovieCard.svelte';
 
   export let title: string;
-  export let movies: any[]; // Define Movie type properly later
+  export let movies: any[];
   export let linkTo: string | undefined = undefined;
 </script>
 

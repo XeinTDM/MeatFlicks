@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 type Theme = 'light' | 'dark';
 
 const userPrefersDark = browser && window.matchMedia('(prefers-color-scheme: dark)').matches;
-const initialTheme: Theme = browser ? (localStorage.getItem('theme') as Theme) || (userPrefersDark ? 'dark' : 'light') : 'dark';
+const initialTheme: Theme = browser ? (localStorage.getItem('theme') as Theme) || (userPrefersDark ? 'dark' : 'dark') : 'dark';
 
 export const theme = writable<Theme>(initialTheme);
 

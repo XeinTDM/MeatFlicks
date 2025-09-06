@@ -6,7 +6,7 @@
 
   $: ({ watchlistMovies, session, error } = data);
   $: sessionStatus = session ? 'authenticated' : 'unauthenticated';
-  $: loading = false; // Data is already loaded from server
+  $: loading = false;
 </script>
 
 {#if loading}
