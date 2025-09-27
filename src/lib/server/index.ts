@@ -3,3 +3,5 @@ export * from './auth/options';
 export * from './services/library.service';
 export * from './services/watchlist.service';
 export { libraryRepository } from './repositories/library.repository';
+export * from  './services/streaming.service'; 
+

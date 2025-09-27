@@ -1,11 +1,95 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import type { ProviderResolution } from '$lib/streaming/provider-registry';
+  import type { StreamingSource } from '$lib/streaming';
 
   export let data: PageData;
 
-  const { movie } = data;
+  const { movie, streaming } = data;
 
+  type StreamingState = {
+    source: StreamingSource | null;
+    resolutions: ProviderResolution[];
+  };
+
+  const initialStreaming: StreamingState = {
+    source: streaming?.source ?? null,
+    resolutions: streaming?.resolutions ?? []
+  };
+
+  let currentStreaming: StreamingState = initialStreaming;
+  $: providerResolutions = currentStreaming.resolutions;
+  $: primarySource = currentStreaming.source;
+  $: playbackUrl = primarySource?.embedUrl ?? primarySource?.streamUrl ?? null;
+  $: primaryLabel = primarySource
+    ? providerResolutions.find((resolution) => resolution.providerId === primarySource.providerId)?.label ??
+      primarySource.providerId
+    : null;
   $: releaseYear = movie?.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A';
+
+  let selectedProvider: string | null = null;
+  let isResolving = false;
+  let resolveError: string | null = null;
+
+  $: if (!selectedProvider && providerResolutions.length > 0) {
+    selectedProvider =
+      primarySource?.providerId ??
+      providerResolutions.find((resolution) => resolution.success)?.providerId ??
+      providerResolutions[0]?.providerId ??
+      null;
+  }
+
+  $: if (
+    selectedProvider &&
+    providerResolutions.length > 0 &&
+    !providerResolutions.some((resolution) => resolution.providerId === selectedProvider)
+  ) {
+    selectedProvider =
+      providerResolutions.find((resolution) => resolution.success)?.providerId ??
+      providerResolutions[0]?.providerId ??
+      null;
+  }
+
+  async function requestProviderResolution(providerId: string) {
+    if (!movie?.tmdbId) return;
+
+    isResolving = true;
+    resolveError = null;
+
+    try {
+      const response = await fetch('/api/streaming', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaType: 'movie',
+          tmdbId: Number(movie.tmdbId),
+          preferredProviders: providerId ? [providerId] : undefined
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+
+      currentStreaming = {\n        source: payload?.source ?? null,\n        resolutions: payload?.resolutions ?? []\n      };\n\n      const resolvedProviderId = currentStreaming.source?.providerId ?? null;\n      if (resolvedProviderId && resolvedProviderId !== selectedProvider) {\n        selectedProvider = resolvedProviderId;\n      }
+    } catch (error) {
+      console.error('[movie][resolveProvider]', error);
+      resolveError = error instanceof Error ? error.message : 'Failed to load provider stream.';
+    } finally {
+      isResolving = false;
+    }
+  }
+
+  async function handleProviderSelection(providerId: string) {
+    if (selectedProvider === providerId && providerResolutions.some((r) => r.providerId === providerId && r.success)) {
+      return;
+    }
+
+    selectedProvider = providerId;
+    await requestProviderResolution(providerId);
+  }
 </script>
 
 {#if !movie}
@@ -21,7 +105,7 @@
           <img
             src={movie.backdropPath}
             alt={movie.title}
-            class="rounded-lg object-cover w-full h-full"
+            class="h-full w-full rounded-lg object-cover"
           />
         {/if}
         <div class="absolute inset-0 rounded-lg bg-gradient-to-t from-black to-transparent"></div>
@@ -32,6 +116,95 @@
           </p>
         </div>
       </div>
+
+      {#if providerResolutions.length}
+        <section class="mb-6">
+          <h3 class="mb-3 text-xl font-semibold">Choose Provider</h3>
+          {#if resolveError}
+            <p class="mb-2 text-sm text-red-400">{resolveError}</p>
+          {/if}
+          <fieldset class="space-y-2">
+            {#each providerResolutions as resolution (resolution.providerId)}
+              <label
+                class={`flex items-start gap-3 rounded-lg border border-border-color bg-bg-color-alt px-4 py-3 transition-shadow duration-200 ${
+                  selectedProvider === resolution.providerId ? 'ring-2 ring-primary-color' : 'ring-0'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="streaming-provider"
+                  class="mt-1 h-4 w-4 accent-primary-color"
+                  value={resolution.providerId}
+                  checked={selectedProvider === resolution.providerId}
+                  on:change={() => handleProviderSelection(resolution.providerId)}
+                  disabled={isResolving && selectedProvider !== resolution.providerId}
+                />
+                <div class="flex w-full items-start justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold uppercase tracking-wide">{resolution.label}</p>
+                    <p class="text-xs text-gray-400">
+                      {#if resolution.success}
+                        Ready to play.
+                      {:else if resolution.error}
+                        {resolution.error}
+                      {:else}
+                        Unavailable.
+                      {/if}
+                    </p>
+                  </div>
+                  <span
+                    class={`text-xs font-semibold uppercase ${
+                      resolution.success ? 'text-green-400' : 'text-red-400'
+                    }`}
+                  >
+                    {resolution.success ? 'Ready' : 'Unavailable'}
+                  </span>
+                </div>
+              </label>
+            {/each}
+          </fieldset>
+          {#if isResolving}
+            <p class="mt-2 text-xs text-gray-400">Loading stream...</p>
+          {/if}
+        </section>
+      {/if}
+
+      {#if playbackUrl}
+        <section class="mb-8">
+          <h2 class="mb-4 text-3xl font-bold">Watch Now</h2>
+          <div class="aspect-video w-full overflow-hidden rounded-lg bg-black">
+            {#if primarySource?.embedUrl}
+              <iframe
+                src={primarySource.embedUrl}
+                title={`Watch ${movie.title}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                class="h-full w-full"
+              ></iframe>
+            {:else if primarySource?.streamUrl}
+              <video
+                controls
+                preload="metadata"
+                poster={movie.posterPath ?? undefined}
+                class="h-full w-full bg-black"
+              >
+                <source src={primarySource.streamUrl} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            {/if}
+          </div>
+          {#if primaryLabel}
+            <p class="mt-2 text-sm text-gray-400">Source: {primaryLabel}</p>
+          {/if}
+        </section>
+      {:else}
+        <section class="mb-8">
+          <h2 class="mb-2 text-3xl font-bold">Watch Now</h2>
+          <p class="text-sm text-gray-400">
+            No playable streams are available yet. Try selecting a different provider above.
+          </p>
+        </section>
+      {/if}
 
       <div class="flex flex-col gap-8 md:flex-row">
         <div class="md:w-1/3 lg:w-1/4">
@@ -81,7 +254,7 @@
                   frameborder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowfullscreen
-                  class="w-full h-full rounded-lg"
+                  class="h-full w-full rounded-lg"
                 ></iframe>
               </div>
             </div>
@@ -91,3 +264,4 @@
     </main>
   </div>
 {/if}
+

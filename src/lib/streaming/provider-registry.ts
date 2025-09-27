@@ -8,31 +8,76 @@ const providers: StreamingProvider[] = [vidlinkProvider, vidsrcProvider, twoEmbe
   (a, b) => b.priority - a.priority
 );
 
+function orderProviders(context: StreamingProviderContext, preferredProviders: string[]): StreamingProvider[] {
+  const preferred = preferredProviders
+    .map((id) => providers.find((provider) => provider.id === id))
+    .filter((provider): provider is StreamingProvider => Boolean(provider));
+
+  const remaining = providers.filter(
+    (provider) => !preferredProviders.includes(provider.id) && provider.supportedMedia.includes(context.mediaType)
+  );
+
+  return [...preferred.filter((provider) => provider.supportedMedia.includes(context.mediaType)), ...remaining];
+}
+
 export function listStreamingProviders(): StreamingProvider[] {
   return providers;
+}
+
+export interface ProviderResolution {
+  providerId: string;
+  label: string;
+  success: boolean;
+  source?: StreamingSource | null;
+  error?: string;
+}
+
+export async function collectStreamingSources(
+  context: StreamingProviderContext,
+  preferredProviders: string[] = []
+): Promise<ProviderResolution[]> {
+  const orderedProviders = orderProviders(context, preferredProviders);
+  const results: ProviderResolution[] = [];
+
+  for (const provider of orderedProviders) {
+    try {
+      const source = await provider.fetchSource(context);
+      if (source) {
+        results.push({
+          providerId: provider.id,
+          label: provider.label,
+          success: true,
+          source
+        });
+      } else {
+        results.push({
+          providerId: provider.id,
+          label: provider.label,
+          success: false,
+          source: null,
+          error: 'Provider returned no source.'
+        });
+      }
+    } catch (error: unknown) {
+      console.warn(`[streaming][${provider.id}]`, error);
+      results.push({
+        providerId: provider.id,
+        label: provider.label,
+        success: false,
+        source: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  return results;
 }
 
 export async function resolveStreamingSource(
   context: StreamingProviderContext,
   preferredProviders: string[] = []
 ): Promise<StreamingSource | null> {
-  const orderedProviders = [
-    ...preferredProviders
-      .map((id) => providers.find((provider) => provider.id === id))
-      .filter((provider): provider is StreamingProvider => Boolean(provider)),
-    ...providers.filter((provider) => !preferredProviders.includes(provider.id))
-  ].filter((provider) => provider.supportedMedia.includes(context.mediaType));
-
-  for (const provider of orderedProviders) {
-    try {
-      const source = await provider.fetchSource(context);
-      if (source) {
-        return source;
-      }
-    } catch (error) {
-      console.warn(`Provider ${provider.id} failed to resolve stream:`, error);
-    }
-  }
-
-  return null;
+  const resolutions = await collectStreamingSources(context, preferredProviders);
+  const success = resolutions.find((resolution) => resolution.success && resolution.source);
+  return success?.source ?? null;
 }

@@ -1,5 +1,3 @@
-const numberPattern = /^\d+$/;
-
 type PathSegment = string | number;
 
 type ExtractPaths = Array<Array<PathSegment>>;
@@ -62,15 +60,9 @@ export function extractFirstUrl(payload: unknown, paths: ExtractPaths): string |
     if (!valid) continue;
 
     if (typeof current === 'string') {
-      try {
-        // Accept both absolute and protocol-relative URLs.
-        const normalized = current.startsWith('http') ? current : current.startsWith('//') ? `https:${current}` : current;
-        const url = new URL(normalized);
-        return url.toString();
-      } catch (error) {
-        if (current.startsWith('/')) {
-          return current;
-        }
+      const normalized = current.startsWith('//') ? `https:${current}` : current;
+      if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('/')) {
+        return normalized;
       }
     }
   }
@@ -80,7 +72,6 @@ export function extractFirstUrl(payload: unknown, paths: ExtractPaths): string |
 
 export function ensureAbsoluteUrl(baseUrl: string, candidate: string | null): string | null {
   if (!candidate) return null;
-
   try {
     const url = new URL(candidate, baseUrl);
     return url.toString();
@@ -89,18 +80,18 @@ export function ensureAbsoluteUrl(baseUrl: string, candidate: string | null): st
   }
 }
 
-export async function withTimeout<T>(promise: Promise<T>, timeoutMs = 8000): Promise<T> {
+export async function fetchWithTimeout(
+  input: URL | string,
+  init: RequestInit & { timeoutMs?: number } = {}
+): Promise<Response> {
+  const { timeoutMs = 8000, ...rest } = init;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await promise;
-    clearTimeout(timeout);
+    const response = await fetch(input, { ...rest, signal: controller.signal });
     return response;
-  } catch (error) {
-    clearTimeout(timeout);
-    throw error;
   } finally {
-    controller.abort();
+    clearTimeout(timeout);
   }
 }
