@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Plus, Minus, Star } from '@lucide/svelte';
   import { watchlist } from '$lib/state/stores/watchlistStore';
+  import type { Movie as WatchlistMovie } from '$lib/state/stores/watchlistStore';
   import { error as errorStore } from '$lib/state/stores/errorStore';
 
   import { Button } from '$lib/components/ui/button';
@@ -14,7 +15,7 @@
   import { Skeleton } from '$lib/components/ui/skeleton';
   import type { LibraryMovie } from '$lib/types/library';
 
-  let { movie }: { movie: LibraryMovie | null } = $props();
+  let { movie }: { movie: LibraryMovie | WatchlistMovie | null } = $props();
 
   const isInWatchlist = $derived(movie ? watchlist.isInWatchlist(movie.id) : false);
 

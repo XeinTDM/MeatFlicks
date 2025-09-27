@@ -20,22 +20,41 @@
   let isResolving = $state(false)
   let resolveError = $state<string | null>(null)
 
-  let providerResolutions = $derived(() => currentStreaming.resolutions)
-  let primarySource = $derived(() => currentStreaming.source)
-  let playbackUrl = $derived(() => primarySource?.embedUrl ?? primarySource?.streamUrl ?? null)
-  let primaryLabel = $derived(() =>
+  let providerResolutions = $derived(currentStreaming.resolutions)
+  let primarySource = $derived(currentStreaming.source)
+  let playbackUrl = $derived(primarySource?.embedUrl ?? primarySource?.streamUrl ?? null)
+  let primaryLabel = $derived(
     primarySource
       ? providerResolutions.find((r) => r.providerId === primarySource.providerId)?.label ??
         primarySource.providerId
       : null
   )
-  let releaseYear = $derived(() =>
+  let releaseYear = $derived(
     movie?.releaseDate ? new Date(movie.releaseDate).getFullYear() : "N/A"
   )
 
   $effect(() => {
     if (typeof window !== "undefined" && movie?.id) {
-      watchHistory.recordWatch({ ...movie, media_type: movie?.media_type ?? "movie" })
+      const normalizedGenres =
+        movie.genres?.map((genre) => ('name' in genre ? String(genre.name) : String(genre))) ?? []
+
+      watchHistory.recordWatch({
+        id: movie.id,
+        title: movie.title,
+        posterPath: movie.posterPath ?? null,
+        backdropPath: movie.backdropPath ?? null,
+        overview: movie.overview ?? null,
+        releaseDate: movie.releaseDate ? new Date(movie.releaseDate).toISOString() : null,
+        rating: movie.rating ?? 0,
+        genres: normalizedGenres,
+        trailerUrl: movie.trailerUrl ?? null,
+        media_type: 'movie',
+        is4K: movie.is4K,
+        isHD: movie.isHD ?? undefined,
+        tmdbId: movie.tmdbId,
+        durationMinutes: movie.durationMinutes ?? null,
+        collectionId: movie.collectionId ?? null
+      })
     }
   })
 
@@ -204,6 +223,7 @@
                 class="h-full w-full"
               ></iframe>
             {:else if primarySource?.streamUrl}
+              <!-- svelte-ignore a11y_media_has_caption -->
               <video
                 controls
                 preload="metadata"

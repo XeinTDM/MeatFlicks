@@ -4,13 +4,19 @@ import type { LibraryMovie } from '$lib/types/library';
 export type Movie = {
   id: string;
   title: string;
-  posterPath: string;
-  backdropPath: string;
-  overview: string;
-  releaseDate: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  overview: string | null;
+  releaseDate: string | null;
   rating: number;
   genres: string[];
-  trailerUrl?: string;
+  trailerUrl?: string | null;
+  media_type?: string;
+  is4K?: boolean;
+  isHD?: boolean;
+  tmdbId?: number;
+  durationMinutes?: number | null;
+  collectionId?: number | null;
 };
 
 type WatchlistCandidate = LibraryMovie | Movie | (Partial<Movie> & Record<string, unknown>);
@@ -42,13 +48,19 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
   return {
     id,
     title,
-    posterPath: typeof payload.posterPath === 'string' ? payload.posterPath : '',
-    backdropPath: typeof payload.backdropPath === 'string' ? payload.backdropPath : '',
-    overview: typeof payload.overview === 'string' ? payload.overview : '',
-    releaseDate: typeof payload.releaseDate === 'string' ? payload.releaseDate : '',
+    posterPath: typeof payload.posterPath === 'string' ? payload.posterPath : null,
+    backdropPath: typeof payload.backdropPath === 'string' ? payload.backdropPath : null,
+    overview: typeof payload.overview === 'string' ? payload.overview : null,
+    releaseDate: typeof payload.releaseDate === 'string' ? payload.releaseDate : null,
     rating: Number.isFinite(ratingValue) ? ratingValue : 0,
     genres: Array.isArray(payload.genres) ? payload.genres.map(String) : [],
-    trailerUrl: typeof payload.trailerUrl === 'string' ? payload.trailerUrl : undefined
+    trailerUrl: typeof payload.trailerUrl === 'string' ? payload.trailerUrl : null,
+    media_type: typeof payload.media_type === 'string' ? payload.media_type : undefined,
+    is4K: payload.is4K === true,
+    isHD: typeof payload.isHD === 'boolean' ? payload.isHD : undefined,
+    tmdbId: typeof payload.tmdbId === 'number' ? payload.tmdbId : undefined,
+    durationMinutes: typeof payload.durationMinutes === 'number' ? payload.durationMinutes : null,
+    collectionId: typeof payload.collectionId === 'number' ? payload.collectionId : null
   } satisfies Movie;
 };
 

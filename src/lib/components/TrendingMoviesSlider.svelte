@@ -16,8 +16,8 @@
     linkTo?: string
   } = $props()
 
-  let moviesCount = $derived(() => movies?.length ?? 0)
-  let hasMultipleMovies = $derived(() => moviesCount > 1)
+  let moviesCount = $derived(movies?.length ?? 0)
+  let hasMultipleMovies = $derived(moviesCount > 1)
 
   const carouselOpts = { align: "center" } as const
 </script>
@@ -58,3 +58,4 @@
     {/if}
   </Carousel>
 </div>
+
