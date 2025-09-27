@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { faFacebookF, faTwitter, faInstagram } from '@fortawesome/free-brands-svg-icons';
-  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { Facebook, Twitter, Instagram } from '@lucide/svelte';
 </script>
 
 <footer id="footer" class="bg-bg-color px-12 pt-12 transition-colors duration-400">
@@ -9,7 +8,7 @@
       <span
         class="text-text-color mb-4 inline-block text-2xl font-bold tracking-tighter"
       >
-        Prism
+        MeatFlicks
       </span>
       <div class="flex space-x-4">
         <a
@@ -18,7 +17,7 @@
           rel="noopener noreferrer"
           class="text-text-color hover:text-primary-color text-xl transition-colors duration-300"
         >
-          <FontAwesomeIcon icon={faFacebookF} />
+          <Facebook class="w-4 h-4" />
         </a>
         <a
           href="https://twitter.com"
@@ -26,7 +25,7 @@
           rel="noopener noreferrer"
           class="text-text-color hover:text-primary-color text-xl transition-colors duration-300"
         >
-          <FontAwesomeIcon icon={faTwitter} />
+          <Twitter class="w-4 h-4" />
         </a>
         <a
           href="https://instagram.com"
@@ -34,7 +33,7 @@
           rel="noopener noreferrer"
           class="text-text-color hover:text-primary-color text-xl transition-colors duration-300"
         >
-          <FontAwesomeIcon icon={faInstagram} />
+          <Instagram class="w-4 h-4" />
         </a>
       </div>
     </div>

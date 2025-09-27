@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { faPlus, faMinus, faStar } from '@fortawesome/free-solid-svg-icons';
-  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { Plus, Minus, Star } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { watchlist } from '$lib/state/stores/watchlistStore';
   import { error as errorStore } from '$lib/state/stores/errorStore';
 
-  import { Button } from '@/components/ui/button';
+  import { Button } from '$lib/components/ui/button';
   export let movie: any;
 
   $: session = $page.data.session;
@@ -62,7 +61,7 @@
   </div>
   <div class="absolute inset-0 flex flex-col justify-end bg-black/50 p-4 opacity-0 transition-opacity duration-400 ease-in-out group-hover:opacity-100">
     <div class="absolute top-4 left-4 bg-black/70 text-white px-2 py-1 rounded-md text-sm flex items-center gap-1 opacity-0 transition-opacity duration-400 ease-in-out group-hover:opacity-100">
-      <FontAwesomeIcon icon={faStar} class="text-yellow-500" /> {movie.rating?.toFixed(1)}
+      <Star class="size-4 text-yellow-500" fill="currentColor" stroke="currentColor" /> {movie.rating?.toFixed(1)}
     </div>
     <div class="absolute top-4 right-4 flex gap-2 opacity-0 transition-all duration-400 ease-in-out group-hover:scale-100 group-hover:opacity-100">
       <span class="bg-black/70 rounded-full px-1.5 py-0.5 text-xs font-semibold text-text-color">
@@ -80,7 +79,11 @@
             on:click={handleWatchlistToggle}
             class={`size-8 rounded-full border border-white/10 text-base backdrop-blur-sm transition-colors duration-300 ${isInWatchlist ? '' : 'bg-background/70 text-text-color hover:bg-background/80'}`}
           >
-            <FontAwesomeIcon icon={isInWatchlist ? faMinus : faPlus} />
+            {#if isInWatchlist}
+              <Minus class="size-4" />
+            {:else}
+              <Plus class="size-4" />
+            {/if}
           </Button>
         {/if}
       </h3>

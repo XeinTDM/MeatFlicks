@@ -1,13 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { faBars, faTimes, faSearch, faCog } from '@fortawesome/free-solid-svg-icons';
-  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
-  import { theme } from '$lib/state/stores/themeStore';
+  import { Menu, X, Search, Cog, Sun, Moon } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { signIn, signOut } from '@auth/sveltekit/client';
-
-  import { Button } from '@/components/ui/button';
-  import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+  import { toggleMode } from "mode-watcher";
+  import { Button } from '$lib/components/ui/button';
+  import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 
   let isNavOpen = false;
   let isSettingsOpen = false;
@@ -29,10 +27,6 @@
     };
   });
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    theme.set(newTheme);
-  };
-
   const languageOptions = [
     { value: 'en', label: 'English' },
     { value: 'es', label: 'Spanish' },
@@ -48,16 +42,16 @@
 >
   <div class="flex h-14 items-center justify-between px-6">
     <a href="/" class="text-2xl font-bold tracking-tighter text-text-color">
-      Prism
+      MeatFlicks
     </a>
     <Button
       variant="ghost"
       size="icon"
       class="text-text-color md:hidden"
-      on:click={() => (isNavOpen = true)}
+      onclick={() => (isNavOpen = true)}
       aria-label="Open navigation menu"
     >
-      <FontAwesomeIcon icon={faBars} />
+      <Menu class="w-4 h-4" />
     </Button>
 
     <nav
@@ -65,16 +59,16 @@
     >
       <div class="flex h-full flex-col md:flex-row md:items-center">
         <a href="/" class="mb-8 text-3xl font-bold text-text-color md:hidden">
-          Prism
+          MeatFlicks
         </a>
         <Button
           variant="ghost"
           size="icon"
           class="absolute top-5 right-5 text-text-color md:hidden"
-          on:click={() => (isNavOpen = false)}
+          onclick={() => (isNavOpen = false)}
           aria-label="Close navigation menu"
         >
-          <FontAwesomeIcon icon={faTimes} />
+          <X class="w-4 h-4" />
         </Button>
         <ul class="flex flex-col gap-8 md:ml-auto md:flex-row md:gap-10">
           <li>
@@ -122,14 +116,14 @@
         class="bg-bg-color-alt border-border-color text-text-color hover:bg-primary-color hover:border-primary-color hover:text-text-color md:px-4 md:py-2"
         aria-label="Search"
       >
-        <FontAwesomeIcon icon={faSearch} />
+        <Search class="w-4 h-4" />
         <span class="hidden md:inline">Search</span>
       </Button>
       {#if status === 'authenticated'}
         <Button
           type="button"
           variant="destructive"
-          on:click={() => signOut()}
+          onclick={() => signOut()}
           aria-label="Sign out"
         >
           Sign Out
@@ -137,7 +131,7 @@
       {:else}
         <Button
           type="button"
-          on:click={() => signIn()}
+          onclick={() => signIn()}
           aria-label="Sign in"
         >
           Sign In
@@ -149,11 +143,11 @@
           variant="ghost"
           size="icon"
           class="h-10 w-10 rounded-full text-text-color hover:bg-bg-color-alt"
-          on:click={() => (isSettingsOpen = !isSettingsOpen)}
+          onclick={() => (isSettingsOpen = !isSettingsOpen)}
           aria-expanded={isSettingsOpen}
           aria-controls="settings-dropdown"
         >
-          <FontAwesomeIcon icon={faCog} />
+          <Cog class="w-4 h-4" />
         </Button>
         <div
           id="settings-dropdown"
@@ -164,23 +158,14 @@
               Theme
             </h4>
             <div class="bg-bg-color border-border-color flex rounded-md border p-0.5">
-              <Button
-                type="button"
-                size="sm"
-                variant={$theme === 'dark' ? 'default' : 'ghost'}
-                class="flex-1 text-xs"
-                on:click={() => handleThemeChange('dark')}
-              >
-                Dark
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={$theme === 'light' ? 'default' : 'ghost'}
-                class="flex-1 text-xs"
-                on:click={() => handleThemeChange('light')}
-              >
-                Light
+              <Button onclick={toggleMode} variant="outline" size="icon">
+                <Sun
+                  class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 !transition-all dark:-rotate-90 dark:scale-0"
+                />
+                <Moon
+                  class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 !transition-all dark:rotate-0 dark:scale-100"
+                />
+                <span class="sr-only">Toggle theme</span>
               </Button>
             </div>
           </div>
@@ -189,6 +174,7 @@
               Language
             </h4>
             <Select
+              type="single"
               value={selectedLanguage}
               onValueChange={(value) => (selectedLanguage = value)}
             >

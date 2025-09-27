@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { faChevronRight } from '@fortawesome/free-solid-svg-icons';
-  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { ChevronRight } from '@lucide/svelte';
   import MovieCard from './MovieCard.svelte';
 
   export let title: string;
@@ -16,7 +15,7 @@
         <span class="text-sm font-medium w-0 overflow-hidden transition-all duration-300 group-hover:w-auto">
           See All
         </span>
-        <FontAwesomeIcon icon={faChevronRight} class="text-base transition-transform duration-300 group-hover:translate-x-1" />
+        <ChevronRight class="size-4 transition-transform duration-300 group-hover:translate-x-1" />
       </div>
     </a>
   {:else}

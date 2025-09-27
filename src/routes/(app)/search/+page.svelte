@@ -2,8 +2,8 @@
   import MovieCard from '$lib/components/MovieCard.svelte';
   import { onDestroy } from 'svelte';
 
-  import { Input } from '@/components/ui/input';
-  import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+  import { Input } from '$lib/components/ui/input';
+  import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 
   let query = '';
   let movies: any[] = [];

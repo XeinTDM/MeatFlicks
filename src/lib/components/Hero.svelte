@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { faPlay, faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
-  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { Play, Check, Plus } from '@lucide/svelte';
   import { page } from '$app/stores';
   import { watchlist } from '$lib/state/stores/watchlistStore';
 
-  import { Button } from '@/components/ui/button';
+  import { Button } from '$lib/components/ui/button';
   export let movie: any;
 
   let message: string | null = null;
@@ -59,7 +58,8 @@
           size="lg"
           class="gap-2 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
         >
-          <FontAwesomeIcon icon={faPlay} /> Play
+          <Play class="size-4" />
+          Play
         </Button>
         <Button
           type="button"
@@ -68,7 +68,11 @@
           on:click={handleWatchlistToggle}
           class="gap-2 font-semibold transition-transform duration-300"
         >
-          <FontAwesomeIcon icon={isInWatchlist ? faCheck : faPlus} />
+          {#if isInWatchlist}
+            <Check class="size-4" />
+          {:else}
+            <Plus class="size-4" />
+          {/if}
           {isInWatchlist ? 'Added to List' : 'My List'}
         </Button>
       </div>
