@@ -4,6 +4,7 @@
   import { page } from '$app/stores';
   import { watchlist } from '$lib/state/stores/watchlistStore';
 
+  import { Button } from '@/components/ui/button';
   export let movie: any;
 
   let message: string | null = null;
@@ -53,19 +54,23 @@
         {movie.overview}
       </p>
       <div class="flex gap-4">
-        <a
+        <Button
           href={`/movie/${movie.id}`}
-          class="btn bg-primary-color text-text-color hover:bg-primary-color-alt inline-flex items-center gap-2 rounded-lg px-6 py-3 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
+          size="lg"
+          class="gap-2 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
         >
           <FontAwesomeIcon icon={faPlay} /> Play
-        </a>
-        <button
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          variant={isInWatchlist ? 'destructive' : 'secondary'}
           on:click={handleWatchlistToggle}
-          class="btn text-text-color light:bg-black/5 light:text-text-color light:border light:border-border-color light:hover:bg-black/10 inline-flex items-center gap-2 rounded-lg bg-white/15 px-6 py-3 font-semibold transition-transform duration-300 hover:bg-white/25"
+          class="gap-2 font-semibold transition-transform duration-300"
         >
           <FontAwesomeIcon icon={isInWatchlist ? faCheck : faPlus} />
           {isInWatchlist ? 'Added to List' : 'My List'}
-        </button>
+        </Button>
       </div>
       {#if message}
         <div class="mt-4 text-sm font-medium text-white">{message}</div>

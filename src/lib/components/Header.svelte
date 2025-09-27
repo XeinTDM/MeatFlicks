@@ -6,6 +6,9 @@
   import { page } from '$app/stores';
   import { signIn, signOut } from '@auth/sveltekit/client';
 
+  import { Button } from '@/components/ui/button';
+  import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+
   let isNavOpen = false;
   let isSettingsOpen = false;
   let settingsRef: HTMLDivElement;
@@ -29,6 +32,14 @@
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     theme.set(newTheme);
   };
+
+  const languageOptions = [
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'fr', label: 'French' }
+  ];
+
+  let selectedLanguage = languageOptions[0].value;
 </script>
 
 <header
@@ -39,13 +50,15 @@
     <a href="/" class="text-2xl font-bold tracking-tighter text-text-color">
       Prism
     </a>
-    <button
-      class="cursor-pointer text-2xl text-text-color md:hidden"
+    <Button
+      variant="ghost"
+      size="icon"
+      class="text-text-color md:hidden"
       on:click={() => (isNavOpen = true)}
       aria-label="Open navigation menu"
     >
       <FontAwesomeIcon icon={faBars} />
-    </button>
+    </Button>
 
     <nav
       class={`fixed top-0 ${isNavOpen ? 'right-0' : '-right-full'} bg-bg-color z-[101] h-full w-full p-8 transition-all duration-400 md:static md:h-auto md:w-auto md:bg-transparent md:p-0`}
@@ -54,13 +67,15 @@
         <a href="/" class="mb-8 text-3xl font-bold text-text-color md:hidden">
           Prism
         </a>
-        <button
-          class="absolute top-5 right-5 cursor-pointer text-3xl text-text-color md:hidden"
+        <Button
+          variant="ghost"
+          size="icon"
+          class="absolute top-5 right-5 text-text-color md:hidden"
           on:click={() => (isNavOpen = false)}
           aria-label="Close navigation menu"
         >
           <FontAwesomeIcon icon={faTimes} />
-        </button>
+        </Button>
         <ul class="flex flex-col gap-8 md:ml-auto md:flex-row md:gap-10">
           <li>
             <a
@@ -101,41 +116,45 @@
     </nav>
 
     <div class="flex items-center gap-4">
-      <a
+      <Button
         href="/search"
-        class="bg-bg-color-alt border-border-color hover:bg-primary-color hover:border-primary-color flex items-center gap-2 rounded-md border px-4 py-2 font-medium text-text-color transition-all duration-300 hover:text-text-color md:px-4 md:py-2"
+        variant="outline"
+        class="bg-bg-color-alt border-border-color text-text-color hover:bg-primary-color hover:border-primary-color hover:text-text-color md:px-4 md:py-2"
         aria-label="Search"
       >
         <FontAwesomeIcon icon={faSearch} />
         <span class="hidden md:inline">Search</span>
-      </a>
+      </Button>
       {#if status === 'authenticated'}
-        <button
+        <Button
+          type="button"
+          variant="destructive"
           on:click={() => signOut()}
-          class="rounded-md bg-red-600 px-4 py-2 font-medium text-text-color transition-all duration-300 hover:bg-red-700"
           aria-label="Sign out"
         >
           Sign Out
-        </button>
+        </Button>
       {:else}
-        <button
+        <Button
+          type="button"
           on:click={() => signIn()}
-          class="bg-primary-color hover:bg-primary-color-dark cursor-pointer rounded-md px-4 py-2 font-medium text-text-color transition-all duration-300"
           aria-label="Sign in"
         >
           Sign In
-        </button>
+        </Button>
       {/if}
       <div class="settings-menu relative">
-        <button
+        <Button
           id="settings-toggle-btn"
-          class="hover:bg-bg-color-alt flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-transparent p-2 text-xl text-text-color transition-colors duration-300"
+          variant="ghost"
+          size="icon"
+          class="h-10 w-10 rounded-full text-text-color hover:bg-bg-color-alt"
           on:click={() => (isSettingsOpen = !isSettingsOpen)}
           aria-expanded={isSettingsOpen}
           aria-controls="settings-dropdown"
         >
           <FontAwesomeIcon icon={faCog} />
-        </button>
+        </Button>
         <div
           id="settings-dropdown"
           bind:this={settingsRef}
@@ -145,32 +164,45 @@
               Theme
             </h4>
             <div class="bg-bg-color border-border-color flex rounded-md border p-0.5">
-              <button
-                class={`flex-1 rounded-md p-2 text-xs font-medium transition-all duration-300 hover:bg-primary-color-dark ${$theme === 'dark' ? 'bg-primary-color text-white' : 'text-white'}`}
+              <Button
+                type="button"
+                size="sm"
+                variant={$theme === 'dark' ? 'default' : 'ghost'}
+                class="flex-1 text-xs"
                 on:click={() => handleThemeChange('dark')}
               >
                 Dark
-              </button>
-              <button
-                class={`flex-1 rounded-md p-2 text-xs font-medium transition-all duration-300 hover:bg-primary-color-dark ${$theme === 'light' ? 'bg-primary-color text-white' : 'text-white'}`}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={$theme === 'light' ? 'default' : 'ghost'}
+                class="flex-1 text-xs"
                 on:click={() => handleThemeChange('light')}
               >
                 Light
-              </button>
+              </Button>
             </div>
           </div>
           <div class="p-3 last:border-b-0">
             <h4 class="text-text-color mb-3 text-xs font-semibold tracking-wider uppercase">
               Language
             </h4>
-            <select
-              id="language-selector"
-              class="bg-bg-color text-text-color border-border-color font-inherit w-full rounded-md border p-2"
+            <Select
+              value={selectedLanguage}
+              onValueChange={(value) => (selectedLanguage = value)}
             >
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-            </select>
+              <SelectTrigger class="w-full justify-between" aria-label="Select language">
+                <span class="text-sm font-medium">
+                  {languageOptions.find((option) => option.value === selectedLanguage)?.label ?? 'Select'}
+                </span>
+              </SelectTrigger>
+              <SelectContent class="w-[220px]">
+                {#each languageOptions as option (option.value)}
+                  <SelectItem value={option.value}>{option.label}</SelectItem>
+                {/each}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

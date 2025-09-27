@@ -5,6 +5,7 @@
   import { watchlist } from '$lib/state/stores/watchlistStore';
   import { error as errorStore } from '$lib/state/stores/errorStore';
 
+  import { Button } from '@/components/ui/button';
   export let movie: any;
 
   $: session = $page.data.session;
@@ -72,12 +73,15 @@
       <h3 class="mb-2 text-lg font-semibold flex items-center justify-between">
         <span>{movie.title}</span>
         {#if isAuthenticated}
-          <button
+          <Button
+            type="button"
+            size="icon"
+            variant={isInWatchlist ? 'destructive' : 'secondary'}
             on:click={handleWatchlistToggle}
-            class={`flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-base backdrop-blur-sm transition-colors duration-300 ${isInWatchlist ? 'bg-red-600 text-text-color hover:bg-red-700' : 'bg-gray-800/70 text-text-color hover:bg-black/80'}`}
+            class={`size-8 rounded-full border border-white/10 text-base backdrop-blur-sm transition-colors duration-300 ${isInWatchlist ? '' : 'bg-background/70 text-text-color hover:bg-background/80'}`}
           >
             <FontAwesomeIcon icon={isInWatchlist ? faMinus : faPlus} />
-          </button>
+          </Button>
         {/if}
       </h3>
       <div class="mb-2 flex items-center gap-3 text-sm text-gray-300">

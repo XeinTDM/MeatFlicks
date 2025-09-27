@@ -2,6 +2,9 @@
   import MovieCard from '$lib/components/MovieCard.svelte';
   import { onDestroy } from 'svelte';
 
+  import { Input } from '@/components/ui/input';
+  import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
   let query = '';
   let movies: any[] = [];
   let loading = false;
@@ -61,20 +64,28 @@
   <main class="container mx-auto p-4">
     <h1 class="my-8 text-center text-4xl font-bold">Search Movies</h1>
     <div class="mb-8 flex justify-center">
-      <input
+      <Input
         type="text"
         placeholder="Search by title..."
-        class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-800 p-3 text-text-color focus:border-blue-500 focus:outline-none"
+        class="max-w-md h-11 text-base bg-bg-color-alt text-text-color"
+        aria-label="Search movies by title"
         bind:value={query}
       />
     </div>
 
     {#if loading}
-      <p class="text-center">Loading...</p>
+      <Alert class="mx-auto mb-6 max-w-md">
+        <AlertDescription>Loading results...</AlertDescription>
+      </Alert>
     {:else if error}
-      <p class="text-center text-red-500">Error: {error}</p>
+      <Alert variant="destructive" class="mx-auto mb-6 max-w-md">
+        <AlertTitle>Search Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     {:else if movies.length === 0 && query.trim()}
-      <p class="text-center">No movies found for &quot;{query}&quot;.</p>
+      <Alert class="mx-auto mb-6 max-w-md">
+        <AlertDescription>No movies found for "{query}".</AlertDescription>
+      </Alert>
     {/if}
 
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
