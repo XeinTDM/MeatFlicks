@@ -1,102 +1,116 @@
 <script lang="ts">
-  import type { PageData } from './$types';
-  import type { ProviderResolution } from '$lib/streaming/provider-registry';
-  import type { StreamingSource } from '$lib/streaming';
+  import type { PageData } from "./$types"
+  import type { ProviderResolution } from "$lib/streaming/provider-registry"
+  import type { StreamingSource } from "$lib/streaming"
+  import { watchHistory } from "$lib/state/stores/historyStore"
 
-  export let data: PageData;
-
-  const { movie, streaming } = data;
+  let { data }: { data: PageData } = $props()
+  const { movie, streaming } = data
 
   type StreamingState = {
-    source: StreamingSource | null;
-    resolutions: ProviderResolution[];
-  };
+    source: StreamingSource | null
+    resolutions: ProviderResolution[]
+  }
 
-  const initialStreaming: StreamingState = {
+  let currentStreaming = $state<StreamingState>({
     source: streaming?.source ?? null,
     resolutions: streaming?.resolutions ?? []
-  };
+  })
+  let selectedProvider = $state<string | null>(null)
+  let isResolving = $state(false)
+  let resolveError = $state<string | null>(null)
 
-  let currentStreaming: StreamingState = initialStreaming;
-  $: providerResolutions = currentStreaming.resolutions;
-  $: primarySource = currentStreaming.source;
-  $: playbackUrl = primarySource?.embedUrl ?? primarySource?.streamUrl ?? null;
-  $: primaryLabel = primarySource
-    ? providerResolutions.find((resolution) => resolution.providerId === primarySource.providerId)?.label ??
-      primarySource.providerId
-    : null;
-  $: releaseYear = movie?.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A';
+  let providerResolutions = $derived(() => currentStreaming.resolutions)
+  let primarySource = $derived(() => currentStreaming.source)
+  let playbackUrl = $derived(() => primarySource?.embedUrl ?? primarySource?.streamUrl ?? null)
+  let primaryLabel = $derived(() =>
+    primarySource
+      ? providerResolutions.find((r) => r.providerId === primarySource.providerId)?.label ??
+        primarySource.providerId
+      : null
+  )
+  let releaseYear = $derived(() =>
+    movie?.releaseDate ? new Date(movie.releaseDate).getFullYear() : "N/A"
+  )
 
-  let selectedProvider: string | null = null;
-  let isResolving = false;
-  let resolveError: string | null = null;
+  $effect(() => {
+    if (typeof window !== "undefined" && movie?.id) {
+      watchHistory.recordWatch({ ...movie, media_type: movie?.media_type ?? "movie" })
+    }
+  })
 
-  $: if (!selectedProvider && providerResolutions.length > 0) {
-    selectedProvider =
-      primarySource?.providerId ??
-      providerResolutions.find((resolution) => resolution.success)?.providerId ??
-      providerResolutions[0]?.providerId ??
-      null;
-  }
+  $effect(() => {
+    if (!selectedProvider && providerResolutions.length > 0) {
+      selectedProvider =
+        primarySource?.providerId ??
+        providerResolutions.find((r) => r.success)?.providerId ??
+        providerResolutions[0]?.providerId ??
+        null
+    }
+  })
 
-  $: if (
-    selectedProvider &&
-    providerResolutions.length > 0 &&
-    !providerResolutions.some((resolution) => resolution.providerId === selectedProvider)
-  ) {
-    selectedProvider =
-      providerResolutions.find((resolution) => resolution.success)?.providerId ??
-      providerResolutions[0]?.providerId ??
-      null;
-  }
+  $effect(() => {
+    if (
+      selectedProvider &&
+      providerResolutions.length > 0 &&
+      !providerResolutions.some((r) => r.providerId === selectedProvider)
+    ) {
+      selectedProvider =
+        providerResolutions.find((r) => r.success)?.providerId ??
+        providerResolutions[0]?.providerId ??
+        null
+    }
+  })
 
   async function requestProviderResolution(providerId: string) {
-    if (!movie?.tmdbId) return;
+    if (!movie?.tmdbId) return
 
-    isResolving = true;
-    resolveError = null;
+    isResolving = true
+    resolveError = null
 
     try {
-      const response = await fetch('/api/streaming', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/streaming", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mediaType: 'movie',
+          mediaType: "movie",
           tmdbId: Number(movie.tmdbId),
           preferredProviders: providerId ? [providerId] : undefined
         })
-      });
+      })
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
 
-      const payload = await response.json();
+      const payload = await response.json()
 
       currentStreaming = {
         source: payload?.source ?? null,
         resolutions: payload?.resolutions ?? []
-      };
+      }
 
-      const resolvedProviderId = currentStreaming.source?.providerId ?? null;
+      const resolvedProviderId = currentStreaming.source?.providerId ?? null
       if (resolvedProviderId && resolvedProviderId !== selectedProvider) {
-        selectedProvider = resolvedProviderId;
+        selectedProvider = resolvedProviderId
       }
     } catch (error) {
-      console.error('[movie][resolveProvider]', error);
-      resolveError = error instanceof Error ? error.message : 'Failed to load provider stream.';
+      console.error("[movie][resolveProvider]", error)
+      resolveError =
+        error instanceof Error ? error.message : "Failed to load provider stream."
     } finally {
-      isResolving = false;
+      isResolving = false
     }
   }
 
   async function handleProviderSelection(providerId: string) {
-    if (selectedProvider === providerId && providerResolutions.some((r) => r.providerId === providerId && r.success)) {
-      return;
+    if (
+      selectedProvider === providerId &&
+      providerResolutions.some((r) => r.providerId === providerId && r.success)
+    ) {
+      return
     }
 
-    selectedProvider = providerId;
-    await requestProviderResolution(providerId);
+    selectedProvider = providerId
+    await requestProviderResolution(providerId)
   }
 </script>
 
@@ -144,7 +158,7 @@
                   class="mt-1 h-4 w-4 accent-primary-color"
                   value={resolution.providerId}
                   checked={selectedProvider === resolution.providerId}
-                  on:change={() => handleProviderSelection(resolution.providerId)}
+                  onchange={() => handleProviderSelection(resolution.providerId)}
                   disabled={isResolving && selectedProvider !== resolution.providerId}
                 />
                 <div class="flex w-full items-start justify-between gap-3">
@@ -238,7 +252,7 @@
             <h3 class="text-2xl font-bold">Genres:</h3>
             <p class="text-lg text-gray-300">
               {#if movie.genres && movie.genres.length > 0}
-                {movie.genres.map((genre: any) => genre.name).join(', ')}
+                {movie.genres.map((genre) => genre.name).join(', ')}
               {:else}
                 N/A
               {/if}
@@ -248,7 +262,7 @@
           {#if movie.cast && movie.cast.length > 0}
             <div class="mb-4">
               <h3 class="text-2xl font-bold">Cast:</h3>
-              <p class="text-lg text-gray-300">{movie.cast.map((actor: any) => actor.name).join(', ')}</p>
+              <p class="text-lg text-gray-300">{movie.cast.map((actor) => actor.name).join(', ')}</p>
             </div>
           {/if}
 
@@ -272,6 +286,3 @@
     </main>
   </div>
 {/if}
-
-
-

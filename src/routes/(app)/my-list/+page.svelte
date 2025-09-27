@@ -1,10 +1,9 @@
 <script lang="ts">
   import MovieCard from '$lib/components/MovieCard.svelte';
-  import type { PageData } from './$types';
+  import { watchlist } from '$lib/state/stores/watchlistStore';
 
-  export let data: PageData;
-
-  const { watchlistMovies, error } = data;
+  const watchlistMovies = $derived($watchlist.watchlist ?? []);
+  const error = $derived($watchlist.error);
 </script>
 
 {#if error}

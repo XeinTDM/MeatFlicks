@@ -1,63 +1,64 @@
 <script lang="ts">
-  import MovieCard from '$lib/components/MovieCard.svelte';
-  import { onDestroy } from 'svelte';
+  import MovieCard from '$lib/components/MovieCard.svelte'
+  import { onDestroy } from 'svelte'
 
-  import { Input } from '$lib/components/ui/input';
-  import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
+  import { Input } from '$lib/components/ui/input'
+  import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert'
+  import type { LibraryMovie } from '$lib/types/library'
 
-  let query = '';
-  let movies: any[] = [];
-  let loading = false;
-  let error: string | null = null;
-  let debounceTimeout: ReturnType<typeof setTimeout>;
-  let controller: AbortController | null = null;
+  let query = $state('')
+  let movies = $state<LibraryMovie[]>([])
+  let loading = $state(false)
+  let error = $state<string | null>(null)
+  let debounceTimeout = $state<ReturnType<typeof setTimeout> | null>(null)
+  let controller = $state<AbortController | null>(null)
 
   async function handleSearch() {
-    const trimmed = query.trim();
+    const trimmed = query.trim()
 
     if (!trimmed) {
-      movies = [];
-      error = null;
-      loading = false;
-      return;
+      movies = []
+      error = null
+      loading = false
+      return
     }
 
-    controller?.abort();
-    controller = new AbortController();
+    controller?.abort()
+    controller = new AbortController()
 
-    loading = true;
-    error = null;
+    loading = true
+    error = null
 
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
         signal: controller.signal
-      });
-      if (!res.ok) {
-        throw new Error('Failed to fetch search results');
-      }
-      const data: any[] = await res.json();
-      movies = data;
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      error = err.message ?? 'Unable to fetch search results.';
+      })
+      if (!res.ok) throw new Error("Failed to fetch search results")
+
+      const data: LibraryMovie[] = await res.json()
+      movies = data
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof Error && err.name === 'AbortError') return
+      error = err instanceof Error ? err.message : 'Unable to fetch search results.'
     } finally {
-      loading = false;
+      loading = false
     }
   }
 
-  $: {
-    clearTimeout(debounceTimeout);
-    debounceTimeout = setTimeout(() => {
-      handleSearch();
-    }, query ? 400 : 0);
-  }
+  $effect(() => {
+    clearTimeout(debounceTimeout ?? undefined)
+    if (query) {
+      debounceTimeout = setTimeout(() => {
+        handleSearch()
+      }, 400)
+    }
+  })
 
   onDestroy(() => {
-    clearTimeout(debounceTimeout);
-    controller?.abort();
-  });
+    clearTimeout(debounceTimeout ?? undefined)
+    controller?.abort()
+  })
 </script>
 
 <div class="min-h-screen">

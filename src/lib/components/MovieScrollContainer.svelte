@@ -1,19 +1,34 @@
 <script lang="ts">
-  import { ChevronRight } from '@lucide/svelte';
-  import MovieCard from './MovieCard.svelte';
+  import { ChevronRight } from '@lucide/svelte'
+  import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious
+  } from '$lib/components/ui/carousel'
+  import MovieCard from './MovieCard.svelte'
+  import type { LibraryMovie } from '$lib/types/library'
 
-  export let title: string;
-  export let movies: any[];
-  export let linkTo: string | undefined = undefined;
+  let { title, movies, linkTo }: {
+    title: string
+    movies: LibraryMovie[]
+    linkTo?: string
+  } = $props()
+
+  let moviesCount = $derived(() => movies?.length ?? 0)
+  let hasMultipleMovies = $derived(() => moviesCount > 1)
+
+  const carouselOpts = { align: "start" } as const
 </script>
 
-<div class="carousel-container bg-bg-color px-[5%] py-8 relative">
+<div class="bg-bg-color px-[5%] py-8">
   <div class="mb-6 flex items-center gap-2">
     <h2 class="text-3xl font-semibold text-text-color">{title}</h2>
     {#if linkTo}
       <a
         href={linkTo}
-        class="group flex items-center text-text-color hover:text-primary-color transition-colors duration-300"
+        class="group flex items-center text-text-color transition-colors duration-300 hover:text-primary-color"
       >
         <span class="text-small font-medium opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           See All
@@ -23,11 +38,19 @@
     {/if}
   </div>
 
-  <div class="scrollbar-thin scrollbar-thumb-primary-color scrollbar-track-bg-color-alt flex w-full flex-nowrap gap-4 overflow-x-auto pb-4">
-    {#each movies as movie (movie.id)}
-      <div class="flex-shrink-0 h-[400px] w-[300px] px-2">
-        <MovieCard {movie} />
-      </div>
-    {/each}
-  </div>
+  <Carousel class="w-full" opts={carouselOpts}>
+    <CarouselContent class="pb-4">
+      {#each movies as movie (movie.id)}
+        <CarouselItem class="basis-auto pl-4">
+          <div class="flex justify-center">
+            <MovieCard {movie} />
+          </div>
+        </CarouselItem>
+      {/each}
+    </CarouselContent>
+    {#if hasMultipleMovies}
+      <CarouselPrevious class="hidden md:inline-flex" />
+      <CarouselNext class="hidden md:inline-flex" />
+    {/if}
+  </Carousel>
 </div>

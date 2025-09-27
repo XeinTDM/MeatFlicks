@@ -1,10 +1,11 @@
 <script lang="ts">
-  import Hero from '$lib/components/Hero.svelte';
-  import { TrendingMoviesSlider, MovieScrollContainer } from '$lib/components';
+  import Hero from '$lib/components/Hero.svelte'
+  import { TrendingMoviesSlider, MovieScrollContainer } from '$lib/components'
+  import type { PageData } from './$types'
 
-  export let data;
+  let { data }: { data: PageData } = $props()
 
-  $: ({ trendingMovies, collections, genres } = data);
+  let { trendingMovies, collections, genres } = $derived(data)
 </script>
 
 <div class="bg-bg-color text-text-color min-h-screen">

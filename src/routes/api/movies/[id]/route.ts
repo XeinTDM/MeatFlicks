@@ -2,6 +2,27 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import prisma from '$lib/server/db';
 import { env } from '$lib/config/env';
 
+type TmdbCastMember = {
+  id: number;
+  name: string;
+  character: string | null;
+};
+
+type TmdbVideo = {
+  key: string;
+  site: string;
+  type: string;
+};
+
+type TmdbMovieResponse = {
+  credits?: {
+    cast?: TmdbCastMember[];
+  };
+  videos?: {
+    results?: TmdbVideo[];
+  };
+};
+
 export const GET: RequestHandler = async ({ params }) => {
   const movieId = params.id;
 
@@ -28,16 +49,18 @@ export const GET: RequestHandler = async ({ params }) => {
       return json({ error: 'Failed to fetch movie details from TMDB' }, { status: 502 });
     }
 
-    const tmdbData = await tmdbResponse.json();
+    const tmdbData: TmdbMovieResponse = await tmdbResponse.json();
 
-    const cast = (tmdbData.credits?.cast ?? []).slice(0, 5).map((actor: any) => ({
-      id: actor.id,
-      name: actor.name,
-      character: actor.character
-    }));
+    const cast = (tmdbData.credits?.cast ?? [])
+      .slice(0, 5)
+      .map(({ id, name, character }) => ({
+        id,
+        name,
+        character: character ?? ''
+      }));
 
     const trailer = (tmdbData.videos?.results ?? []).find(
-      (video: any) => video.type === 'Trailer' && video.site === 'YouTube'
+      (video) => video.type === 'Trailer' && video.site === 'YouTube'
     );
 
     return json({

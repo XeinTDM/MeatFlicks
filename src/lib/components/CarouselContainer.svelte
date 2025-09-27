@@ -1,12 +1,15 @@
 <script lang="ts">
-  import TrendingMoviesSlider from './TrendingMoviesSlider.svelte';
-  import MovieScrollContainer from './MovieScrollContainer.svelte';
+  import TrendingMoviesSlider from './TrendingMoviesSlider.svelte'
+  import MovieScrollContainer from './MovieScrollContainer.svelte'
+  import type { LibraryMovie } from '$lib/types/library'
 
-  export let title: string;
-  export let movies: any[];
-  export let linkTo: string | undefined = undefined;
+  let { title, movies, linkTo }: {
+    title: string
+    movies: LibraryMovie[]
+    linkTo?: string
+  } = $props()
 
-  $: isTrendingNow = title === "Trending Now";
+  let isTrendingNow = $derived(title === "Trending Now")
 </script>
 
 {#if isTrendingNow}

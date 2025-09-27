@@ -2,6 +2,12 @@ type PathSegment = string | number;
 
 type ExtractPaths = Array<Array<PathSegment>>;
 
+type IndexKey = string | number;
+type Indexable = Record<IndexKey, unknown>;
+
+const isIndexableObject = (value: unknown): value is Indexable =>
+  typeof value === 'object' && value !== null;
+
 export const DEFAULT_STREAM_PATHS: ExtractPaths = [
   ['stream'],
   ['url'],
@@ -39,18 +45,14 @@ export function extractFirstUrl(payload: unknown, paths: ExtractPaths): string |
   }
 
   for (const path of paths) {
-    let current: any = payload;
+    let current: unknown = payload;
     let valid = true;
 
     for (const segment of path) {
       if (Array.isArray(current) && typeof segment === 'number') {
         current = current[segment];
-      } else if (
-        current &&
-        typeof current === 'object' &&
-        segment in current
-      ) {
-        current = (current as Record<string | number, unknown>)[segment as any];
+      } else if (isIndexableObject(current) && segment in current) {
+        current = current[segment];
       } else {
         valid = false;
         break;

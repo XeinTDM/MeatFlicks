@@ -1,31 +1,28 @@
 <script lang="ts">
   import { Play, Check, Plus } from '@lucide/svelte';
-  import { page } from '$app/stores';
   import { watchlist } from '$lib/state/stores/watchlistStore';
-
   import { Button } from '$lib/components/ui/button';
-  export let movie: any;
+  import type { LibraryMovie } from '$lib/types/library';
 
-  let message: string | null = null;
+  let { movie }: { movie: LibraryMovie | null } = $props();
 
-  $: session = $page.data.session;
-  $: isAuthenticated = Boolean(session?.user?.id);
-  $: watchlistState = $watchlist;
-  $: isInWatchlist = watchlist.isInWatchlist(movie.id);
+  let message = $state<string | null>(null);
 
-  async function handleWatchlistToggle() {
-    if (!isAuthenticated) {
-      message = 'Please sign in to manage your watchlist.';
+  const isInWatchlist = $derived(movie ? watchlist.isInWatchlist(movie.id) : false);
+
+  function handleWatchlistToggle() {
+    if (!movie) {
+      message = 'No movie selected.';
       return;
     }
 
     try {
       if (isInWatchlist) {
-        await watchlist.removeFromWatchlist(movie.id);
-        message = 'Movie removed from watchlist!';
+        watchlist.removeFromWatchlist(movie.id);
+        message = 'Removed from watchlist.';
       } else {
-        await watchlist.addToWatchlist(movie.id);
-        message = 'Movie added to watchlist!';
+        watchlist.addToWatchlist(movie);
+        message = 'Added to watchlist!';
       }
     } catch (error) {
       console.error('Failed to update watchlist:', error);
@@ -33,20 +30,24 @@
     }
   }
 
-  $: if (watchlistState.error) {
-    message = watchlistState.error;
-  }
+  $effect(() => {
+    if ($watchlist?.error) {
+      message = $watchlist.error;
+    }
+  });
 
-  $: backgroundStyle = movie ? `url(https://image.tmdb.org/t/p/original${movie.backdropPath})` : '';
+  const backgroundStyle = $derived(
+    movie ? `url(https://image.tmdb.org/t/p/original${movie.backdropPath})` : ''
+  );
 </script>
 
 {#if movie}
   <section
     class="relative flex h-[90vh] items-end bg-cover bg-top bg-no-repeat px-[5%] pb-[8%]"
-    style="background-image: {backgroundStyle}"
+    style={`background-image: ${backgroundStyle}`}
   >
-    <div class="absolute inset-0 bg-gradient-to-t from-[var(--bg-color)] via-[var(--bg-color)]/70 to-transparent from-15% via-50% to-transparent"></div>
-    <div class="absolute inset-0 bg-gradient-to-r from-[var(--bg-color)] via-transparent to-transparent from-10% via-70% to-transparent"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-[var(--bg-color)] via-[var(--bg-color)]/70 to-transparent from-15% via-50%"></div>
+    <div class="absolute inset-0 bg-gradient-to-r from-[var(--bg-color)] via-transparent to-transparent from-10% via-70%"></div>
     <div class="relative z-10 max-w-3xl">
       <h1 class="text-biggest mb-4 leading-tight">{movie.title}</h1>
       <p class="text-normal text-text-color mb-8 max-w-[80%] leading-relaxed">
@@ -61,21 +62,24 @@
           <Play class="size-4" />
           Play
         </Button>
+
         <Button
           type="button"
           size="lg"
           variant={isInWatchlist ? 'destructive' : 'secondary'}
-          on:click={handleWatchlistToggle}
+          onclick={handleWatchlistToggle}
           class="gap-2 font-semibold transition-transform duration-300"
         >
           {#if isInWatchlist}
             <Check class="size-4" />
+            Added to List
           {:else}
             <Plus class="size-4" />
+            My List
           {/if}
-          {isInWatchlist ? 'Added to List' : 'My List'}
         </Button>
       </div>
+
       {#if message}
         <div class="mt-4 text-sm font-medium text-white">{message}</div>
       {/if}
