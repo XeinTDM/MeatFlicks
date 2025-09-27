@@ -6,9 +6,12 @@
 
   export let movie: any;
 
-  $: isAuthenticated = !!$page.data.session?.user;
-  $: isInWatchlist = $watchlist.isInWatchlist(movie.id);
   let message: string | null = null;
+
+  $: session = $page.data.session;
+  $: isAuthenticated = Boolean(session?.user?.id);
+  $: watchlistState = $watchlist;
+  $: isInWatchlist = watchlist.isInWatchlist(movie.id);
 
   async function handleWatchlistToggle() {
     if (!isAuthenticated) {
@@ -18,16 +21,20 @@
 
     try {
       if (isInWatchlist) {
-        await $watchlist.removeFromWatchlist(movie.id);
+        await watchlist.removeFromWatchlist(movie.id);
         message = 'Movie removed from watchlist!';
       } else {
-        await $watchlist.addToWatchlist(movie.id);
+        await watchlist.addToWatchlist(movie.id);
         message = 'Movie added to watchlist!';
       }
     } catch (error) {
       console.error('Failed to update watchlist:', error);
       message = 'Failed to update watchlist.';
     }
+  }
+
+  $: if (watchlistState.error) {
+    message = watchlistState.error;
   }
 
   $: backgroundStyle = movie ? `url(https://image.tmdb.org/t/p/original${movie.backdropPath})` : '';

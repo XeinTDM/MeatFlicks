@@ -1,27 +1,34 @@
-import { getServerSession, type Session } from 'next-auth';
+import type { Prisma } from '@prisma/client';
 import prisma from '$lib/server/db';
-import { authOptions } from '../auth/options';
 
-async function requireSession(): Promise<Session & { user: NonNullable<Session['user']> & { id: string } }> {
-  const session = (await getServerSession(authOptions as any)) as Session | null;
-
-  if (!session || !session.user || !session.user.id) {
+function assertUser(userId: string | null | undefined): asserts userId is string {
+  if (!userId) {
     throw new Error('Unauthorized');
   }
-
-  return session as Session & { user: NonNullable<Session['user']> & { id: string } };
 }
 
-export async function addToWatchlist(movieId: string) {
-  const session = await requireSession();
+export async function addToWatchlist(userId: string | null | undefined, movieId: string) {
+  assertUser(userId);
+
+  if (!movieId) {
+    throw new Error('Movie id is required');
+  }
 
   try {
-    await prisma.watchlist.create({
-      data: {
-        userId: session.user.id,
+    await prisma.watchlist.upsert({
+      where: {
+        userId_movieId: {
+          userId,
+          movieId
+        }
+      },
+      update: {},
+      create: {
+        userId,
         movieId
       }
     });
+
     return { success: true };
   } catch (error) {
     console.error('Error adding to watchlist:', error);
@@ -29,37 +36,49 @@ export async function addToWatchlist(movieId: string) {
   }
 }
 
-export async function removeFromWatchlist(movieId: string) {
-  const session = await requireSession();
+export async function removeFromWatchlist(userId: string | null | undefined, movieId: string) {
+  assertUser(userId);
+
+  if (!movieId) {
+    throw new Error('Movie id is required');
+  }
 
   try {
     await prisma.watchlist.delete({
       where: {
         userId_movieId: {
-          userId: session.user.id,
+          userId,
           movieId
         }
       }
     });
+
     return { success: true };
   } catch (error) {
+    const prismaError = error as Prisma.PrismaClientKnownRequestError;
+
+    if (prismaError?.code === 'P2025') {
+      return { success: true };
+    }
+
     console.error('Error removing from watchlist:', error);
     throw new Error('Failed to remove from watchlist');
   }
 }
 
-export async function getWatchlist() {
-  const session = await requireSession();
+export async function getWatchlist(userId: string | null | undefined) {
+  assertUser(userId);
 
   try {
     const watchlist = await prisma.watchlist.findMany({
       where: {
-        userId: session.user.id
+        userId
       },
       include: {
         movie: true
       }
     });
+
     return watchlist.map((item) => item.movie);
   } catch (error) {
     console.error('Error fetching watchlist:', error);

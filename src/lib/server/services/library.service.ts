@@ -1,4 +1,4 @@
-import { createCollectionSlug } from '$lib/utils';
+import { toSlug } from '$lib/utils';
 import { libraryRepository } from '../repositories/library.repository';
 
 export async function fetchHomeLibrary() {
@@ -11,13 +11,14 @@ export async function fetchHomeLibrary() {
   const collectionsWithMovies = await Promise.all(
     collections.map(async (collection) => ({
       ...collection,
-      movies: await libraryRepository.findCollectionMovies(createCollectionSlug(collection.name))
+      movies: await libraryRepository.findCollectionMovies(collection.slug)
     }))
   );
 
   const genresWithMovies = await Promise.all(
     genres.map(async (genre) => ({
       ...genre,
+      slug: toSlug(genre.name),
       movies: await libraryRepository.findGenreMovies(genre.name)
     }))
   );

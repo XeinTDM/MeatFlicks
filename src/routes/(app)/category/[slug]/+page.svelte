@@ -5,6 +5,7 @@
   export let data: PageData;
 
   const { categoryTitle, genreData, hasContent, singleGenreMode } = data;
+  const primaryGenre = genreData[0];
 </script>
 
 <div class="min-h-screen">
@@ -12,14 +13,18 @@
     <h1 class="my-8 text-center text-4xl font-bold capitalize">{categoryTitle}</h1>
     {#if hasContent}
       {#if singleGenreMode}
-        <CarouselContainer title={categoryTitle} movies={genreData[0].movies} />
+        {#if primaryGenre}
+          <CarouselContainer title={categoryTitle} movies={primaryGenre.movies} />
+        {:else}
+          <p class="text-center text-lg text-text-color">No content found for this category.</p>
+        {/if}
       {:else}
-        {#each genreData as data (data.genre)}
-          {#if data.movies.length > 0}
+        {#each genreData as entry (entry.slug)}
+          {#if entry.movies.length > 0}
             <CarouselContainer
-              title={data.genre}
-              movies={data.movies}
-              linkTo={`/category/${data.genre}`}
+              title={entry.genre}
+              movies={entry.movies}
+              linkTo={`/genre/${entry.slug}`}
             />
           {/if}
         {/each}

@@ -23,13 +23,21 @@ export const libraryRepository = {
     }
   },
 
-  async findCollectionMovies(collectionSlug: string): Promise<Movie[]> {
+  async findCollectionWithMovies(collectionSlug: string): Promise<(Collection & { movies: Movie[] }) | null> {
     try {
-      const collection = await prisma.collection.findUnique({
+      return await prisma.collection.findUnique({
         where: { slug: collectionSlug },
         include: { movies: true }
       });
+    } catch (error) {
+      console.error(`Error fetching collection ${collectionSlug}:`, error);
+      throw new Error(`Failed to fetch collection ${collectionSlug}`);
+    }
+  },
 
+  async findCollectionMovies(collectionSlug: string): Promise<Movie[]> {
+    try {
+      const collection = await libraryRepository.findCollectionWithMovies(collectionSlug);
       return collection?.movies ?? [];
     } catch (error) {
       console.error(`Error fetching movies for collection ${collectionSlug}:`, error);
@@ -43,6 +51,15 @@ export const libraryRepository = {
     } catch (error) {
       console.error('Error fetching genres:', error);
       throw new Error('Failed to fetch genres');
+    }
+  },
+
+  async findGenreByName(genreName: string): Promise<Genre | null> {
+    try {
+      return await prisma.genre.findUnique({ where: { name: genreName } });
+    } catch (error) {
+      console.error(`Error fetching genre ${genreName}:`, error);
+      throw new Error(`Failed to fetch genre ${genreName}`);
     }
   },
 

@@ -1,134 +1,127 @@
-import { writable } from 'svelte/store';
-import { browser } from '$app/environment';
+import { writable, get } from 'svelte/store';
 
-type Movie = { id: string; title: string; posterPath: string; backdropPath: string; overview: string; releaseDate: string, rating: number, genres: string[], trailerUrl?: string };
+type Movie = {
+  id: string;
+  title: string;
+  posterPath: string;
+  backdropPath: string;
+  overview: string;
+  releaseDate: string;
+  rating: number;
+  genres: string[];
+  trailerUrl?: string;
+};
 
-interface WatchlistStore {
+interface WatchlistState {
   watchlist: Movie[];
   loading: boolean;
   error: string | null;
-  addToWatchlist: (movieId: string) => Promise<void>;
-  removeFromWatchlist: (movieId: string) => Promise<void>;
-  isInWatchlist: (movieId: string) => boolean;
+  isAuthenticated: boolean;
 }
 
-function createWatchlistStore() {
-  const { subscribe, set, update } = writable<WatchlistStore>({
-    watchlist: [],
-    loading: true,
-    error: null,
-    addToWatchlist: async () => {},
-    removeFromWatchlist: async () => {},
-    isInWatchlist: () => false,
-  });
+const initialState: WatchlistState = {
+  watchlist: [],
+  loading: false,
+  error: null,
+  isAuthenticated: false
+};
 
-  let isAuthenticated = false;
+function createWatchlistStore() {
+  const store = writable<WatchlistState>(initialState);
 
   const setAuthStatus = (status: boolean) => {
-    isAuthenticated = status;
-    if (isAuthenticated) {
-      fetchWatchlist();
+    store.update((state) => ({ ...state, isAuthenticated: status }));
+
+    if (status) {
+      void fetchWatchlist();
     } else {
-      set({
-        watchlist: [],
-        loading: false,
-        error: null,
-        addToWatchlist: async () => {},
-        removeFromWatchlist: async () => {},
-        isInWatchlist: () => false,
-      });
+      store.set({ ...initialState });
     }
   };
 
   const fetchWatchlist = async () => {
-    if (!isAuthenticated) {
-      update((state) => ({ ...state, loading: false, watchlist: [] }));
+    if (!get(store).isAuthenticated) {
+      store.update((state) => ({ ...state, watchlist: [], loading: false }));
       return;
     }
-    update((state) => ({ ...state, loading: true, error: null }));
+
+    store.update((state) => ({ ...state, loading: true, error: null }));
+
     try {
       const response = await fetch('/api/watchlist/get');
       if (!response.ok) {
         throw new Error('Failed to fetch watchlist');
       }
-      const data = await response.json();
-      update((state) => ({ ...state, watchlist: data, loading: false, error: null }));
-    } catch (err) {
-      console.error("Failed to fetch watchlist:", err);
-      update((state) => ({ ...state, error: "Failed to load watchlist.", loading: false, watchlist: [] }));
+
+      const payload = await response.json();
+      const watchlist = Array.isArray(payload.watchlist) ? payload.watchlist : [];
+
+      store.update((state) => ({
+        ...state,
+        watchlist,
+        loading: false,
+        error: null
+      }));
+    } catch (error) {
+      console.error('Failed to fetch watchlist:', error);
+      store.update((state) => ({
+        ...state,
+        watchlist: [],
+        loading: false,
+        error: 'Failed to load watchlist.'
+      }));
     }
   };
 
-  const addToWatchlist = async (movieId: string) => {
-    if (!isAuthenticated) {
-      update((state) => ({ ...state, error: "Please sign in to manage your watchlist." }));
+  const mutateWatchlist = async (endpoint: string, movieId: string) => {
+    if (!get(store).isAuthenticated) {
+      store.update((state) => ({
+        ...state,
+        error: 'Please sign in to manage your watchlist.'
+      }));
       return;
     }
+
     try {
-      const response = await fetch('/api/watchlist/add', {
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ movieId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movieId })
       });
+
       if (!response.ok) {
-        throw new Error('Failed to add to watchlist');
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.message ?? 'Failed to update watchlist.');
       }
-      update((state) => {
-        const movieToAdd = { id: movieId } as Movie;
-        return { ...state, watchlist: [...state.watchlist, movieToAdd], error: null };
-      });
-    } catch (err) {
-      console.error("Failed to add to watchlist:", err);
-      update((state) => ({ ...state, error: "Failed to add to watchlist." }));
+
+      await fetchWatchlist();
+    } catch (error) {
+      console.error('Failed to update watchlist:', error);
+      store.update((state) => ({
+        ...state,
+        error: error instanceof Error ? error.message : 'Failed to update watchlist.'
+      }));
     }
   };
 
-  const removeFromWatchlist = async (movieId: string) => {
-    if (!isAuthenticated) {
-      update((state) => ({ ...state, error: "Please sign in to manage your watchlist." }));
-      return;
-    }
-    try {
-      const response = await fetch('/api/watchlist/remove', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ movieId }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to remove from watchlist');
-      }
-      update((state) => ({ ...state, watchlist: state.watchlist.filter((movie) => movie.id !== movieId), error: null }));
-    } catch (err) {
-      console.error("Failed to remove from watchlist:", err);
-      update((state) => ({ ...state, error: "Failed to remove from watchlist." }));
-    }
-  };
+  const addToWatchlist = async (movieId: string) => mutateWatchlist('/api/watchlist/add', movieId);
 
-  const isInWatchlist = (movieId: string) => {
-    let isPresent = false;
-    update((state) => {
-      isPresent = state.watchlist.some((movie) => movie.id === movieId);
-      return state;
-    });
-    return isPresent;
-  };
+  const removeFromWatchlist = async (movieId: string) => mutateWatchlist('/api/watchlist/remove', movieId);
 
-  if (browser && isAuthenticated) {
-    fetchWatchlist();
-  }
+  const isInWatchlist = (movieId: string) =>
+    get(store).watchlist.some((movie) => movie.id === movieId);
 
   return {
-    subscribe,
+    subscribe: store.subscribe,
     setAuthStatus,
+    fetchWatchlist,
     addToWatchlist,
     removeFromWatchlist,
-    isInWatchlist,
-    fetchWatchlist,
+    isInWatchlist
   };
 }
 
 export const watchlist = createWatchlistStore();
+
+
+

@@ -1,51 +1,58 @@
 import type { PageServerLoad } from './$types';
-import type { Movie } from '@prisma/client';
+import { libraryRepository } from '$lib/server';
+import { fromSlug, toSlug } from '$lib/utils';
 
-async function getMoviesByGenre(genreName: string): Promise<Movie[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/genres/${genreName}`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    if (res.status === 404) {
-      return [];
-    }
-    throw new Error(`Failed to fetch movies for genre ${genreName}`);
+const CATEGORY_PRESETS: Record<string, { title: string; genres: string[] }> = {
+  movies: {
+    title: 'Movies',
+    genres: ['Action', 'Comedy', 'Drama', 'Horror', 'Science Fiction', 'Thriller']
+  },
+  'tv-shows': {
+    title: 'TV Shows',
+    genres: ['Animation', 'Documentary', 'Family', 'Kids', 'Mystery', 'Reality']
   }
-  return res.json();
-}
+};
 
 export const load: PageServerLoad = async ({ params }) => {
   const { slug } = params;
 
-  let categoryTitle = '';
-  let genresToFetch: string[] = [];
+  const preset = CATEGORY_PRESETS[slug];
+  let categoryTitle = preset?.title ?? '';
+  let genresToFetch = preset?.genres ?? [];
   let singleGenreMode = false;
 
-  if (slug === 'movies') {
-    categoryTitle = 'Movies';
-    genresToFetch = ['Action', 'Comedy', 'Drama', 'Horror', 'Science Fiction', 'Thriller'];
-  } else if (slug === 'tv-shows') {
-    categoryTitle = 'TV Shows';
-    genresToFetch = ['Animation', 'Documentary', 'Family', 'Kids', 'Mystery', 'Reality'];
-  } else {
-    categoryTitle = slug.replace(/-/g, ' ');
-    genresToFetch = [slug];
+  if (!preset) {
+    const genres = await libraryRepository.listGenres();
+    const match = genres.find((genre) => toSlug(genre.name) === slug);
+
+    if (!match) {
+      return {
+        categoryTitle: fromSlug(slug),
+        genreData: [],
+        hasContent: false,
+        singleGenreMode: true
+      };
+    }
+
+    categoryTitle = match.name;
+    genresToFetch = [match.name];
     singleGenreMode = true;
   }
 
-  const genreDataPromises = genresToFetch.map(async (genre) => {
-    const movies = await getMoviesByGenre(genre);
-    return { genre, movies };
-  });
+  const genreData = await Promise.all(
+    genresToFetch.map(async (genreName) => ({
+      genre: genreName,
+      slug: toSlug(genreName),
+      movies: await libraryRepository.findGenreMovies(genreName)
+    }))
+  );
 
-  const genreData = await Promise.all(genreDataPromises);
-
-  const hasContent = genreData.some((data) => data.movies.length > 0);
+  const hasContent = genreData.some((entry) => entry.movies.length > 0);
 
   return {
     categoryTitle,
     genreData,
     hasContent,
-    singleGenreMode,
+    singleGenreMode
   };
 };

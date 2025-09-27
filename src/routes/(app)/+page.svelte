@@ -1,13 +1,10 @@
 <script lang="ts">
   import Hero from '$lib/components/Hero.svelte';
-  import { createCollectionSlug } from '$lib/utils';
-  import { MovieCardSkeleton, TrendingMoviesSlider, MovieScrollContainer } from '$lib/components';
-  import CarouselLoadingFallback from '$lib/components/CarouselLoadingFallback.svelte';
+  import { TrendingMoviesSlider, MovieScrollContainer } from '$lib/components';
 
   export let data;
 
   $: ({ trendingMovies, collections, genres } = data);
-
 </script>
 
 <div class="bg-bg-color text-text-color min-h-screen">
@@ -23,7 +20,7 @@
         <MovieScrollContainer
           title={collection.name}
           movies={collection.movies}
-          linkTo={`/collection/${createCollectionSlug(collection.name)}`}
+          linkTo={`/collection/${collection.slug}`}
         />
       {/if}
     {/each}
@@ -33,7 +30,7 @@
         <MovieScrollContainer
           title={genre.name}
           movies={genre.movies}
-          linkTo={`/genre/${genre.name}`}
+          linkTo={`/genre/${genre.slug}`}
         />
       {/if}
     {/each}

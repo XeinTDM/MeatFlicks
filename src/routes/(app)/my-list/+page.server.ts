@@ -4,7 +4,7 @@ import { watchlistService } from '$lib/server';
 export const load: PageServerLoad = async ({ locals }) => {
   const session = await locals.auth?.();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     return {
       watchlistMovies: [],
       session,
@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   }
 
   try {
-    const watchlistMovies = await watchlistService.getWatchlist();
+    const watchlistMovies = await watchlistService.getWatchlist(session.user.id);
     return {
       watchlistMovies,
       session,
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     return {
       watchlistMovies: [],
       session,
-      error: err.message || 'Failed to load watchlist.'
+      error: err?.message ?? 'Failed to load watchlist.'
     };
   }
 };

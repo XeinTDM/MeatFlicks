@@ -1,19 +1,13 @@
 <script lang="ts">
   import MovieCard from '$lib/components/MovieCard.svelte';
-  import { page } from '$app/stores';
+  import type { PageData } from './$types';
 
-  export let data;
+  export let data: PageData;
 
-  $: ({ watchlistMovies, session, error } = data);
-  $: sessionStatus = session ? 'authenticated' : 'unauthenticated';
-  $: loading = false;
+  const { watchlistMovies, error } = data;
 </script>
 
-{#if loading}
-  <div class="flex min-h-screen flex-col items-center justify-center bg-bg-color text-text-color">
-    <p>Loading watchlist...</p>
-  </div>
-{:else if error}
+{#if error}
   <div class="flex min-h-screen flex-col items-center justify-center bg-bg-color text-text-color">
     <p class="text-red-500">Error: {error}</p>
   </div>

@@ -11,22 +11,19 @@ type MovieWithDetails = Prisma.MovieGetPayload<{
   trailerUrl: string | null;
 };
 
-async function getMovie(id: string): Promise<MovieWithDetails | null> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/movies/${id}`, {
-    cache: 'no-store'
-  });
-  if (!res.ok) {
-    if (res.status === 404) {
-      return null;
-    }
-    throw new Error('Failed to fetch movie');
-  }
-  return res.json();
-}
-
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, fetch }) => {
   const { id } = params;
-  const movie = await getMovie(id);
+
+  const response = await fetch(`/api/movies/${id}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { movie: null, streaming: { source: null, resolutions: [] } };
+    }
+
+    throw new Error(`Failed to fetch movie ${id}`);
+  }
+
+  const movie = (await response.json()) as MovieWithDetails | null;
 
   if (!movie) {
     return { movie: null, streaming: { source: null, resolutions: [] } };

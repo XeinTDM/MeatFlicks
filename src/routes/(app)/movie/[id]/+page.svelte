@@ -73,7 +73,15 @@
 
       const payload = await response.json();
 
-      currentStreaming = {\n        source: payload?.source ?? null,\n        resolutions: payload?.resolutions ?? []\n      };\n\n      const resolvedProviderId = currentStreaming.source?.providerId ?? null;\n      if (resolvedProviderId && resolvedProviderId !== selectedProvider) {\n        selectedProvider = resolvedProviderId;\n      }
+      currentStreaming = {
+        source: payload?.source ?? null,
+        resolutions: payload?.resolutions ?? []
+      };
+
+      const resolvedProviderId = currentStreaming.source?.providerId ?? null;
+      if (resolvedProviderId && resolvedProviderId !== selectedProvider) {
+        selectedProvider = resolvedProviderId;
+      }
     } catch (error) {
       console.error('[movie][resolveProvider]', error);
       resolveError = error instanceof Error ? error.message : 'Failed to load provider stream.';
@@ -264,4 +272,6 @@
     </main>
   </div>
 {/if}
+
+
 

@@ -1,39 +1,59 @@
 <script lang="ts">
   import MovieCard from '$lib/components/MovieCard.svelte';
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
 
   let query = '';
   let movies: any[] = [];
   let loading = false;
   let error: string | null = null;
   let debounceTimeout: ReturnType<typeof setTimeout>;
+  let controller: AbortController | null = null;
 
   async function handleSearch() {
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+      movies = [];
+      error = null;
+      loading = false;
+      return;
+    }
+
+    controller?.abort();
+    controller = new AbortController();
+
     loading = true;
     error = null;
+
     try {
-      const res = await fetch(`${import.meta.env.VITE_NEXT_PUBLIC_BASE_URL}/api/search?q=${query}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+        signal: controller.signal
+      });
       if (!res.ok) {
         throw new Error('Failed to fetch search results');
       }
       const data: any[] = await res.json();
       movies = data;
     } catch (err: any) {
-      error = err.message;
+      if (err.name === 'AbortError') {
+        return;
+      }
+      error = err.message ?? 'Unable to fetch search results.';
     } finally {
       loading = false;
     }
   }
 
-  $: if (query) {
+  $: {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
       handleSearch();
-    }, 500);
+    }, query ? 400 : 0);
   }
 
   onDestroy(() => {
     clearTimeout(debounceTimeout);
+    controller?.abort();
   });
 </script>
 
@@ -53,7 +73,7 @@
       <p class="text-center">Loading...</p>
     {:else if error}
       <p class="text-center text-red-500">Error: {error}</p>
-    {:else if movies.length === 0 && query}
+    {:else if movies.length === 0 && query.trim()}
       <p class="text-center">No movies found for &quot;{query}&quot;.</p>
     {/if}
 

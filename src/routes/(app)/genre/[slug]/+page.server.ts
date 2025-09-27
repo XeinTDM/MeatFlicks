@@ -1,23 +1,24 @@
 import type { PageServerLoad } from './$types';
 import { libraryRepository } from '$lib/server';
-import { fromSlug } from '$lib/utils';
+import { fromSlug, toSlug } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ params }) => {
   const { slug } = params;
-  const collection = await libraryRepository.findCollectionWithMovies(slug);
+  const genres = await libraryRepository.listGenres();
+  const match = genres.find((genre) => toSlug(genre.name) === slug);
 
-  if (!collection) {
+  if (!match) {
     return {
-      collectionTitle: fromSlug(slug),
+      genreTitle: fromSlug(slug),
       movies: [],
       hasContent: false
     };
   }
 
-  const { name: collectionTitle, movies } = collection;
+  const movies = await libraryRepository.findGenreMovies(match.name);
 
   return {
-    collectionTitle,
+    genreTitle: match.name,
     movies,
     hasContent: movies.length > 0
   };
