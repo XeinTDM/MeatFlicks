@@ -2,8 +2,8 @@
   import { getContext } from 'svelte';
   import { faPlus, faMinus, faStar } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
-  import { watchlist } from '$lib/contexts/watchlistStore';
-  import { error as errorStore } from '$lib/contexts/errorStore';
+  import { watchlist } from '$lib/state/stores/watchlistStore';
+  import { error as errorStore } from '$lib/state/stores/errorStore';
 
   export let movie: any;
 

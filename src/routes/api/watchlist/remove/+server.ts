@@ -1,12 +1,12 @@
-import { json } from '@sveltejs/kit';
-import { removeFromWatchlist } from '../../../../lib/watchlistActions';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { watchlistService } from '$lib/server';
 
-export async function DELETE({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
   const { movieId } = await request.json();
   try {
-    await removeFromWatchlist(movieId);
+    await watchlistService.removeFromWatchlist(movieId);
     return json({ success: true });
   } catch (error: any) {
     return json({ success: false, message: error.message }, { status: 500 });
   }
-}
+};

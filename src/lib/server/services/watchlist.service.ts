@@ -1,22 +1,26 @@
-import { authOptions } from './authUtils';
-import prisma from './prisma';
 import { getServerSession, type Session } from 'next-auth';
+import prisma from '$lib/server/db';
+import { authOptions } from '../auth/options';
 
-export async function addToWatchlist(movieId: string) {
-  const session: Session | null = await getServerSession(authOptions as any);
+async function requireSession(): Promise<Session & { user: NonNullable<Session['user']> & { id: string } }> {
+  const session = (await getServerSession(authOptions as any)) as Session | null;
 
   if (!session || !session.user || !session.user.id) {
     throw new Error('Unauthorized');
   }
 
-  const userId = session.user.id;
+  return session as Session & { user: NonNullable<Session['user']> & { id: string } };
+}
+
+export async function addToWatchlist(movieId: string) {
+  const session = await requireSession();
 
   try {
     await prisma.watchlist.create({
       data: {
-        userId,
-        movieId,
-      },
+        userId: session.user.id,
+        movieId
+      }
     });
     return { success: true };
   } catch (error) {
@@ -26,22 +30,16 @@ export async function addToWatchlist(movieId: string) {
 }
 
 export async function removeFromWatchlist(movieId: string) {
-  const session: Session | null = await getServerSession(authOptions as any);
-
-  if (!session || !session.user || !session.user.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const session = await requireSession();
 
   try {
     await prisma.watchlist.delete({
       where: {
         userId_movieId: {
-          userId,
-          movieId,
-        },
-      },
+          userId: session.user.id,
+          movieId
+        }
+      }
     });
     return { success: true };
   } catch (error) {
@@ -51,22 +49,16 @@ export async function removeFromWatchlist(movieId: string) {
 }
 
 export async function getWatchlist() {
-  const session: Session | null = await getServerSession(authOptions as any);
-
-  if (!session || !session.user || !session.user.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const session = await requireSession();
 
   try {
     const watchlist = await prisma.watchlist.findMany({
       where: {
-        userId,
+        userId: session.user.id
       },
       include: {
-        movie: true,
-      },
+        movie: true
+      }
     });
     return watchlist.map((item) => item.movie);
   } catch (error) {
@@ -74,3 +66,9 @@ export async function getWatchlist() {
     throw new Error('Failed to fetch watchlist');
   }
 }
+
+export const watchlistService = {
+  addToWatchlist,
+  removeFromWatchlist,
+  getWatchlist
+};

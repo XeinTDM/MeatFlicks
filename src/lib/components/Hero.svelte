@@ -2,7 +2,7 @@
   import { faPlay, faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
   import { page } from '$app/stores';
-  import { watchlist } from '$lib/contexts/watchlistStore';
+  import { watchlist } from '$lib/state/stores/watchlistStore';
 
   export let movie: any;
 

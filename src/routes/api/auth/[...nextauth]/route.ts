@@ -1,5 +1,5 @@
 import { SvelteKitAuth } from "@auth/sveltekit";
-import { authOptions } from "$lib/authUtils";
+import { authOptions } from "$lib/server";
 
 const handler = SvelteKitAuth(authOptions as any);
 

@@ -1,45 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import prisma from '$lib/server/db';
 
+export const GET: RequestHandler = async ({ params }) => {
+  const { genreName } = params;
 
-
-interface RouteContext {
-  params: { genreName: string };
-}
-
-export async function GET(request: NextRequest, context: RouteContext) {
-  const { genreName } = context.params;
+  if (!genreName) {
+    return json({ error: 'Genre is required' }, { status: 400 });
+  }
 
   try {
     const movies = await prisma.movie.findMany({
       where: {
         genres: {
-          some: {
-            name: genreName,
-          },
-        },
+          some: { name: genreName }
+        }
       },
-      include: {
-        genres: true,
-      },
-      orderBy: {
-        rating: 'desc',
-      },
+      include: { genres: true },
+      orderBy: { rating: 'desc' }
     });
 
-    if (!movies || movies.length === 0) {
-      return NextResponse.json(
-        { message: `No movies found for genre: ${genreName}` },
-        { status: 404 },
-      );
+    if (!movies.length) {
+      return json({ message: `No movies found for genre: ${genreName}` }, { status: 404 });
     }
 
-    return NextResponse.json(movies);
+    return json(movies);
   } catch (error) {
     console.error(`Error fetching movies for genre ${genreName}:`, error);
-    return NextResponse.json(
-      { error: `Failed to fetch movies for genre ${genreName}` },
-      { status: 500 },
-    );
+    return json({ error: `Failed to fetch movies for genre ${genreName}` }, { status: 500 });
   }
-}
+};

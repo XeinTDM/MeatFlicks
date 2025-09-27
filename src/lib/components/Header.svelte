@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { faBars, faTimes, faSearch, faCog } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
-  import { theme } from '$lib/contexts/themeStore';
+  import { theme } from '$lib/state/stores/themeStore';
   import { page } from '$app/stores';
   import { signIn, signOut } from '@auth/sveltekit/client';
 
@@ -177,3 +177,4 @@
     </div>
   </div>
 </header>
+

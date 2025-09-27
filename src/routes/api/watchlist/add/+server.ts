@@ -1,12 +1,12 @@
-import { json } from '@sveltejs/kit';
-import { addToWatchlist } from '../../../../lib/watchlistActions';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { watchlistService } from '$lib/server';
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
   const { movieId } = await request.json();
   try {
-    await addToWatchlist(movieId);
+    await watchlistService.addToWatchlist(movieId);
     return json({ success: true });
   } catch (error: any) {
     return json({ success: false, message: error.message }, { status: 500 });
   }
-}
+};

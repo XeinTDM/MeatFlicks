@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '../../../lib/prisma';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import prisma from '$lib/server/db';
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get('q');
+export const GET: RequestHandler = async ({ url }) => {
+  const query = url.searchParams.get('q');
 
   if (!query) {
-    return NextResponse.json({ error: 'Query parameter "q" is required' }, { status: 400 });
+    return json({ error: 'Query parameter "q" is required' }, { status: 400 });
   }
 
   try {
@@ -14,13 +13,13 @@ export async function GET(req: NextRequest) {
       where: {
         OR: [
           { title: { contains: query, mode: 'insensitive' } },
-          { overview: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+          { overview: { contains: query, mode: 'insensitive' } }
+        ]
+      }
     });
-    return NextResponse.json(movies);
+    return json(movies);
   } catch (error) {
     console.error('Error searching movies:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+};

@@ -1,30 +1,30 @@
-import { getWatchlist } from '../../../src/lib/watchlistActions';
 import type { PageServerLoad } from './$types';
+import { watchlistService } from '$lib/server';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const session = await locals.auth();
+  const session = await locals.auth?.();
 
   if (!session?.user) {
     return {
       watchlistMovies: [],
       session,
-      error: 'Please sign in to view your watchlist.',
+      error: 'Please sign in to view your watchlist.'
     };
   }
 
   try {
-    const watchlistMovies = await getWatchlist();
+    const watchlistMovies = await watchlistService.getWatchlist();
     return {
       watchlistMovies,
       session,
-      error: null,
+      error: null
     };
   } catch (err: any) {
     console.error('Error fetching watchlist in +page.server.ts:', err);
     return {
       watchlistMovies: [],
       session,
-      error: err.message || 'Failed to load watchlist.',
+      error: err.message || 'Failed to load watchlist.'
     };
   }
 };

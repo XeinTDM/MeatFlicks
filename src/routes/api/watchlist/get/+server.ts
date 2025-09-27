@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
-import { getWatchlist } from '../../../../lib/watchlistActions';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { watchlistService } from '$lib/server';
 
-export async function GET() {
+export const GET: RequestHandler = async () => {
   try {
-    const watchlist = await getWatchlist();
-    return json(watchlist);
+    const watchlist = await watchlistService.getWatchlist();
+    return json({ success: true, watchlist });
   } catch (error: any) {
     return json({ success: false, message: error.message }, { status: 500 });
   }
-}
+};

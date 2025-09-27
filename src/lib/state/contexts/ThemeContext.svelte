@@ -1,8 +1,8 @@
 <script lang="ts">
   import { setContext } from 'svelte';
-  import { error } from './errorStore';
+  import { theme } from '../stores/themeStore';
 
-  setContext('error', error);
+  setContext('theme', theme);
 </script>
 
 <slot />
