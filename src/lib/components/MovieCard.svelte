@@ -109,7 +109,7 @@
         </div>
 
         <CardHeader class="translate-y-5 transform transition-transform delay-100 duration-400 ease-in-out group-hover:translate-y-0">
-          <CardTitle class="mb-2 flex items-center justify-between text-lg font-semibold text-foreground">
+          <CardTitle class="flex items-center justify-between text-lg font-semibold text-foreground">
             <span>{movie.title}</span>
             <Button
               type="button"
@@ -128,7 +128,7 @@
         </CardHeader>
 
         <CardContent class="text-sm text-muted-foreground">
-          <div class="mb-2 flex items-center gap-3">
+          <div class=" flex items-center gap-3">
             <span>{releaseYear}</span>
             {#if qualityTag}
               <Badge

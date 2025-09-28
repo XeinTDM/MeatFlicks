@@ -465,42 +465,12 @@
               </AlertDescription>
             </Alert>
           {/if}
-
-          <section class="space-y-4 rounded-2xl border border-border/40 bg-background/60 p-6">
-            <div class="space-y-1">
-              <h2 class="text-xl font-semibold text-foreground">
-                {lastSearchedTerm ? 'Try one of these popular hubs' : 'Jump back in'}
-              </h2>
-              <p class="text-sm text-muted-foreground">
-                {lastSearchedTerm
-                  ? 'These fan favorites are streaming free right now - tap a hub to keep exploring.'
-                  : 'Explore curated collections to spark your next watch - or start typing to run a custom search.'}
-              </p>
-            </div>
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {#each curatedCollections as collection (collection.title)}
-                <button
-                  type="button"
-                  class="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card/80 p-5 text-left transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-                  onclick={() => handleQuickSearch(collection.query)}
-                >
-                  <span class="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <collection.icon class="size-5" />
-                  </span>
-                  <div class="space-y-1">
-                    <h3 class="text-lg font-semibold text-foreground">{collection.title}</h3>
-                    <p class="text-sm text-muted-foreground">{collection.description}</p>
-                  </div>
-                  <span class="text-xs font-semibold text-primary">Search "{collection.query}" -></span>
-                </button>
-              {/each}
-            </div>
-          </section>
         </div>
       {/if}
     </section>
   </main>
 </div>
+
 
 
 
