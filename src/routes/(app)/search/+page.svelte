@@ -68,7 +68,7 @@
       <Input
         type="text"
         placeholder="Search by title..."
-        class="max-w-md h-11 text-base bg-bg-color-alt text-text-color"
+        class="max-w-md h-11 text-base bg-card text-foreground"
         aria-label="Search movies by title"
         bind:value={query}
       />
@@ -96,3 +96,5 @@
     </div>
   </main>
 </div>
+
+

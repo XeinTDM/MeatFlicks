@@ -16,7 +16,7 @@
         {#if primaryGenre}
           <CarouselContainer title={categoryTitle} movies={primaryGenre.movies} />
         {:else}
-          <p class="text-center text-lg text-text-color">No content found for this category.</p>
+          <p class="text-center text-lg text-foreground">No content found for this category.</p>
         {/if}
       {:else}
         {#each genreData as entry (entry.slug)}
@@ -30,7 +30,8 @@
         {/each}
       {/if}
     {:else}
-      <p class="text-center text-lg text-text-color">No content found for this category.</p>
+      <p class="text-center text-lg text-foreground">No content found for this category.</p>
     {/if}
   </main>
 </div>
+

@@ -59,20 +59,20 @@
   aria-label={movie ? `View details for ${movie.title}` : 'Loading movie'}
   class="group relative h-72 w-48 cursor-pointer overflow-hidden rounded-xl transition-transform duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-lg"
 >
-  <Card class="h-full w-full overflow-hidden bg-background">
-    <div class="relative h-full w-full">
+  <Card class="h-full w-full overflow-hidden bg-background p-0 gap-0">
+    <div class="relative h-full w-full flex-1">
       {#if movie?.posterPath}
         <img
           src={movie.posterPath}
           alt={`${movie.title} Poster`}
-          class="h-full w-full rounded-xl object-cover transition-opacity duration-400 ease-in-out"
+          class="h-full w-full object-cover transition-opacity duration-400 ease-in-out"
         />
       {:else if movie}
-        <div class="flex h-full w-full items-center justify-center rounded-xl bg-muted">
+        <div class="flex h-full w-full flex-1 items-center justify-center bg-muted">
           <img src="" alt="" width="96" height="96" class="text-muted-foreground" />
         </div>
       {:else}
-        <Skeleton class="h-full w-full rounded-xl" />
+        <Skeleton class="h-full w-full" />
       {/if}
     </div>
 

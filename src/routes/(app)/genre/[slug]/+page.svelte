@@ -13,7 +13,8 @@
     {#if hasContent}
       <CarouselContainer title={genreTitle} movies={movies} />
     {:else}
-      <p class="text-center text-lg text-text-color">No content found for this genre.</p>
+      <p class="text-center text-lg text-foreground">No content found for this genre.</p>
     {/if}
   </main>
 </div>
+

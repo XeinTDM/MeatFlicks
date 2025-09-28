@@ -23,7 +23,7 @@
   <WatchlistContext>
     <ErrorContext>
       <AppShell>
-        <div class="flex min-h-svh flex-col bg-bg-color text-text-color">
+        <div class="flex min-h-svh flex-col text-foreground">
           <slot />
           <Footer />
         </div>

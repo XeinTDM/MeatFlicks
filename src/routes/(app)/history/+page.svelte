@@ -14,7 +14,7 @@
   import { watchHistory } from '$lib/state/stores/historyStore';
   import type { HistoryEntry } from '$lib/state/stores/historyStore';
   import type { PageData } from './$types';
-  import { Filter, RefreshCw, Star } from '@lucide/svelte';
+  import { Funnel, RefreshCw, Star } from '@lucide/svelte';
 
   export let data: PageData;
 
@@ -166,7 +166,7 @@
   };
 </script>
 
-<div class="min-h-screen bg-bg-color text-text-color">
+<div class="min-h-screen bg-background text-foreground">
   <main class="container mx-auto space-y-6 px-4 py-8">
     <header class="space-y-2">
       <h1 class="text-3xl font-semibold sm:text-4xl">Watch History</h1>
@@ -175,11 +175,11 @@
       </p>
     </header>
 
-    <Card class="border-border-color bg-bg-color/60 backdrop-blur">
+    <Card class="border-border bg-background/60 backdrop-blur">
       <CardHeader class="space-y-1">
         <div class="flex items-center justify-between gap-2">
           <CardTitle class="flex items-center gap-2 text-lg font-semibold">
-            <Filter class="size-4" />
+            <Funnel class="size-4" />
             Filters
           </CardTitle>
           <Badge variant="outline" class="gap-1">
@@ -244,7 +244,7 @@
         </CardContent>
       </Card>
     {:else if normalizedEntries.length === 0}
-      <Card class="border-border-color bg-bg-color/60 backdrop-blur">
+      <Card class="border-border bg-background/60 backdrop-blur">
         <CardContent class="space-y-4 p-6 text-center">
           <h2 class="text-xl font-semibold">No watch history yet</h2>
           <p class="text-sm text-muted-foreground">
@@ -261,7 +261,7 @@
         <CarouselContainer title={collectionTitle} movies={movies} />
       {/if}
     {:else if filteredEntries.length === 0}
-      <Card class="border-border-color bg-bg-color/60 backdrop-blur">
+      <Card class="border-border bg-background/60 backdrop-blur">
         <CardContent class="space-y-4 p-6 text-center">
           <h2 class="text-xl font-semibold">No matches found</h2>
           <p class="text-sm text-muted-foreground">
@@ -276,7 +276,7 @@
     {:else}
       <section class="space-y-4">
         {#each filteredEntries as entry (entry.id + entry.watchedAt)}
-          <Card class="border-border-color bg-bg-color/70 transition-colors hover:border-primary/60">
+          <Card class="border-border bg-background/70 transition-colors hover:border-primary/60">
             <CardContent class="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
               <div class="relative h-48 w-full overflow-hidden rounded-lg bg-muted sm:w-32">
                 {#if entry.posterPath}

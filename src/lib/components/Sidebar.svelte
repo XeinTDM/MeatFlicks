@@ -88,7 +88,7 @@
 <SidebarProvider>
 	<Sidebar collapsible="offcanvas">
 		<SidebarHeader class="px-2 py-2">
-			<SidebarGroup class="bg-primary rounded">
+			<SidebarGroup class="bg-background rounded">
 				<SidebarGroupContent>
 					<SidebarMenu>
 						{#each primaryNav as item (item.href ?? item.label)}
@@ -110,7 +110,7 @@
 		</SidebarHeader>
 
 		<SidebarContent class="px-2 py-4">
-			<div class="bg-primary rounded flex flex-1 flex-col">
+			<div class="bg-background rounded flex flex-1 flex-col">
 				<SidebarGroup class="px-2 pt-2 pb-2">
 					<SidebarGroupContent>
 						<SidebarMenu>
@@ -156,13 +156,11 @@
 		</SidebarContent>
 	</Sidebar>
 
-	<SidebarInset class="bg-bg-color text-text-color flex min-h-svh flex-1 flex-col">
+	<SidebarInset class=" text-foreground flex min-h-svh flex-1 flex-col">
 		{@render children?.()}
 	</SidebarInset>
 
-	<SidebarTrigger class="bg-bg-color-alt text-text-color border-border-color hover:bg-bg-color-alt/80 fixed bottom-4 left-4 z-50 rounded-full border p-3 shadow-md md:hidden" />
+	<SidebarTrigger class="bg-card text-foreground border-border hover:bg-card/80 fixed bottom-4 left-4 z-50 rounded-full border p-3 shadow-md md:hidden" />
 </SidebarProvider>
 
 <SettingsDialog bind:open={isSettingsOpen} />
-
-

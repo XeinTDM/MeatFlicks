@@ -22,11 +22,11 @@
   const carouselOpts = { align: "center" } as const
 </script>
 
-<div class="bg-bg-color px-[5%] py-8">
+<div class="px-[5%] py-8">
   {#if linkTo}
     <a
       href={linkTo}
-      class="group mb-6 flex w-full items-center justify-center text-text-color transition-colors duration-300 hover:text-primary-color"
+      class="group mb-6 flex w-full items-center justify-center text-foreground transition-colors duration-300 hover:text-primary"
     >
       <h2 class="text-3xl font-semibold">{title}</h2>
       <div class="ml-2 flex items-center gap-1">
@@ -38,7 +38,7 @@
     </a>
   {:else}
     <div class="mb-6 flex w-full items-center justify-center">
-      <h2 class="text-3xl font-semibold text-text-color">{title}</h2>
+      <h2 class="text-3xl font-semibold text-foreground">{title}</h2>
     </div>
   {/if}
 
@@ -58,4 +58,3 @@
     {/if}
   </Carousel>
 </div>
-

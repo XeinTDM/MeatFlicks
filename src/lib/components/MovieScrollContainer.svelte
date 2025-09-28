@@ -22,13 +22,13 @@
   const carouselOpts = { align: "start" } as const
 </script>
 
-<div class="bg-bg-color px-[5%] py-8">
+<div class="px-[5%] py-8">
   <div class="mb-6 flex items-center gap-2">
-    <h2 class="text-3xl font-semibold text-text-color">{title}</h2>
+    <h2 class="text-3xl font-semibold text-foreground">{title}</h2>
     {#if linkTo}
       <a
         href={linkTo}
-        class="group flex items-center text-text-color transition-colors duration-300 hover:text-primary-color"
+        class="group flex items-center text-foreground transition-colors duration-300 hover:text-primary"
       >
         <span class="text-small font-medium opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           See All

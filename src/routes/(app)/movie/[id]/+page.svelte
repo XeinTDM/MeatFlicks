@@ -134,12 +134,12 @@
 </script>
 
 {#if !movie}
-  <div class="flex min-h-screen flex-col items-center justify-center text-text-color">
+  <div class="flex min-h-screen flex-col items-center justify-center text-foreground">
     <h1 class="text-4xl font-bold">Movie Not Found</h1>
     <p class="text-lg">The movie you are looking for does not exist.</p>
   </div>
 {:else}
-  <div class="min-h-screen bg-bg-color text-text-color">
+  <div class="min-h-screen bg-background text-foreground">
     <main class="container mx-auto p-4">
       <div class="relative mb-8 h-96 w-full">
         {#if movie.backdropPath}
@@ -151,7 +151,7 @@
         {/if}
         <div class="absolute inset-0 rounded-lg bg-gradient-to-t from-black to-transparent"></div>
         <div class="absolute bottom-4 left-4">
-          <h1 class="text-5xl font-bold text-text-color">{movie.title}</h1>
+          <h1 class="text-5xl font-bold text-foreground">{movie.title}</h1>
           <p class="text-xl text-gray-300">
             {releaseYear} | {movie.durationMinutes} min
           </p>
@@ -167,14 +167,14 @@
           <fieldset class="space-y-2">
             {#each providerResolutions as resolution (resolution.providerId)}
               <label
-                class={`flex items-start gap-3 rounded-lg border border-border-color bg-bg-color-alt px-4 py-3 transition-shadow duration-200 ${
-                  selectedProvider === resolution.providerId ? 'ring-2 ring-primary-color' : 'ring-0'
+                class={`flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 transition-shadow duration-200 ${
+                  selectedProvider === resolution.providerId ? 'ring-2 ring-primary' : 'ring-0'
                 }`}
               >
                 <input
                   type="radio"
                   name="streaming-provider"
-                  class="mt-1 h-4 w-4 accent-primary-color"
+                  class="mt-1 h-4 w-4 accent-primary"
                   value={resolution.providerId}
                   checked={selectedProvider === resolution.providerId}
                   onchange={() => handleProviderSelection(resolution.providerId)}
