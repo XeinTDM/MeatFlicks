@@ -39,7 +39,7 @@
 	};
 
 	let isSettingsOpen = $state(false);
-	let content: (() => any) | undefined;
+	let { children } = $props<{ children?: () => any }>();
 
 	const pageStore = page;
 	const currentPath = $derived($pageStore.url.pathname);
@@ -157,10 +157,12 @@
 	</Sidebar>
 
 	<SidebarInset class="bg-bg-color text-text-color flex min-h-svh flex-1 flex-col">
-		{@render content?.()}
+		{@render children?.()}
 	</SidebarInset>
 
 	<SidebarTrigger class="bg-bg-color-alt text-text-color border-border-color hover:bg-bg-color-alt/80 fixed bottom-4 left-4 z-50 rounded-full border p-3 shadow-md md:hidden" />
 </SidebarProvider>
 
 <SettingsDialog bind:open={isSettingsOpen} />
+
+
