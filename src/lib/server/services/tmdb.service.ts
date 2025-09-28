@@ -56,6 +56,20 @@ export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExt
   const response = await fetch(endpoint);
 
   if (!response.ok) {
+    if (response.status === 404) {
+      console.warn(`[tmdb] Movie ${tmdbId} was not found (404). Skipping extras.`);
+      const fallback: TmdbMovieExtras = {
+        tmdbId,
+        imdbId: null,
+        cast: [],
+        trailerUrl: null,
+        runtime: null,
+        releaseDate: null
+      };
+      movieExtrasCache.set(tmdbId, fallback);
+      return fallback;
+    }
+
     const message = await response.text().catch(() => response.statusText);
     throw new Error(`TMDB responded with status ${response.status}: ${message}`);
   }

@@ -82,21 +82,25 @@
 </script>
 
 <SidebarProvider>
-	<Sidebar collapsible="offcanvas">
+	<Sidebar
+		collapsible="offcanvas"
+		class="group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0 [&_[data-slot=sidebar-inner]]:bg-background"
+	>
 		<SidebarHeader class="px-2 py-2">
-			<SidebarGroup class="bg-background rounded">
+			<SidebarGroup class="bg-card rounded-lg">
 				<SidebarGroupContent>
 					<SidebarMenu>
 						{#each primaryNav as item (item.href ?? item.label)}
 							<SidebarMenuItem>
 								<SidebarMenuButton
+									class="cursor-pointer text-base gap-5 p-2 [&>svg]:!size-6"
 									isActive={isActive(item)}
 									onclick={() => handleItemSelect(item)}
 									tooltipContent={item.label}
-									class="cursor-pointer"
+									size="lg"
 								>
-									<item.icon class="h-4 w-4" />
-									<span>{item.label}</span>
+									<item.icon class="h-6 w-6" />
+									<span class="font-semibold">{item.label}</span>
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						{/each}
@@ -105,21 +109,22 @@
 			</SidebarGroup>
 		</SidebarHeader>
 
-		<SidebarContent class="px-2 py-4">
-			<div class="bg-background rounded flex flex-1 flex-col">
+		<SidebarContent class="px-2 py-2">
+			<div class="bg-card rounded-lg flex flex-1 flex-col">
 				<SidebarGroup class="px-2 pt-2 pb-2">
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{#each browseNav as item (item.href ?? item.label)}
 								<SidebarMenuItem>
 									<SidebarMenuButton
-										class="cursor-pointer"
+										class="cursor-pointer text-base gap-5 p-2 [&>svg]:!size-6"
 										isActive={isActive(item)}
 										onclick={() => handleItemSelect(item)}
 										tooltipContent={item.label}
+										size="lg"
 									>
-										<item.icon class="h-4 w-4" />
-										<span>{item.label}</span>
+										<item.icon class="h-6 w-6" />
+										<span class="font-semibold">{item.label}</span>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							{/each}
@@ -134,13 +139,14 @@
 								{#each libraryNav as item (item.href ?? item.label)}
 									<SidebarMenuItem>
 										<SidebarMenuButton
-											class="cursor-pointer"
+											class="cursor-pointer text-base gap-5 p-2 [&>svg]:!size-6"
 											isActive={isActive(item)}
 											onclick={() => handleItemSelect(item)}
 											tooltipContent={item.label}
+											size="lg"
 										>
-											<item.icon class="h-4 w-4" />
-											<span>{item.label}</span>
+											<item.icon class="h-6 w-6" />
+											<span class="font-semibold">{item.label}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 								{/each}
