@@ -1,6 +1,5 @@
 <script lang="ts">
   import '../../app.css';
-  import './globals.css';
 
   import AppShell from '$lib/components/Sidebar.svelte';
   import Footer from '$lib/components/Footer.svelte';
