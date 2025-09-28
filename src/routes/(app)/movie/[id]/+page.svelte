@@ -1,42 +1,45 @@
 <script lang="ts">
-  import type { PageData } from "./$types"
-  import type { ProviderResolution } from "$lib/streaming/provider-registry"
-  import type { StreamingSource } from "$lib/streaming"
-  import { watchHistory } from "$lib/state/stores/historyStore"
+  import type { PageData } from "./$types";
+  import type { ProviderResolution } from "$lib/streaming/provider-registry";
+  import type { StreamingSource } from "$lib/streaming";
+  import { Button } from "$lib/components/ui/button";
+  import { watchHistory } from "$lib/state/stores/historyStore";
 
-  let { data }: { data: PageData } = $props()
-  const { movie, streaming } = data
+  let { data }: { data: PageData } = $props();
+  const { movie, streaming } = data;
 
   type StreamingState = {
-    source: StreamingSource | null
-    resolutions: ProviderResolution[]
-  }
+    source: StreamingSource | null;
+    resolutions: ProviderResolution[];
+  };
 
   let currentStreaming = $state<StreamingState>({
     source: streaming?.source ?? null,
-    resolutions: streaming?.resolutions ?? []
-  })
-  let selectedProvider = $state<string | null>(null)
-  let isResolving = $state(false)
-  let resolveError = $state<string | null>(null)
+    resolutions: Array.isArray(streaming?.resolutions) ? [...streaming.resolutions] : []
+  });
+  let selectedProvider = $state<string | null>(null);
+  let isResolving = $state(false);
+  let hasRequestedPlayback = $state(Boolean(streaming?.source));
+  let resolveError = $state<string | null>(null);
 
-  let providerResolutions = $derived(currentStreaming.resolutions)
-  let primarySource = $derived(currentStreaming.source)
-  let playbackUrl = $derived(primarySource?.embedUrl ?? primarySource?.streamUrl ?? null)
+  let providerResolutions = $derived(currentStreaming.resolutions);
+  let primarySource = $derived(currentStreaming.source);
+  let playbackUrl = $derived(primarySource?.embedUrl ?? primarySource?.streamUrl ?? null);
+  let displayPlayer = $derived(hasRequestedPlayback && Boolean(playbackUrl));
   let primaryLabel = $derived(
     primarySource
       ? providerResolutions.find((r) => r.providerId === primarySource.providerId)?.label ??
         primarySource.providerId
       : null
-  )
+  );
   let releaseYear = $derived(
     movie?.releaseDate ? new Date(movie.releaseDate).getFullYear() : "N/A"
-  )
+  );
 
   $effect(() => {
     if (typeof window !== "undefined" && movie?.id) {
       const normalizedGenres =
-        movie.genres?.map((genre) => ('name' in genre ? String(genre.name) : String(genre))) ?? []
+        movie.genres?.map((genre) => ('name' in genre ? String(genre.name) : String(genre))) ?? [];
 
       watchHistory.recordWatch({
         id: movie.id,
@@ -52,11 +55,12 @@
         is4K: movie.is4K,
         isHD: movie.isHD ?? undefined,
         tmdbId: movie.tmdbId,
+        imdbId: movie.imdbId ?? undefined,
         durationMinutes: movie.durationMinutes ?? null,
         collectionId: movie.collectionId ?? null
-      })
+      });
     }
-  })
+  });
 
   $effect(() => {
     if (!selectedProvider && providerResolutions.length > 0) {
@@ -64,9 +68,9 @@
         primarySource?.providerId ??
         providerResolutions.find((r) => r.success)?.providerId ??
         providerResolutions[0]?.providerId ??
-        null
+        null;
     }
-  })
+  });
 
   $effect(() => {
     if (
@@ -77,15 +81,21 @@
       selectedProvider =
         providerResolutions.find((r) => r.success)?.providerId ??
         providerResolutions[0]?.providerId ??
-        null
+        null;
     }
-  })
+  });
+
+  $effect(() => {
+    if (currentStreaming.source && !hasRequestedPlayback) {
+      hasRequestedPlayback = true;
+    }
+  });
 
   async function requestProviderResolution(providerId: string) {
-    if (!movie?.tmdbId) return
+    if (!movie?.tmdbId) return;
 
-    isResolving = true
-    resolveError = null
+    isResolving = true;
+    resolveError = null;
 
     try {
       const response = await fetch("/api/streaming", {
@@ -94,42 +104,68 @@
         body: JSON.stringify({
           mediaType: "movie",
           tmdbId: Number(movie.tmdbId),
+          imdbId: movie.imdbId ?? undefined,
           preferredProviders: providerId ? [providerId] : undefined
         })
-      })
+      });
 
-      if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
+      if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
 
-      const payload = await response.json()
+      const payload = await response.json();
 
       currentStreaming = {
         source: payload?.source ?? null,
-        resolutions: payload?.resolutions ?? []
+        resolutions: Array.isArray(payload?.resolutions) ? [...payload.resolutions] : []
+      };
+
+      const resolvedProviderId = currentStreaming.source?.providerId ?? null;
+      if (resolvedProviderId && resolvedProviderId !== selectedProvider) {
+        selectedProvider = resolvedProviderId;
       }
 
-      const resolvedProviderId = currentStreaming.source?.providerId ?? null
-      if (resolvedProviderId && resolvedProviderId !== selectedProvider) {
-        selectedProvider = resolvedProviderId
+      if (!currentStreaming.source) {
+        resolveError = 'Provider did not return a playable stream. Please try another option.';
+      } else {
+        hasRequestedPlayback = true;
       }
     } catch (error) {
-      console.error("[movie][resolveProvider]", error)
+      console.error("[movie][resolveProvider]", error);
       resolveError =
-        error instanceof Error ? error.message : "Failed to load provider stream."
+        error instanceof Error ? error.message : "Failed to load provider stream.";
     } finally {
-      isResolving = false
+      isResolving = false;
     }
   }
 
-  async function handleProviderSelection(providerId: string) {
-    if (
-      selectedProvider === providerId &&
-      providerResolutions.some((r) => r.providerId === providerId && r.success)
-    ) {
-      return
+  function handleProviderSelectionChange(providerId: string) {
+    resolveError = null;
+    if (selectedProvider === providerId) {
+      return;
     }
 
-    selectedProvider = providerId
-    await requestProviderResolution(providerId)
+    selectedProvider = providerId;
+  }
+
+  async function handlePlayClick() {
+    if (!selectedProvider) {
+      resolveError = 'Select a provider before playing.';
+      return;
+    }
+
+    const alreadyResolved =
+      primarySource?.providerId === selectedProvider && Boolean(playbackUrl);
+
+    if (alreadyResolved) {
+      hasRequestedPlayback = true;
+      return;
+    }
+
+    await requestProviderResolution(selectedProvider);
+  }
+
+  function handleOpenInNewTab() {
+    if (!playbackUrl) return;
+    window.open(playbackUrl, '_blank', 'noopener,noreferrer');
   }
 </script>
 
@@ -161,6 +197,9 @@
       {#if providerResolutions.length}
         <section class="mb-6">
           <h3 class="mb-3 text-xl font-semibold">Choose Provider</h3>
+          <p class="mb-2 text-sm text-muted-foreground">
+            Pick a streaming API and then press play to load the player.
+          </p>
           {#if resolveError}
             <p class="mb-2 text-sm text-red-400">{resolveError}</p>
           {/if}
@@ -177,7 +216,7 @@
                   class="mt-1 h-4 w-4 accent-primary"
                   value={resolution.providerId}
                   checked={selectedProvider === resolution.providerId}
-                  onchange={() => handleProviderSelection(resolution.providerId)}
+                  onchange={() => handleProviderSelectionChange(resolution.providerId)}
                   disabled={isResolving && selectedProvider !== resolution.providerId}
                 />
                 <div class="flex w-full items-start justify-between gap-3">
@@ -204,13 +243,31 @@
               </label>
             {/each}
           </fieldset>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              onclick={handlePlayClick}
+              disabled={!selectedProvider || isResolving}
+            >
+              {#if isResolving}
+                Loading…
+              {:else}
+                Play
+              {/if}
+            </Button>
+            {#if hasRequestedPlayback && playbackUrl}
+              <Button type="button" variant="secondary" onclick={handleOpenInNewTab}>
+                Open in new tab
+              </Button>
+            {/if}
+          </div>
           {#if isResolving}
-            <p class="mt-2 text-xs text-gray-400">Loading stream...</p>
+            <p class="mt-2 text-xs text-gray-400">Loading stream…</p>
           {/if}
         </section>
       {/if}
 
-      {#if playbackUrl}
+      {#if playbackUrl && displayPlayer}
         <section class="mb-8">
           <h2 class="mb-4 text-3xl font-bold">Watch Now</h2>
           <div class="aspect-video w-full overflow-hidden rounded-lg bg-black">
@@ -239,11 +296,18 @@
             <p class="mt-2 text-sm text-gray-400">Source: {primaryLabel}</p>
           {/if}
         </section>
+      {:else if hasRequestedPlayback}
+        <section class="mb-8">
+          <h2 class="mb-4 text-3xl font-bold">Watch Now</h2>
+          <p class="text-sm text-gray-400">
+            We couldn't load a playable stream from the selected provider. Try another option above.
+          </p>
+        </section>
       {:else}
         <section class="mb-8">
           <h2 class="mb-2 text-3xl font-bold">Watch Now</h2>
           <p class="text-sm text-gray-400">
-            No playable streams are available yet. Try selecting a different provider above.
+            Select your preferred provider and click play to start streaming.
           </p>
         </section>
       {/if}
@@ -306,3 +370,4 @@
     </main>
   </div>
 {/if}
+

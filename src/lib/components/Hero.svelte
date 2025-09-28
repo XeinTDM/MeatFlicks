@@ -42,6 +42,17 @@
     return rating && rating > 0 ? rating.toFixed(1) : 'NR';
   });
 
+  const detailsHref = $derived(
+    movie
+      ? movie.canonicalPath ??
+        (movie.imdbId
+          ? `/movie/${movie.imdbId}`
+          : movie.tmdbId
+            ? `/movie/${movie.tmdbId}`
+            : `/movie/${movie.id}`)
+      : '#'
+  );
+
   function handleWatchlistToggle() {
     if (!movie) {
       message = 'No movie selected.';
@@ -120,7 +131,7 @@
 
         <div class="flex items-center gap-4">
           <Button
-            href={`/movie/${movie.id}`}
+            href={detailsHref}
             size="lg"
             class="gap-2 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
           >

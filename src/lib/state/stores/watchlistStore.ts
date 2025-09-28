@@ -15,8 +15,11 @@ export type Movie = {
   is4K?: boolean;
   isHD?: boolean;
   tmdbId?: number;
+  imdbId?: string | null;
+  canonicalPath?: string;
   durationMinutes?: number | null;
   collectionId?: number | null;
+  addedAt: string;
 };
 
 type WatchlistCandidate = LibraryMovie | Movie | (Partial<Movie> & Record<string, unknown>);
@@ -29,6 +32,41 @@ interface WatchlistState {
 
 const STORAGE_KEY = 'meatflicks.watchlist';
 const hasStorage = typeof localStorage !== 'undefined';
+
+const normalizeDateString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return new Date(parsed).toISOString();
+};
+
+const buildCanonicalPath = (payload: Partial<Movie> & Record<string, unknown>, id: string): string => {
+  const fromPayload = typeof payload.canonicalPath === 'string' ? payload.canonicalPath.trim() : '';
+  if (fromPayload) {
+    return fromPayload.startsWith('/') ? fromPayload : `/${fromPayload}`;
+  }
+
+  const imdbId = typeof payload.imdbId === 'string' ? payload.imdbId.trim() : '';
+  if (imdbId) {
+    return `/movie/${imdbId}`;
+  }
+
+  const tmdbId = typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId)
+    ? payload.tmdbId
+    : null;
+
+  if (tmdbId) {
+    return `/movie/${tmdbId}`;
+  }
+
+  return `/movie/${id}`;
+};
 
 const sanitizeMovie = (candidate: unknown): Movie | null => {
   if (!candidate || typeof candidate !== 'object') {
@@ -44,6 +82,7 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
   }
 
   const ratingValue = Number(payload.rating ?? 0);
+  const addedAt = normalizeDateString(payload.addedAt) ?? new Date().toISOString();
 
   return {
     id,
@@ -59,8 +98,11 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
     is4K: payload.is4K === true,
     isHD: typeof payload.isHD === 'boolean' ? payload.isHD : undefined,
     tmdbId: typeof payload.tmdbId === 'number' ? payload.tmdbId : undefined,
+    imdbId: typeof payload.imdbId === 'string' ? payload.imdbId : null,
+    canonicalPath: buildCanonicalPath(payload, id),
     durationMinutes: typeof payload.durationMinutes === 'number' ? payload.durationMinutes : null,
-    collectionId: typeof payload.collectionId === 'number' ? payload.collectionId : null
+    collectionId: typeof payload.collectionId === 'number' ? payload.collectionId : null,
+    addedAt
   } satisfies Movie;
 };
 
@@ -146,10 +188,14 @@ function createWatchlistStore() {
     }
 
     store.update((state) => {
-      const exists = state.watchlist.some((item) => item.id === sanitized.id);
-      const updated = exists
-        ? state.watchlist.map((item) => (item.id === sanitized.id ? sanitized : item))
-        : [...state.watchlist, sanitized];
+      const existing = state.watchlist.find((item) => item.id === sanitized.id);
+      const updatedEntry = existing
+        ? { ...sanitized, addedAt: existing.addedAt }
+        : sanitized;
+
+      const updated = existing
+        ? state.watchlist.map((item) => (item.id === sanitized.id ? updatedEntry : item))
+        : [...state.watchlist, updatedEntry];
 
       persist(updated);
       return { ...state, watchlist: updated, error: null };

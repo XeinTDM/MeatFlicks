@@ -2,10 +2,13 @@
   import CarouselContainer from '$lib/components/CarouselContainer.svelte';
   import type { PageData } from './$types';
 
-  export let data: PageData;
+  let { data } = $props<{ data: PageData }>();
 
-  const { categoryTitle, genreData, hasContent, singleGenreMode } = data;
-  const primaryGenre = genreData[0];
+  const categoryTitle = $derived(data.categoryTitle);
+  const genreData = $derived(data.genreData);
+  const hasContent = $derived(data.hasContent);
+  const singleGenreMode = $derived(data.singleGenreMode);
+  const primaryGenre = $derived(genreData[0]);
 </script>
 
 <div class="min-h-screen">

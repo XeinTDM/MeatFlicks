@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
-	import type { Route } from "$types";
 	import {
 		House,
 		Search,
@@ -34,7 +32,7 @@
 	type NavigationItem = {
 		label: string;
 		icon: IconComponent;
-		href?: Route;
+		href?: string;
 		onSelect?: () => void;
 	};
 
@@ -46,19 +44,19 @@
 
 	const primaryNav: NavigationItem[] = [
 		{ label: 'Home', icon: House, href: '/' },
-		{ label: 'Search', icon: Search, href: '/(app)/search' }
+		{ label: 'Search', icon: Search, href: '/search' }
 	];
 
 	const browseNav: NavigationItem[] = [
-		{ label: 'Movies', icon: Clapperboard, href: '/(app)/explore/movies' },
-		{ label: 'TV Series', icon: Tv, href: '/(app)/explore/tv-shows' },
-		{ label: 'Anime', icon: Sparkles, href: '/(app)/explore/anime' },
-		{ label: 'Manga', icon: BookOpen, href: '/(app)/explore/manga' }
+		{ label: 'Movies', icon: Clapperboard, href: '/explore/movies' },
+		{ label: 'TV Series', icon: Tv, href: '/explore/tv-shows' },
+		{ label: 'Anime', icon: Sparkles, href: '/explore/anime' },
+		{ label: 'Manga', icon: BookOpen, href: '/explore/manga' }
 	];
 
 	const libraryNav: NavigationItem[] = [
-		{ label: 'History', icon: HistoryIcon, href: '/(app)/history' },
-		{ label: 'Watchlist', icon: Bookmark, href: '/(app)/watchlist' },
+		{ label: 'History', icon: HistoryIcon, href: '/history' },
+		{ label: 'Watchlist', icon: Bookmark, href: '/watchlist' },
 		{ label: 'Settings', icon: Cog, onSelect: () => (isSettingsOpen = true) }
 	];
 
@@ -69,19 +67,17 @@
 		}
 
 		if (item.href) {
-			const target = resolve(item.href);
-			void goto(target);
+			void goto(item.href);
 		}
 	};
 
 	const isActive = (item: NavigationItem) => {
 		if (!item.href) return false;
-		const target = resolve(item.href);
-		if (target === '/') {
-			return currentPath === target;
+		if (item.href === '/') {
+			return currentPath === item.href;
 		}
 
-		return currentPath.startsWith(target);
+		return currentPath.startsWith(item.href);
 	};
 </script>
 

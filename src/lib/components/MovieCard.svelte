@@ -52,10 +52,21 @@
   const qualityTag = $derived(
     movie?.is4K ? '4K' : movie?.isHD ? 'HD' : ''
   );
+
+  const detailsHref = $derived(
+    movie
+      ? movie.canonicalPath ??
+        (movie.imdbId
+          ? `/movie/${movie.imdbId}`
+          : movie.tmdbId
+            ? `/movie/${movie.tmdbId}`
+            : `/movie/${movie.id}`)
+      : undefined
+  );
 </script>
 
 <a
-  href={movie ? `/movie/${movie.id}` : undefined}
+  href={detailsHref}
   aria-label={movie ? `View details for ${movie.title}` : 'Loading movie'}
   class="group relative h-72 w-48 cursor-pointer overflow-hidden rounded-xl transition-transform duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-lg"
 >

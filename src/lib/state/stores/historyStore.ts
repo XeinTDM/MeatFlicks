@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import type { Movie } from './watchlistStore';
 
-export type HistoryEntry = Movie & {
+export type HistoryEntry = Omit<Movie, 'addedAt'> & {
   watchedAt: string;
   mediaType?: string;
 };
@@ -13,6 +13,28 @@ type HistoryState = {
 
 const STORAGE_KEY = 'meatflicks.history';
 const hasStorage = typeof localStorage !== 'undefined';
+
+const resolveCanonicalPath = (payload: Partial<Movie> & Record<string, unknown>, id: string): string => {
+  const provided = typeof payload.canonicalPath === 'string' ? payload.canonicalPath.trim() : '';
+  if (provided) {
+    return provided.startsWith('/') ? provided : `/${provided}`;
+  }
+
+  const imdbId = typeof payload.imdbId === 'string' ? payload.imdbId.trim() : '';
+  if (imdbId) {
+    return `/movie/${imdbId}`;
+  }
+
+  const tmdbId = typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId)
+    ? payload.tmdbId
+    : null;
+
+  if (tmdbId) {
+    return `/movie/${tmdbId}`;
+  }
+
+  return `/movie/${id}`;
+};
 
 const sanitizeEntry = (candidate: unknown): HistoryEntry | null => {
   if (!candidate || typeof candidate !== 'object') {
@@ -40,8 +62,15 @@ const sanitizeEntry = (candidate: unknown): HistoryEntry | null => {
     rating: Number.isFinite(ratingValue) ? ratingValue : 0,
     genres: Array.isArray(payload.genres) ? payload.genres.map(String) : [],
     trailerUrl: typeof payload.trailerUrl === 'string' ? payload.trailerUrl : undefined,
-    watchedAt,
-    mediaType: typeof payload.mediaType === 'string' ? payload.mediaType : undefined
+    tmdbId: typeof payload.tmdbId === 'number' ? payload.tmdbId : undefined,
+    imdbId: typeof payload.imdbId === 'string' ? payload.imdbId : null,
+    canonicalPath: resolveCanonicalPath(payload, id),
+    durationMinutes: typeof payload.durationMinutes === 'number' ? payload.durationMinutes : null,
+    collectionId: typeof payload.collectionId === 'number' ? payload.collectionId : null,
+    is4K: payload.is4K === true,
+    isHD: typeof payload.isHD === 'boolean' ? payload.isHD : undefined,
+    media_type: typeof payload.media_type === 'string' ? payload.media_type : undefined,
+    watchedAt
   } satisfies HistoryEntry;
 };
 
@@ -104,8 +133,15 @@ const normalizeForHistory = (movie: Partial<Movie> & Record<string, unknown>): H
     rating: Number.isFinite(ratingValue) ? ratingValue : 0,
     genres: Array.isArray(movie.genres) ? movie.genres.map(String) : [],
     trailerUrl: typeof movie.trailerUrl === 'string' ? movie.trailerUrl : undefined,
-    watchedAt: timestamp,
-    mediaType: typeof movie.media_type === 'string' ? (movie.media_type as string) : undefined
+    tmdbId: typeof movie.tmdbId === 'number' ? movie.tmdbId : undefined,
+    imdbId: typeof movie.imdbId === 'string' ? movie.imdbId : null,
+    canonicalPath: resolveCanonicalPath(movie, id),
+    durationMinutes: typeof movie.durationMinutes === 'number' ? movie.durationMinutes : null,
+    collectionId: typeof movie.collectionId === 'number' ? movie.collectionId : null,
+    is4K: movie.is4K === true,
+    isHD: typeof movie.isHD === 'boolean' ? movie.isHD : undefined,
+    media_type: typeof movie.media_type === 'string' ? (movie.media_type as string) : undefined,
+    watchedAt: timestamp
   } satisfies HistoryEntry;
 };
 

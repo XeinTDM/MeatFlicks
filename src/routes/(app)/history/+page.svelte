@@ -16,9 +16,11 @@
   import type { PageData } from './$types';
   import { Funnel, RefreshCw, Star } from '@lucide/svelte';
 
-  export let data: PageData;
+  let { data } = $props<{ data: PageData }>();
 
-  const { collectionTitle, movies, hasContent } = data;
+  const collectionTitle = $derived(data.collectionTitle);
+  const movies = $derived(data.movies);
+  const hasContent = $derived(data.hasContent);
 
   type NormalizedHistoryEntry = HistoryEntry & {
     normalizedType: string;
@@ -34,7 +36,7 @@
   const historyEntries = $derived(historyState.entries);
   const historyError = $derived(historyState.error);
 
-  const normalizedEntries = $derived<NormalizedHistoryEntry[]>(() =>
+  const normalizedEntries = $derived.by<NormalizedHistoryEntry[]>(() =>
     historyEntries.map((entry) => {
       const watchedAtCandidate = new Date(entry.watchedAt);
       const watchedAtTime = watchedAtCandidate.getTime();
@@ -54,7 +56,7 @@
     })
   );
 
-  const countsByType = $derived<Record<string, number>>(() => {
+  const countsByType = $derived.by<Record<string, number>>(() => {
     const counts: Record<string, number> = {};
 
     for (const entry of normalizedEntries) {
@@ -88,7 +90,7 @@
       .join(' ');
   };
 
-  const availableFilters = $derived(() => {
+  const availableFilters = $derived.by(() => {
     const unique = new Set<string>();
 
     for (const entry of normalizedEntries) {
@@ -141,7 +143,7 @@
     return null;
   };
 
-  const filteredEntries = $derived(() => {
+  const filteredEntries = $derived.by(() => {
     const term = searchTerm.trim().toLowerCase();
 
     return normalizedEntries
@@ -276,6 +278,7 @@
     {:else}
       <section class="space-y-4">
         {#each filteredEntries as entry (entry.id + entry.watchedAt)}
+          {@const relativeLabel = formatRelativeTime(entry.watchedAtDate)}
           <Card class="border-border bg-background/70 transition-colors hover:border-primary/60">
             <CardContent class="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
               <div class="relative h-48 w-full overflow-hidden rounded-lg bg-muted sm:w-32">
@@ -307,13 +310,12 @@
 
                 <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{formatWatchedAt(entry.watchedAtDate)}</span>
-                  {@const relativeLabel = formatRelativeTime(entry.watchedAtDate)}
                   {#if relativeLabel}
-                    <span aria-hidden="true">•</span>
+                    <span aria-hidden="true">&middot;</span>
                     <span>{relativeLabel}</span>
                   {/if}
                   {#if entry.releaseYear}
-                    <span aria-hidden="true">•</span>
+                    <span aria-hidden="true">&middot;</span>
                     <span>Released {entry.releaseYear}</span>
                   {/if}
                 </div>

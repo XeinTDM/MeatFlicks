@@ -2,9 +2,11 @@
   import CarouselContainer from '$lib/components/CarouselContainer.svelte';
   import type { PageData } from './$types';
 
-  export let data: PageData;
+  let { data } = $props<{ data: PageData }>();
 
-  const { collectionTitle, movies, hasContent } = data;
+  const collectionTitle = $derived(data.collectionTitle);
+  const movies = $derived(data.movies);
+  const hasContent = $derived(data.hasContent);
 </script>
 
 <div class="min-h-screen">

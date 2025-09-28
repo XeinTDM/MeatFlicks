@@ -14,6 +14,10 @@ export type LibraryMovie = Omit<Movie, 'releaseDate'> & {
   media_type?: string | null;
   genres?: GenreSummary[];
   cast?: CastMember[];
+  imdbId?: string | null;
+  canonicalPath?: string;
+  addedAt?: string;
+
 };
 
 export type LibraryCollection = Collection & {
@@ -30,3 +34,4 @@ export type HomeLibrary = {
   collections: LibraryCollection[];
   genres: LibraryGenre[];
 };
+

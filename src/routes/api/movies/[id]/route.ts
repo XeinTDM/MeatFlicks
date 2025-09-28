@@ -1,75 +1,80 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import prisma from '$lib/server/db';
-import { env } from '$lib/config/env';
+import { fetchTmdbMovieExtras, lookupTmdbIdByImdbId } from '$lib/server/services/tmdb.service';
 
-type TmdbCastMember = {
-  id: number;
-  name: string;
-  character: string | null;
-};
+async function resolveMovieByIdentifier(
+  identifier: string,
+  queryMode: 'id' | 'tmdb' | 'imdb'
+) {
+  switch (queryMode) {
+    case 'tmdb': {
+      const tmdbId = Number.parseInt(identifier, 10);
+      if (!Number.isFinite(tmdbId)) {
+        throw new Error('Invalid TMDB id provided.');
+      }
 
-type TmdbVideo = {
-  key: string;
-  site: string;
-  type: string;
-};
+      const movie = await prisma.movie.findUnique({
+        where: { tmdbId },
+        include: { genres: true }
+      });
 
-type TmdbMovieResponse = {
-  credits?: {
-    cast?: TmdbCastMember[];
-  };
-  videos?: {
-    results?: TmdbVideo[];
-  };
-};
+      return { movie, tmdbId } as const;
+    }
+    case 'imdb': {
+      const tmdbId = await lookupTmdbIdByImdbId(identifier);
+      if (!tmdbId) {
+        return { movie: null, tmdbId: null } as const;
+      }
 
-export const GET: RequestHandler = async ({ params }) => {
-  const movieId = params.id;
+      const movie = await prisma.movie.findUnique({
+        where: { tmdbId },
+        include: { genres: true }
+      });
 
-  if (!movieId) {
-    return json({ error: 'Movie ID is required' }, { status: 400 });
+      return { movie, tmdbId } as const;
+    }
+    case 'id':
+    default: {
+      const movie = await prisma.movie.findUnique({
+        where: { id: identifier },
+        include: { genres: true }
+      });
+
+      return { movie, tmdbId: movie?.tmdbId ?? null } as const;
+    }
+  }
+}
+
+export const GET: RequestHandler = async ({ params, url }) => {
+  const movieIdentifier = params.id;
+  const queryModeParam = url.searchParams.get('by');
+  const queryMode = queryModeParam === 'tmdb' || queryModeParam === 'imdb' ? queryModeParam : 'id';
+
+  if (!movieIdentifier) {
+    return json({ error: 'Movie identifier is required.' }, { status: 400 });
   }
 
   try {
-    const movie = await prisma.movie.findUnique({
-      where: { id: movieId },
-      include: { genres: true }
-    });
+    const { movie, tmdbId } = await resolveMovieByIdentifier(movieIdentifier, queryMode);
 
-    if (!movie) {
+    if (!movie || !tmdbId) {
       return json({ message: 'Movie not found' }, { status: 404 });
     }
 
-    const tmdbResponse = await fetch(
-      `https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${env.TMDB_API_KEY}&append_to_response=credits,videos`
-    );
+    const extras = await fetchTmdbMovieExtras(tmdbId);
 
-    if (!tmdbResponse.ok) {
-      console.error('TMDB error', await tmdbResponse.text());
-      return json({ error: 'Failed to fetch movie details from TMDB' }, { status: 502 });
-    }
-
-    const tmdbData: TmdbMovieResponse = await tmdbResponse.json();
-
-    const cast = (tmdbData.credits?.cast ?? [])
-      .slice(0, 5)
-      .map(({ id, name, character }) => ({
-        id,
-        name,
-        character: character ?? ''
-      }));
-
-    const trailer = (tmdbData.videos?.results ?? []).find(
-      (video) => video.type === 'Trailer' && video.site === 'YouTube'
-    );
-
-    return json({
+    const payload = {
       ...movie,
-      cast,
-      trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null
-    });
+      releaseDate: movie.releaseDate ?? (extras.releaseDate ? new Date(extras.releaseDate) : null),
+      durationMinutes: movie.durationMinutes ?? extras.runtime ?? null,
+      imdbId: extras.imdbId,
+      cast: extras.cast,
+      trailerUrl: extras.trailerUrl
+    };
+
+    return json(payload);
   } catch (error) {
-    console.error(`Error fetching movie with ID ${movieId}:`, error);
-    return json({ error: `Failed to fetch movie with ID ${movieId}` }, { status: 500 });
+    console.error(`Error fetching movie with identifier ${movieIdentifier}:`, error);
+    return json({ error: `Failed to fetch movie with identifier ${movieIdentifier}` }, { status: 500 });
   }
 };
