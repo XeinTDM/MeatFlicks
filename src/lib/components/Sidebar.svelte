@@ -109,7 +109,7 @@
 			</SidebarGroup>
 		</SidebarHeader>
 
-		<SidebarContent class="px-2 py-2">
+		<SidebarContent class="px-2 pt-0 pb-2">
 			<div class="bg-card rounded-lg flex flex-1 flex-col">
 				<SidebarGroup class="px-2 pt-2 pb-2">
 					<SidebarGroupContent>
