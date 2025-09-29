@@ -4,7 +4,6 @@
 	import SearchHeader from '$lib/components/SearchHeader.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
-	import { Badge } from '$lib/components/ui/badge';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { onDestroy } from 'svelte';
 	import {
@@ -149,9 +148,9 @@
 </script>
 
 <div class="min-h-screen">
-	<main class="container mx-auto px-2 py-2 md:py-2">
+	<main class="container w-full py-2 pr-2 md:py-2">
 		<section
-			class="space-y-10 rounded-3xl border border-border/60 bg-card/70 p-6 shadow-xl backdrop-blur-sm sm:p-8"
+			class="space-y-2 rounded-3xl border border-border/60 bg-card/70 p-6 shadow-xl backdrop-blur-sm sm:p-8"
 		>
 			<SearchHeader {query} {loading} {performSearch} {handleSubmit} {trendingQueries} />
 
@@ -162,66 +161,55 @@
 				{hasActiveFilters}
 				onSortChange={(sort: SortOption) => (sortBy = sort)}
 				onQualityChange={(q: QualityFilter) => (qualityFilter = q)}
+				onOverviewToggle={(enabled: boolean) => (onlyWithOverview = enabled)}
 				onResetFilters={resetFilters}
 			/>
 
-			{#if resultsSummary}
-				<div
-					class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/50 bg-background/60 px-4 py-3 text-sm"
-				>
-					<div class="flex flex-wrap items-center gap-3">
-						<Badge
-							class="rounded-full border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold tracking-wide text-primary uppercase"
-							variant="outline"
-						>
-							{lastSearchedTerm}
-						</Badge>
-						<span class="text-muted-foreground">{resultsSummary}</span>
+			{#if true}
+				{@const visibleMovies = filteredMovies()}
+				{@const summaryText = resultsSummary()}
+
+				{#if summaryText}
+					<p class="text-sm text-muted-foreground" aria-live="polite">{summaryText}</p>
+				{/if}
+
+				{#if error}
+					<Alert variant="destructive" class="border-destructive/40 bg-destructive/10">
+						<AlertTitle>Search error</AlertTitle>
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				{/if}
+
+				{#if visibleMovies.length > 0}
+					<div
+						class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+					>
+						{#each visibleMovies as movie (movie.id)}
+							<MovieCard movie={movie as LibraryMovie} />
+						{/each}
 					</div>
-					{#if movies.length > 0}
-						<span class="text-xs tracking-wide text-muted-foreground uppercase">
-							{filteredMovies().length} visible / {movies.length} total
-						</span>
-					{/if}
-				</div>
-			{/if}
-
-			{#if error}
-				<Alert variant="destructive" class="border-destructive/40 bg-destructive/10">
-					<AlertTitle>Search error</AlertTitle>
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			{/if}
-
-			{#if filteredMovies().length > 0}
-				<div
-					class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-				>
-					{#each filteredMovies() as movie (movie.id)}
-						<MovieCard movie={movie as LibraryMovie} />
-					{/each}
-				</div>
-			{:else if loading}
-				<div
-					class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-				>
-					{#each skeletonSlots as _, index (index)}
-						<MovieCard movie={null} />
-					{/each}
-				</div>
-			{:else}
-				<div class="space-y-4">
-					{#if lastSearchedTerm && !error}
-						<Alert class="border-border/60 bg-background/60">
-							<AlertTitle>No matches found</AlertTitle>
-							<AlertDescription>
-								{hasActiveFilters
-									? 'Nothing matched after filters. Try resetting filters or searching for a different title.'
-									: 'We could not find that title. Try a different keyword or explore the suggestions below.'}
-							</AlertDescription>
-						</Alert>
-					{/if}
-				</div>
+				{:else if loading}
+					<div
+						class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+					>
+						{#each skeletonSlots as slot, index (index)}
+							<MovieCard movie={null} />
+						{/each}
+					</div>
+				{:else}
+					<div class="space-y-4">
+						{#if lastSearchedTerm && !error}
+							<Alert class="border-border/60 bg-background/60">
+								<AlertTitle>No matches found</AlertTitle>
+								<AlertDescription>
+									{hasActiveFilters
+										? 'Nothing matched after filters. Try resetting filters or searching for a different title.'
+										: 'We could not find that title. Try a different keyword or explore the suggestions below.'}
+								</AlertDescription>
+							</Alert>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 		</section>
 	</main>

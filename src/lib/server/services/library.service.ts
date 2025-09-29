@@ -1,4 +1,5 @@
 import { createTtlCache } from '$lib/server/cache';
+import { clone } from '$lib/server/utils';
 import { toSlug } from '$lib/utils';
 import { libraryRepository } from '../repositories/library.repository';
 import type {
@@ -16,17 +17,9 @@ const homeLibraryCache = createTtlCache<string, HomeLibrary>({
 	maxEntries: 1
 });
 
-const clone = <T>(value: T): T => {
-	if (typeof globalThis.structuredClone === 'function') {
-		return globalThis.structuredClone(value);
-	}
-
-	return JSON.parse(JSON.stringify(value)) as T;
-};
-
-const buildImdbMap = async (
+const buildExtrasMap = async (
 	movies: { tmdbId: number | null }[]
-): Promise<Map<number, string | null>> => {
+): Promise<Map<number, { imdbId: string | null; trailerUrl: string | null }>> => {
 	const uniqueIds = Array.from(
 		movies
 			.map((movie) => movie.tmdbId)
@@ -34,33 +27,38 @@ const buildImdbMap = async (
 			.reduce<Set<number>>((accumulator, tmdbId) => accumulator.add(tmdbId), new Set<number>())
 	);
 
-	const imdbMap = new Map<number, string | null>();
+	const extrasMap = new Map<number, { imdbId: string | null; trailerUrl: string | null }>();
 
-	await Promise.all(
-		uniqueIds.map(async (tmdbId) => {
-			try {
-				const extras = await fetchTmdbMovieExtras(tmdbId);
-				imdbMap.set(tmdbId, extras.imdbId ?? null);
-			} catch (error) {
-				console.error(`[library][tmdb] Failed to fetch metadata for TMDB ${tmdbId}`, error);
-				imdbMap.set(tmdbId, null);
-			}
-		})
-	);
+	for (const tmdbId of uniqueIds) {
+		try {
+			const extras = await fetchTmdbMovieExtras(tmdbId);
+			extrasMap.set(tmdbId, {
+				imdbId: extras.imdbId ?? null,
+				trailerUrl: extras.trailerUrl ?? null
+			});
+		} catch (error) {
+			console.error(`[library][tmdb] Failed to fetch metadata for TMDB ${tmdbId}`, error);
+			extrasMap.set(tmdbId, { imdbId: null, trailerUrl: null });
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
 
-	return imdbMap;
+	return extrasMap;
 };
 
 const attachIdentifiers = (
 	movie: LibraryMovie,
-	imdbMap: Map<number, string | null>
+	extrasMap: Map<number, { imdbId: string | null; trailerUrl: string | null }>
 ): LibraryMovie => {
-	const imdbId = movie.tmdbId ? (imdbMap.get(movie.tmdbId) ?? null) : null;
+	const extras = movie.tmdbId ? extrasMap.get(movie.tmdbId) ?? null : null;
+	const imdbId = extras?.imdbId ?? null;
+	const trailerUrl = extras?.trailerUrl ?? (movie.trailerUrl ?? null);
 	const canonicalPath = imdbId ? `/movie/${imdbId}` : `/movie/${movie.tmdbId ?? movie.id}`;
 
 	return {
 		...movie,
 		imdbId,
+		trailerUrl,
 		canonicalPath
 	} satisfies LibraryMovie;
 };
@@ -96,13 +94,13 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 		})
 	);
 
-	const imdbMap = await buildImdbMap([
+	const extrasMap = await buildExtrasMap([
 		...trendingMovies,
 		...collectionsWithMovies.flatMap((collection) => collection.movies),
 		...genresWithMovies.flatMap((genre) => genre.movies)
 	]);
 
-	const decorate = (movie: LibraryMovie) => attachIdentifiers(movie, imdbMap);
+	const decorate = (movie: LibraryMovie) => attachIdentifiers(movie, extrasMap);
 
 	const decoratedTrending = trendingMovies.map((movie) => decorate(movie as LibraryMovie));
 	const decoratedCollections = collectionsWithMovies.map((collection) => ({

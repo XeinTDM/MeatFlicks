@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CarouselContainer from '$lib/components/CarouselContainer.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import {
@@ -91,7 +92,7 @@
 	};
 
 	const availableFilters = $derived.by(() => {
-		const unique = new Set<string>();
+		const unique = new SvelteSet<string>();
 
 		for (const entry of normalizedEntries) {
 			unique.add(entry.normalizedType);
@@ -216,7 +217,7 @@
 				</div>
 
 				<div class="flex flex-wrap gap-2">
-					{#each availableFilters as option}
+					{#each availableFilters as option (option)}
 						<Button
 							type="button"
 							size="sm"
@@ -335,7 +336,7 @@
 
 								{#if entry.genres.length > 0}
 									<div class="flex flex-wrap gap-1.5">
-										{#each entry.genres.slice(0, 6) as genre}
+										{#each entry.genres.slice(0, 6) as genre (genre)}
 											<Badge variant="outline" class="bg-transparent">
 												{genre}
 											</Badge>

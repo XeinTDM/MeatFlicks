@@ -32,6 +32,7 @@
 	--border: oklch(0.25 0 0);
 	--input: oklch(0.25 0 0);
 	--ring: oklch(0.55 0 0);
+	--scrollbar-thumb: color-mix(in srgb, var(--foreground) 35%, var(--background) 65%);
 
 	--chart-1: oklch(0.3 0 0);
 	--chart-2: oklch(0.45 0 0);
@@ -75,6 +76,7 @@
 	--border: oklch(0.93 0 0);
 	--input: oklch(0.93 0 0);
 	--ring: oklch(0.7 0 0);
+	--scrollbar-thumb: color-mix(in srgb, var(--foreground) 55%, var(--background) 45%);
 
 	--chart-1: oklch(0.3 0 0);
 	--chart-2: oklch(0.45 0 0);
@@ -134,7 +136,33 @@
 	* {
 		@apply border-border outline-ring/50;
 	}
+	html,
+	body {
+		@apply h-full;
+	}
 	body {
 		@apply bg-background text-foreground;
+	}
+
+	html {
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-thumb) transparent;
+	}
+
+	body::-webkit-scrollbar {
+		width: 10px;
+	}
+
+	body::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	body::-webkit-scrollbar-thumb {
+		background-color: var(--scrollbar-thumb);
+		border-radius: 9999px;
+	}
+
+	body::-webkit-scrollbar-thumb:hover {
+		background-color: color-mix(in srgb, var(--scrollbar-thumb) 70%, var(--background) 30%);
 	}
 }

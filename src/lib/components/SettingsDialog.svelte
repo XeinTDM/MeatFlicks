@@ -397,7 +397,7 @@
 							Choose how MeatFlicks balances quality and bandwidth for your account.
 						</p>
 						<div class="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-							{#each playbackQualityOptions as option}
+							{#each playbackQualityOptions as option (option.value)}
 								<Button
 									type="button"
 									variant={playbackQuality === option.value ? 'secondary' : 'outline'}

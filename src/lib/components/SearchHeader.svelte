@@ -24,11 +24,7 @@
 		trendingQueries: string[];
 	} = $props();
 
-	let searchHistory = $state<string[]>([]);
-
-	$effect(() => {
-		searchHistory = getSearchHistory(browser);
-	});
+	let searchHistory = $state(getSearchHistory(browser));
 
 	function handleQuickSearch(term: string) {
 		query = term;
@@ -83,7 +79,7 @@
 
 	<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
 		<span class="font-medium text-foreground">Trending now:</span>
-		{#each trendingQueries as item}
+		{#each trendingQueries as item (item)}
 			<Button
 				type="button"
 				variant="secondary"
@@ -114,7 +110,7 @@
 				</Button>
 			</div>
 			<div class="flex flex-wrap gap-2">
-				{#each searchHistory as term}
+				{#each searchHistory as term (term)}
 					<Button
 						type="button"
 						variant="ghost"

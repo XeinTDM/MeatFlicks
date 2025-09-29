@@ -1,9 +1,11 @@
 import { env } from '$lib/config/env';
 import { createTtlCache } from '$lib/server/cache';
+import { tmdbRateLimiter } from '$lib/server/rate-limiter';
+import { ApiError, RateLimitError, safeParseApiResponse, toNumber } from '$lib/server/utils';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const MOVIE_DETAILS_TTL_MS = 1000 * 60 * 10; // 10 minutes
-const IMDB_LOOKUP_TTL_MS = 1000 * 60 * 30; // 30 minutes
+const MOVIE_DETAILS_TTL_MS = 1000 * 60 * 10;
+const IMDB_LOOKUP_TTL_MS = 1000 * 60 * 30;
 
 export interface TmdbMovieExtras {
 	tmdbId: number;
@@ -14,7 +16,22 @@ export interface TmdbMovieExtras {
 	releaseDate: string | null;
 }
 
-const movieExtrasCache = createTtlCache<number, TmdbMovieExtras>({
+export interface TmdbMovieGenre {
+	id: number;
+	name: string;
+}
+
+export interface TmdbMovieDetails extends TmdbMovieExtras {
+	found: boolean;
+	title: string | null;
+	overview: string | null;
+	posterPath: string | null;
+	backdropPath: string | null;
+	rating: number | null;
+	genres: TmdbMovieGenre[];
+}
+
+const movieDetailsCache = createTtlCache<number, TmdbMovieDetails>({
 	ttlMs: MOVIE_DETAILS_TTL_MS,
 	maxEntries: 500
 });
@@ -24,16 +41,10 @@ const imdbLookupCache = createTtlCache<string, number>({
 	maxEntries: 2000
 });
 
-const toNumber = (value: unknown): number | null => {
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed)) {
-		return null;
-	}
-	return parsed;
-};
-
 function buildUrl(path: string, params: Record<string, string | number | undefined> = {}): string {
-	const url = new URL(path, TMDB_BASE_URL);
+	const normalizedBase = TMDB_BASE_URL.endsWith('/') ? TMDB_BASE_URL : `${TMDB_BASE_URL}/`;
+	const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+	const url = new URL(normalizedPath, normalizedBase);
 	url.searchParams.set('api_key', env.TMDB_API_KEY);
 	for (const [key, rawValue] of Object.entries(params)) {
 		if (rawValue === undefined || rawValue === null || rawValue === '') continue;
@@ -42,14 +53,115 @@ function buildUrl(path: string, params: Record<string, string | number | undefin
 	return url.toString();
 }
 
-export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExtras> {
-	const cached = movieExtrasCache.get(tmdbId);
+const buildImageUrl = (segment: unknown, size: string): string | null => {
+	if (typeof segment !== 'string' || !segment.trim()) {
+		return null;
+	}
+
+	const trimmed = segment.trim();
+	if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+		return trimmed;
+	}
+
+	return `${env.TMDB_IMAGE_BASE_URL}${size}${trimmed}`;
+};
+
+const parseTmdbMovieDetails = (tmdbId: number, data: Record<string, unknown>): TmdbMovieDetails => {
+	const credits = (data.credits as Record<string, unknown> | undefined)?.cast;
+	const videos = (data.videos as Record<string, unknown> | undefined)?.results;
+
+	const cast = Array.isArray(credits)
+		? credits
+				.slice(0, 10)
+				.map((member: Record<string, unknown>) => ({
+					id: toNumber(member?.id) ?? 0,
+					name: String(member?.name ?? '').trim(),
+					character: String(member?.character ?? '').trim()
+				}))
+				.filter((member) => member.id > 0 && member.name)
+		: [];
+
+	const trailer = Array.isArray(videos)
+		? videos.find((video: Record<string, unknown>) => {
+				if (!video || typeof video !== 'object') return false;
+				const site = String(video?.site ?? '').toLowerCase();
+				const type = String(video?.type ?? '').toLowerCase();
+				return site === 'youtube' && (type === 'trailer' || type === 'teaser');
+			})
+		: undefined;
+
+	const trailerKey =
+		trailer && typeof trailer === 'object'
+			? String((trailer as Record<string, unknown>).key ?? '').trim()
+			: '';
+
+	const imdbIdRaw = data.imdb_id;
+	const releaseDate = typeof data.release_date === 'string' ? data.release_date : null;
+	const runtime = toNumber(data.runtime) ?? null;
+	const voteAverage = toNumber(data.vote_average) ?? null;
+
+	const genres = Array.isArray(data.genres)
+		? data.genres
+				.map((genre) => {
+					if (!genre || typeof genre !== 'object') return null;
+					const record = genre as Record<string, unknown>;
+					const id = toNumber(record.id);
+					const name = typeof record.name === 'string' ? record.name.trim() : '';
+					if (!id || !name) return null;
+					return { id, name } as TmdbMovieGenre;
+				})
+				.filter((genre): genre is TmdbMovieGenre => Boolean(genre))
+		: [];
+
+	const title =
+		typeof data.title === 'string' && data.title.trim()
+			? data.title.trim()
+			: typeof data.original_title === 'string' && data.original_title.trim()
+				? data.original_title.trim()
+				: null;
+
+	const overview =
+		typeof data.overview === 'string' && data.overview.trim() ? data.overview.trim() : null;
+
+	const posterPath = buildImageUrl(
+		(data as Record<string, unknown>).poster_path,
+		env.TMDB_POSTER_SIZE
+	);
+	const backdropPath = buildImageUrl(
+		(data as Record<string, unknown>).backdrop_path,
+		env.TMDB_BACKDROP_SIZE
+	);
+
+	return {
+		found: true,
+		tmdbId,
+		imdbId: typeof imdbIdRaw === 'string' && imdbIdRaw.trim() ? imdbIdRaw.trim() : null,
+		cast,
+		trailerUrl: trailerKey ? `https://www.youtube.com/embed/${trailerKey}` : null,
+		runtime,
+		releaseDate,
+		title,
+		overview,
+		posterPath,
+		backdropPath,
+		rating: voteAverage,
+		genres
+	};
+};
+
+export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
+	const cached = movieDetailsCache.get(tmdbId);
 	if (cached) {
 		return cached;
 	}
 
 	if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
-		throw new Error(`A valid TMDB id is required. Received: ${tmdbId}`);
+		throw new ApiError(`A valid TMDB id is required. Received: ${tmdbId}`, 400);
+	}
+
+	const rateLimit = await tmdbRateLimiter.checkLimit('tmdb-movie-extras');
+	if (!rateLimit.allowed) {
+		throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
 	}
 
 	const endpoint = buildUrl(`/movie/${tmdbId}`, { append_to_response: 'credits,videos' });
@@ -58,64 +170,73 @@ export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExt
 	if (!response.ok) {
 		if (response.status === 404) {
 			console.warn(`[tmdb] Movie ${tmdbId} was not found (404). Skipping extras.`);
-			const fallback: TmdbMovieExtras = {
+			const fallback: TmdbMovieDetails = {
+				found: false,
 				tmdbId,
 				imdbId: null,
 				cast: [],
 				trailerUrl: null,
 				runtime: null,
-				releaseDate: null
+				releaseDate: null,
+				title: null,
+				overview: null,
+				posterPath: null,
+				backdropPath: null,
+				rating: null,
+				genres: []
 			};
-			movieExtrasCache.set(tmdbId, fallback);
+			movieDetailsCache.set(tmdbId, fallback);
 			return fallback;
 		}
 
+		if (response.status === 429) {
+			throw new RateLimitError('TMDB API rate limited', undefined);
+		}
+
 		const message = await response.text().catch(() => response.statusText);
-		throw new Error(`TMDB responded with status ${response.status}: ${message}`);
+		throw new ApiError(
+			`TMDB responded with status ${response.status}: ${message}`,
+			response.status
+		);
 	}
 
-	const payload: Record<string, unknown> = await response.json();
+	const payload = (await response.json()) as Record<string, unknown>;
 
-	const credits = (payload.credits as Record<string, unknown> | undefined)?.cast;
-	const videos = (payload.videos as Record<string, unknown> | undefined)?.results;
+	const parseResult = safeParseApiResponse(payload, (data) => parseTmdbMovieDetails(tmdbId, data));
+	if (!parseResult.success) {
+		throw new ApiError(`Failed to parse TMDB response for ${tmdbId}: ${parseResult.error}`);
+	}
 
-	const cast = Array.isArray(credits)
-		? credits
-				.slice(0, 10)
-				.map((member) => ({
-					id: toNumber((member as Record<string, unknown>).id) ?? 0,
-					name: String((member as Record<string, unknown>).name ?? ''),
-					character: String((member as Record<string, unknown>).character ?? '')
-				}))
-				.filter((member) => member.id > 0 && member.name)
-		: [];
+	if (!parseResult.data) {
+		throw new ApiError(`Invalid TMDB response data for ${tmdbId}`);
+	}
 
-	const trailer = Array.isArray(videos)
-		? videos.find((video) => {
-				if (!video || typeof video !== 'object') return false;
-				const site = String((video as Record<string, unknown>).site ?? '').toLowerCase();
-				const type = String((video as Record<string, unknown>).type ?? '').toLowerCase();
-				return site === 'youtube' && type === 'trailer';
-			})
-		: undefined;
+	movieDetailsCache.set(tmdbId, parseResult.data);
+	return parseResult.data;
+}
 
-	const trailerKey =
-		trailer && typeof trailer === 'object'
-			? String((trailer as Record<string, unknown>).key ?? '')
-			: '';
+export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExtras> {
+	const details = await fetchTmdbMovieDetails(tmdbId);
 
-	const imdbIdRaw = payload.imdb_id;
-	const extras: TmdbMovieExtras = {
-		tmdbId,
-		imdbId: typeof imdbIdRaw === 'string' && imdbIdRaw.trim() ? imdbIdRaw.trim() : null,
-		cast,
-		trailerUrl: trailerKey ? `https://www.youtube.com/embed/${trailerKey}` : null,
-		runtime: toNumber(payload.runtime) ?? null,
-		releaseDate: typeof payload.release_date === 'string' ? payload.release_date : null
+	if (!details.found) {
+		return {
+			tmdbId,
+			imdbId: null,
+			cast: [],
+			trailerUrl: null,
+			runtime: null,
+			releaseDate: null
+		};
+	}
+
+	return {
+		tmdbId: details.tmdbId,
+		imdbId: details.imdbId,
+		cast: details.cast,
+		trailerUrl: details.trailerUrl,
+		runtime: details.runtime,
+		releaseDate: details.releaseDate
 	};
-
-	movieExtrasCache.set(tmdbId, extras);
-	return extras;
 }
 
 export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | null> {
@@ -129,28 +250,44 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
 		return cached === 0 ? null : cached;
 	}
 
+	const rateLimit = await tmdbRateLimiter.checkLimit('tmdb-imdb-lookup');
+	if (!rateLimit.allowed) {
+		throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
+	}
+
 	const endpoint = buildUrl(`/find/${normalized}`, { external_source: 'imdb_id' });
 	const response = await fetch(endpoint);
 
 	if (!response.ok) {
+		if (response.status === 429) {
+			throw new RateLimitError('TMDB API rate limited', undefined);
+		}
 		const message = await response.text().catch(() => response.statusText);
-		throw new Error(`Failed to resolve TMDB id for ${imdbId}: ${message}`);
+		throw new ApiError(`Failed to resolve TMDB id for ${imdbId}: ${message}`, response.status);
 	}
 
-	const payload: Record<string, unknown> = await response.json();
-	const movieResults = payload.movie_results;
+	const payload = (await response.json()) as Record<string, unknown>;
 
-	const tmdbId =
-		Array.isArray(movieResults) && movieResults.length > 0
-			? toNumber((movieResults[0] as Record<string, unknown>).id)
-			: null;
+	const parseImdbLookup = (data: Record<string, unknown>) => {
+		const movieResults = data.movie_results;
+		const tmdbId =
+			Array.isArray(movieResults) && movieResults.length > 0
+				? toNumber((movieResults[0] as Record<string, unknown>)?.id)
+				: null;
+		return tmdbId;
+	};
 
-	const value = tmdbId ?? 0;
+	const parseResult = safeParseApiResponse<number | null>(payload, parseImdbLookup);
+	if (!parseResult.success) {
+		throw new ApiError(`Failed to parse TMDB lookup response for ${imdbId}: ${parseResult.error}`);
+	}
+
+	const value = parseResult.data ?? 0;
 	imdbLookupCache.set(normalized, value);
-	return tmdbId ?? null;
+	return parseResult.data;
 }
 
 export function invalidateTmdbCaches() {
-	movieExtrasCache.clear();
+	movieDetailsCache.clear();
 	imdbLookupCache.clear();
 }

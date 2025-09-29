@@ -34,27 +34,16 @@
 		}
 	}
 
-	$effect(() => {
-		if ($watchlist?.error) {
-			errorStore.set($watchlist.error);
-		}
+	const releaseYear = $derived(() => {
+		if (!movie?.releaseDate) return 'N/A';
+		const date = new Date(movie.releaseDate);
+		return isNaN(date.getTime()) ? 'N/A' : date.getFullYear().toString();
 	});
-
-	const releaseYear = $derived(
-		movie?.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'
-	);
 
 	const qualityTag = $derived(movie?.is4K ? '4K' : movie?.isHD ? 'HD' : '');
 
 	const detailsHref = $derived(
-		movie
-			? (movie.canonicalPath ??
-					(movie.imdbId
-						? `/movie/${movie.imdbId}`
-						: movie.tmdbId
-							? `/movie/${movie.tmdbId}`
-							: `/movie/${movie.id}`))
-			: undefined
+		movie && movie.id ? (movie.canonicalPath ?? `/movie/${movie.id}`) : '#'
 	);
 </script>
 
@@ -73,7 +62,7 @@
 				/>
 			{:else if movie}
 				<div class="flex h-full w-full flex-1 items-center justify-center bg-muted">
-					<img src="" alt="" width="96" height="96" class="text-muted-foreground" />
+					<span class="text-lg text-muted-foreground">No Image</span>
 				</div>
 			{:else}
 				<Skeleton class="h-full w-full" />
@@ -89,7 +78,7 @@
 				>
 					<Badge variant="secondary" class="flex items-center gap-1 bg-black/70 text-white">
 						<Star class="size-4 text-yellow-500" fill="currentColor" stroke="currentColor" />
-						{movie.rating?.toFixed(1)}
+						{movie.rating && typeof movie.rating === 'number' ? movie.rating.toFixed(1) : 'N/A'}
 					</Badge>
 				</div>
 
@@ -97,7 +86,11 @@
 					class="absolute top-4 right-4 flex gap-2 opacity-0 transition-all duration-400 ease-in-out group-hover:scale-100 group-hover:opacity-100"
 				>
 					<Badge variant="secondary" class="bg-black/70 text-white">
-						{movie.media_type === 'tv' ? 'TV Series' : 'Movie'}
+						{movie.media_type === 'tv'
+							? 'TV Series'
+							: movie.media_type === 'movie'
+								? 'Movie'
+								: movie.media_type || 'Media'}
 					</Badge>
 				</div>
 

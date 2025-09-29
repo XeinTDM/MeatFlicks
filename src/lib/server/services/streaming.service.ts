@@ -2,6 +2,7 @@ import { collectStreamingSources, resolveStreamingSource } from '$lib/streaming'
 import type { MediaType } from '$lib/streaming';
 import type { ProviderResolution } from '$lib/streaming/provider-registry';
 import { createTtlCache } from '$lib/server/cache';
+import { clone } from '$lib/server/utils';
 
 export interface ResolveStreamingInput {
 	mediaType: MediaType;
@@ -25,14 +26,6 @@ const streamingResolutionCache = createTtlCache<string, ResolveStreamingResponse
 	ttlMs: STREAMING_CACHE_TTL_MS,
 	maxEntries: 500
 });
-
-const clone = <T>(value: T): T => {
-	if (typeof globalThis.structuredClone === 'function') {
-		return globalThis.structuredClone(value);
-	}
-
-	return JSON.parse(JSON.stringify(value)) as T;
-};
 
 const buildCacheKey = (input: ResolveStreamingInput): string => {
 	const providerKey = Array.from(new Set(input.preferredProviders ?? []))

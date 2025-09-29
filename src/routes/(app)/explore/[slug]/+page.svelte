@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { Clapperboard, Search, Sparkles, Star, TrendingUp } from '@lucide/svelte';
+	import { Clapperboard, Search, Sparkles } from '@lucide/svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import Hero from '$lib/components/Hero.svelte';
 	import CarouselContainer from '$lib/components/CarouselContainer.svelte';
-	import MovieCard from '$lib/components/MovieCard.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Card } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { Separator } from '$lib/components/ui/separator';
@@ -66,7 +65,7 @@
 
 	const uniqueMovies = $derived(
 		(() => {
-			const lookup = new Map<string, LibraryMovie>();
+			const lookup = new SvelteMap<string, LibraryMovie>();
 			for (const genre of genreData) {
 				for (const movie of genre?.movies ?? []) {
 					if (!movie) continue;
@@ -81,14 +80,6 @@
 	);
 
 	const totalTitles = $derived(uniqueMovies.length);
-	const ratedMovies = $derived(uniqueMovies.filter((movie) => getRatingValue(movie) !== null));
-	const averageRating = $derived(
-		(() => {
-			if (!ratedMovies.length) return null;
-			const total = ratedMovies.reduce((sum, movie) => sum + (getRatingValue(movie) ?? 0), 0);
-			return total / ratedMovies.length;
-		})()
-	);
 
 	const sortedByRating = $derived(
 		(() => {
@@ -105,9 +96,6 @@
 		})()
 	);
 
-	const topRatedMovie = $derived(
-		sortedByRating.find((movie) => getRatingValue(movie) !== null) ?? null
-	);
 	const highlightMovie = $derived(
 		(() => {
 			for (const movie of sortedByRating) {
@@ -119,124 +107,8 @@
 		})()
 	);
 
-	const releaseSorted = $derived(
-		(() => {
-			const entries = [...uniqueMovies];
-			entries.sort((a, b) => toTimestamp(b.releaseDate) - toTimestamp(a.releaseDate));
-			return entries;
-		})()
-	);
-
-	const topGenres = $derived(
-		(() => {
-			const sorted = [...genreData];
-			sorted.sort((a, b) => (b?.movies?.length ?? 0) - (a?.movies?.length ?? 0));
-			return sorted.slice(0, 3).map((entry) => entry.genre);
-		})()
-	);
-
-	const mediaTypeCounts = $derived(
-		(() => {
-			const counts = new Map<string, { label: string; total: number }>();
-			for (const movie of uniqueMovies) {
-				const raw = (movie?.media_type ?? 'movie').toString().toLowerCase();
-				const label = getMediaTypeLabel(raw);
-				const record = counts.get(raw) ?? { label, total: 0 };
-				record.total += 1;
-				counts.set(raw, record);
-			}
-			return counts;
-		})()
-	);
-
-	const mediaTypeFilters = $derived(
-		Array.from(mediaTypeCounts.entries()).sort(
-			(a, b) => b[1].total - a[1].total || a[1].label.localeCompare(b[1].label)
-		)
-	);
-
-	const curatedCarouselSections = $derived(
-		(() => {
-			const sections: { title: string; movies: LibraryMovie[] }[] = [];
-			const topRated = sortedByRating.slice(0, 12);
-			if (topRated.length > 0) {
-				sections.push({ title: 'Top Rated Picks', movies: topRated });
-			}
-			const freshReleases = releaseSorted
-				.filter((movie) => toTimestamp(movie.releaseDate) > 0)
-				.slice(0, 12);
-			if (freshReleases.length > 0) {
-				sections.push({ title: 'Fresh Releases', movies: freshReleases });
-			}
-			return sections;
-		})()
-	);
-
 	let searchTerm = $state('');
-	let activeMediaType = $state<'all' | string>('all');
 	let sortOption = $state<'curated' | 'rating' | 'newest' | 'alpha'>('curated');
-
-	const activeMediaTypeLabel = $derived(
-		activeMediaType === 'all'
-			? 'all formats'
-			: (mediaTypeCounts.get(activeMediaType)?.label ?? getMediaTypeLabel(activeMediaType))
-	);
-
-	$effect(() => {
-		if (activeMediaType !== 'all' && !mediaTypeCounts.has(activeMediaType)) {
-			activeMediaType = 'all';
-		}
-	});
-
-	const curatedMovies = $derived(
-		(() => {
-			if (!uniqueMovies.length) return [];
-			const query = searchTerm.trim().toLowerCase();
-
-			const filtered = uniqueMovies.filter((movie) => {
-				if (activeMediaType !== 'all') {
-					const currentType = (movie?.media_type ?? 'movie').toString().toLowerCase();
-					if (currentType !== activeMediaType) return false;
-				}
-				if (query) {
-					const haystack = `${movie.title ?? ''} ${movie.overview ?? ''}`.toLowerCase();
-					if (!haystack.includes(query)) return false;
-				}
-				return true;
-			});
-
-			const sorted = [...filtered];
-
-			sorted.sort((a, b) => {
-				switch (sortOption) {
-					case 'rating': {
-						const ratingA = getRatingValue(a) ?? 0;
-						const ratingB = getRatingValue(b) ?? 0;
-						if (ratingA === ratingB) {
-							return toTimestamp(b.releaseDate) - toTimestamp(a.releaseDate);
-						}
-						return ratingB - ratingA;
-					}
-					case 'newest': {
-						return toTimestamp(b.releaseDate) - toTimestamp(a.releaseDate);
-					}
-					case 'alpha': {
-						return (a.title ?? '').localeCompare(b.title ?? '');
-					}
-					case 'curated':
-					default: {
-						const ratingA = getRatingValue(a) ?? 0;
-						const ratingB = getRatingValue(b) ?? 0;
-						const ratingDiff = ratingB - ratingA;
-						if (ratingDiff !== 0) return ratingDiff;
-						return toTimestamp(b.releaseDate) - toTimestamp(a.releaseDate);
-					}
-				}
-			});
-
-			return sorted.slice(0, 12);
-		})()
-	);
 </script>
 
 <div class="min-h-screen bg-background">

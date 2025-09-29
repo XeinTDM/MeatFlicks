@@ -32,6 +32,7 @@
 		{#if linkTo}
 			<a
 				href={linkTo}
+				data-sveltekit-preload-data="hover"
 				class="group flex items-center text-foreground transition-colors duration-300 hover:text-primary"
 			>
 				<span

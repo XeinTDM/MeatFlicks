@@ -81,7 +81,7 @@ export function ensureAbsoluteUrl(baseUrl: string, candidate: string | null): st
 	try {
 		const url = new URL(candidate, baseUrl);
 		return url.toString();
-	} catch (error) {
+	} catch {
 		return candidate;
 	}
 }

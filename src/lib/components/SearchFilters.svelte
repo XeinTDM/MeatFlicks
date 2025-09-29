@@ -12,6 +12,7 @@
 		hasActiveFilters,
 		onSortChange,
 		onQualityChange,
+		onOverviewToggle = () => {},
 		onResetFilters
 	}: {
 		sortBy: SortOption;
@@ -20,6 +21,7 @@
 		hasActiveFilters: boolean;
 		onSortChange: (sort: SortOption) => void;
 		onQualityChange: (quality: QualityFilter) => void;
+		onOverviewToggle?: (enabled: boolean) => void;
 		onResetFilters: () => void;
 	} = $props();
 
@@ -36,6 +38,19 @@
 	];
 
 	const overviewSwitchId = 'search-overview-toggle';
+	const overviewDescriptionId = `${overviewSwitchId}-description`;
+
+	let overviewSelection = $state(onlyWithOverview);
+
+	$effect(() => {
+		overviewSelection = onlyWithOverview;
+	});
+
+	$effect(() => {
+		if (overviewSelection !== onlyWithOverview) {
+			onOverviewToggle?.(overviewSelection);
+		}
+	});
 </script>
 
 <section class="space-y-5 rounded-2xl border border-border/50 bg-background/60 p-5 shadow-inner">
@@ -50,7 +65,7 @@
 				variant="ghost"
 				size="sm"
 				class="h-8 gap-1 self-start rounded-full px-3 text-xs text-muted-foreground hover:text-foreground md:self-auto"
-				onclick={onResetFilters}
+				onclick={() => onResetFilters()}
 			>
 				<RotateCcw class="size-3.5" />
 				Reset filters
@@ -93,19 +108,24 @@
 			</div>
 		</div>
 
-		<div class="flex items-center gap-3 rounded-xl border border-border/40 bg-background/70 p-3">
-			<Switch
-				id={overviewSwitchId}
-				bind:checked={onlyWithOverview}
-				aria-describedby={`${overviewSwitchId}-description`}
-			/>
-			<div>
-				<Label for={overviewSwitchId} class="cursor-pointer text-sm font-semibold text-foreground">
-					Storyline only
-				</Label>
-				<p id={`${overviewSwitchId}-description`} class="text-xs text-muted-foreground">
-					Hide titles without a synopsis so you can decide faster.
-				</p>
+		<div class="space-y-2">
+			<p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Metadata</p>
+			<div
+				class="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/50 px-3 py-3"
+			>
+				<div class="space-y-1">
+					<Label for={overviewSwitchId} class="text-xs font-semibold text-foreground"
+						>Require overview</Label
+					>
+					<p id={overviewDescriptionId} class="text-xs leading-snug text-muted-foreground">
+						Hide titles without a synopsis.
+					</p>
+				</div>
+				<Switch
+					id={overviewSwitchId}
+					aria-describedby={overviewDescriptionId}
+					bind:checked={overviewSelection}
+				/>
 			</div>
 		</div>
 	</div>

@@ -9,6 +9,7 @@
 		Star,
 		Trash2
 	} from '@lucide/svelte';
+	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import MovieCard from '$lib/components/MovieCard.svelte';
 	import type { Movie } from '$lib/state/stores/watchlistStore';
 	import { watchlist } from '$lib/state/stores/watchlistStore';
@@ -95,7 +96,7 @@
 
 	const availableGenres = $derived(
 		(() => {
-			const values = new Set<string>();
+			const values = new SvelteSet<string>();
 			for (const movie of watchlistMovies) {
 				const genres = movie.genres ?? [];
 				for (const entry of genres) {
@@ -215,7 +216,7 @@
 
 	const groupedByDate = $derived(
 		(() => {
-			const buckets = new Map<string, GroupedEntry>();
+			const buckets = new SvelteMap<string, GroupedEntry>();
 
 			for (const movie of sortedMovies) {
 				const parsed = new Date(movie.addedAt ?? Date.now());
@@ -374,20 +375,6 @@
 							Titles
 						</p>
 						<p class="text-2xl font-bold text-foreground">{numberFormatter.format(stats.total)}</p>
-					</div>
-					<div class="rounded-lg border border-border bg-background/60 p-4">
-						<p class="mb-1 flex items-center gap-2 font-semibold text-foreground">
-							<Badge class="size-3 bg-red-500/20 text-red-200">4K</Badge>
-							4K Ready
-						</p>
-						<p class="text-2xl font-bold text-foreground">{numberFormatter.format(stats.fourK)}</p>
-					</div>
-					<div class="rounded-lg border border-border bg-background/60 p-4">
-						<p class="mb-1 flex items-center gap-2 font-semibold text-foreground">
-							<Badge class="size-3 bg-blue-500/20 text-blue-200">HD</Badge>
-							HD & Up
-						</p>
-						<p class="text-2xl font-bold text-foreground">{numberFormatter.format(stats.hd)}</p>
 					</div>
 					<div class="rounded-lg border border-border bg-background/60 p-4">
 						<p class="mb-1 flex items-center gap-2 font-semibold text-foreground">
@@ -600,6 +587,7 @@
 										>
 											<a
 												href={movie.canonicalPath ?? `/movie/${movie.id}`}
+												data-sveltekit-preload-data="hover"
 												class="flex w-full gap-4 md:w-auto"
 											>
 												{#if movie.posterPath}
@@ -623,6 +611,7 @@
 													<div class="space-y-1">
 														<a
 															href={movie.canonicalPath ?? `/movie/${movie.id}`}
+															data-sveltekit-preload-data="hover"
 															class="text-lg font-semibold hover:text-primary"
 														>
 															{movie.title}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { Snippet } from 'svelte';
 	import { Cog } from '@lucide/svelte';
 	import {
 		Sidebar,
@@ -26,7 +27,13 @@
 	import { media } from 'svelte-match-media';
 
 	let isSettingsOpen = $state(false);
-	let { children } = $props<{ children?: () => any }>(); // TODO: Replace any with proper type
+	let { children } = $props<{ children?: () => Snippet }>();
+
+	const primaryNavItems = primaryNav;
+	const browseNavItems = browseNav;
+	const libraryNavItems = libraryNav();
+	const isDesktop = $derived(() => Boolean($media?.desktop));
+	const sidebarLabel = 'Primary navigation';
 
 	const handleItemSelect = (item: NavigationItem) => {
 		if (item.onSelect) {
@@ -42,13 +49,14 @@
 
 <SidebarProvider>
 	<Sidebar
-		collapsible={$media?.desktop ? 'none' : 'offcanvas'}
-		class="group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0 [&_[data-slot=sidebar-inner]]:bg-background"
+		aria-label={sidebarLabel}
+		collapsible={isDesktop() ? 'none' : 'offcanvas'}
+		class="min-h-svh bg-background group-data-[side=right]:border-l-0 md:sticky md:top-0"
 	>
 		<SidebarHeader class="px-2 py-2">
 			<SidebarGroup class="rounded-lg bg-card">
 				<SidebarGroupContent>
-					<NavigationMenu items={primaryNav} onItemSelected={handleItemSelect} />
+					<NavigationMenu items={primaryNavItems} onItemSelected={handleItemSelect} />
 				</SidebarGroupContent>
 			</SidebarGroup>
 		</SidebarHeader>
@@ -57,14 +65,14 @@
 			<div class="flex flex-1 flex-col rounded-lg bg-card">
 				<SidebarGroup class="px-2 pt-2 pb-2">
 					<SidebarGroupContent>
-						<NavigationMenu items={browseNav} onItemSelected={handleItemSelect} />
+						<NavigationMenu items={browseNavItems} onItemSelected={handleItemSelect} />
 					</SidebarGroupContent>
 				</SidebarGroup>
 
-				<SidebarFooter class="mt-auto gap-0 px-2 pt-0 pb-2">
+				<SidebarFooter class="mt-auto gap-0 px-0 pt-0 pb-2">
 					<SidebarGroup>
 						<SidebarGroupContent>
-							<NavigationMenu items={libraryNav()} onItemSelected={handleItemSelect} />
+							<NavigationMenu items={libraryNavItems} onItemSelected={handleItemSelect} />
 							<SidebarMenu>
 								<SidebarMenuItem>
 									<SidebarMenuButton
@@ -85,11 +93,12 @@
 		</SidebarContent>
 	</Sidebar>
 
-	<SidebarInset class=" flex min-h-svh flex-1 flex-col text-foreground">
+	<SidebarInset class="flex min-h-svh flex-1 flex-col text-foreground">
 		{@render children?.()}
 	</SidebarInset>
 
 	<SidebarTrigger
+		aria-label="Toggle navigation"
 		class="fixed bottom-4 left-4 z-50 rounded-full border border-border bg-card p-3 text-foreground shadow-md hover:bg-card/80 md:hidden"
 	/>
 </SidebarProvider>

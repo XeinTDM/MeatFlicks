@@ -3,13 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider  = "sqlite"
+  url       = "file:./dev.db"
 }
 
 model Movie {
-  id              String      @id @default(uuid())
+  id              String      @id @default(cuid())
   tmdbId          Int         @unique
   title           String
   overview        String?
