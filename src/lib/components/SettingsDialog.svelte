@@ -176,10 +176,10 @@
 	};
 </script>
 
-<Dialog bind:open={open}>
+<Dialog bind:open>
 	<DialogContent
 		id="settings-dialog"
-		class="border-border bg-card text-foreground grid h-[80vh] w-[96vw] max-w-[1280px] grid-rows-[auto,1fr] overflow-hidden border sm:w-[760px] md:w-[980px] lg:w-[1160px] xl:w-[1240px]"
+		class="grid h-[80vh] w-[96vw] max-w-[1280px] grid-rows-[auto,1fr] overflow-hidden border border-border bg-card text-foreground sm:w-[760px] md:w-[980px] lg:w-[1160px] xl:w-[1240px]"
 	>
 		<div class="flex h-full flex-col">
 			<DialogHeader class="space-y-1">
@@ -194,7 +194,9 @@
 				onValueChange={(value: string) => (settingsTab = value as SettingsTab)}
 				class="mt-6 flex flex-1 flex-col overflow-hidden"
 			>
-				<TabsList class="grid w-full grid-cols-2 gap-2 overflow-x-auto sm:grid-cols-3 md:grid-cols-5">
+				<TabsList
+					class="grid w-full grid-cols-2 gap-2 overflow-x-auto sm:grid-cols-3 md:grid-cols-5"
+				>
 					<TabsTrigger value="appearance">Appearance</TabsTrigger>
 					<TabsTrigger value="playback">Playback</TabsTrigger>
 					<TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -204,14 +206,9 @@
 
 				<TabsContent value="appearance" class="mt-4 flex-1 space-y-6 overflow-y-auto pr-1">
 					<section class="space-y-3">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">Theme</h4>
-						<div class="bg-background border-border flex w-fit rounded-md border p-0.5">
-							<Button
-								onclick={toggleMode}
-								variant="outline"
-								size="icon"
-								aria-label="Toggle theme"
-							>
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">Theme</h4>
+						<div class="flex w-fit rounded-md border border-border bg-background p-0.5">
+							<Button onclick={toggleMode} variant="outline" size="icon" aria-label="Toggle theme">
 								<Sun
 									class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 !transition-all dark:scale-0 dark:-rotate-90"
 								/>
@@ -226,13 +223,15 @@
 					<Separator />
 
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">Interface</h4>
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
+							Interface
+						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="show-animations" class="text-foreground text-sm font-medium">
+									<Label for="show-animations" class="text-sm font-medium text-foreground">
 										Backdrop animations
 									</Label>
 									<p id="show-animations-description" class="text-xs text-muted-foreground">
@@ -246,10 +245,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="show-badges" class="text-foreground text-sm font-medium">
+									<Label for="show-badges" class="text-sm font-medium text-foreground">
 										Show episode badges
 									</Label>
 									<p id="show-badges-description" class="text-xs text-muted-foreground">
@@ -263,10 +262,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="compact-sidebar" class="text-foreground text-sm font-medium">
+									<Label for="compact-sidebar" class="text-sm font-medium text-foreground">
 										Compact sidebar
 									</Label>
 									<p id="compact-sidebar-description" class="text-xs text-muted-foreground">
@@ -280,10 +279,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="accessibility-mode" class="text-foreground text-sm font-medium">
+									<Label for="accessibility-mode" class="text-sm font-medium text-foreground">
 										Accessibility emphasis
 									</Label>
 									<p id="accessibility-mode-description" class="text-xs text-muted-foreground">
@@ -310,15 +309,15 @@
 
 				<TabsContent value="playback" class="mt-4 flex-1 space-y-6 overflow-y-auto pr-1">
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Playback flow
 						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="autoplay-next" class="text-foreground text-sm font-medium">
+									<Label for="autoplay-next" class="text-sm font-medium text-foreground">
 										Autoplay next episode
 									</Label>
 									<p id="autoplay-next-description" class="text-xs text-muted-foreground">
@@ -332,44 +331,30 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div
+									class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
+								>
+									<div class="space-y-1">
+										<Label for="autoplay-trailers" class="text-sm font-medium text-foreground">
+											Autoplay trailers
+										</Label>
 
-							class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+										<p id="autoplay-trailers-description" class="text-xs text-muted-foreground">
+											Play previews while browsing titles.
+										</p>
+									</div>
 
-						>
+									<Switch
+										id="autoplay-trailers"
+										bind:checked={autoplayTrailers}
+										aria-describedby="autoplay-trailers-description"
+									/>
+								</div>
 
-							<div class="space-y-1">
-
-								<Label for="autoplay-trailers" class="text-foreground text-sm font-medium">
-
-									Autoplay trailers
-
-								</Label>
-
-								<p id="autoplay-trailers-description" class="text-xs text-muted-foreground">
-
-									Play previews while browsing titles.
-
-								</p>
-
-							</div>
-
-							<Switch
-
-								id="autoplay-trailers"
-
-								bind:checked={autoplayTrailers}
-
-								aria-describedby="autoplay-trailers-description"
-
-							/>
-
-						</div>
-
-						<div class="space-y-1">
-									<Label for="skip-intros" class="text-foreground text-sm font-medium">
+								<div class="space-y-1">
+									<Label for="skip-intros" class="text-sm font-medium text-foreground">
 										Skip intros automatically
 									</Label>
 									<p id="skip-intros-description" class="text-xs text-muted-foreground">
@@ -383,10 +368,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="remember-position" class="text-foreground text-sm font-medium">
+									<Label for="remember-position" class="text-sm font-medium text-foreground">
 										Remember playback position
 									</Label>
 									<p id="remember-position-description" class="text-xs text-muted-foreground">
@@ -405,7 +390,7 @@
 					<Separator />
 
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Streaming quality
 						</h4>
 						<p class="text-xs text-muted-foreground">
@@ -416,7 +401,7 @@
 								<Button
 									type="button"
 									variant={playbackQuality === option.value ? 'secondary' : 'outline'}
-									class="h-auto flex flex-col items-start gap-1 whitespace-normal text-left"
+									class="flex h-auto flex-col items-start gap-1 text-left whitespace-normal"
 									aria-pressed={playbackQuality === option.value}
 									onclick={() => (playbackQuality = option.value)}
 								>
@@ -430,15 +415,15 @@
 					<Separator />
 
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Bandwidth
 						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="limit-cellular" class="text-foreground text-sm font-medium">
+									<Label for="limit-cellular" class="text-sm font-medium text-foreground">
 										Limit cellular data
 									</Label>
 									<p id="limit-cellular-description" class="text-xs text-muted-foreground">
@@ -452,10 +437,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="adaptive-audio" class="text-foreground text-sm font-medium">
+									<Label for="adaptive-audio" class="text-sm font-medium text-foreground">
 										Adaptive audio
 									</Label>
 									<p id="adaptive-audio-description" class="text-xs text-muted-foreground">
@@ -474,15 +459,15 @@
 
 				<TabsContent value="notifications" class="mt-4 flex-1 space-y-6 overflow-y-auto pr-1">
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Email &amp; push
 						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="email-updates" class="text-foreground text-sm font-medium">
+									<Label for="email-updates" class="text-sm font-medium text-foreground">
 										Email updates
 									</Label>
 									<p id="email-updates-description" class="text-xs text-muted-foreground">
@@ -496,10 +481,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="push-reminders" class="text-foreground text-sm font-medium">
+									<Label for="push-reminders" class="text-sm font-medium text-foreground">
 										Push reminders
 									</Label>
 									<p id="push-reminders-description" class="text-xs text-muted-foreground">
@@ -518,15 +503,15 @@
 					<Separator />
 
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Personalized alerts
 						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="weekly-digest" class="text-foreground text-sm font-medium">
+									<Label for="weekly-digest" class="text-sm font-medium text-foreground">
 										Weekly digest
 									</Label>
 									<p id="weekly-digest-description" class="text-xs text-muted-foreground">
@@ -540,10 +525,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="watchlist-alerts" class="text-foreground text-sm font-medium">
+									<Label for="watchlist-alerts" class="text-sm font-medium text-foreground">
 										Watchlist alerts
 									</Label>
 									<p id="watchlist-alerts-description" class="text-xs text-muted-foreground">
@@ -557,19 +542,13 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label
-										for="product-announcements"
-										class="text-foreground text-sm font-medium"
-									>
+									<Label for="product-announcements" class="text-sm font-medium text-foreground">
 										Product announcements
 									</Label>
-									<p
-										id="product-announcements-description"
-										class="text-xs text-muted-foreground"
-									>
+									<p id="product-announcements-description" class="text-xs text-muted-foreground">
 										Hear about new features, betas, and community events.
 									</p>
 								</div>
@@ -585,15 +564,15 @@
 
 				<TabsContent value="downloads" class="mt-4 flex-1 space-y-6 overflow-y-auto pr-1">
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Smart downloads
 						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="auto-download" class="text-foreground text-sm font-medium">
+									<Label for="auto-download" class="text-sm font-medium text-foreground">
 										Auto download next episodes
 									</Label>
 									<p id="auto-download-description" class="text-xs text-muted-foreground">
@@ -607,10 +586,10 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="auto-delete" class="text-foreground text-sm font-medium">
+									<Label for="auto-delete" class="text-sm font-medium text-foreground">
 										Auto delete finished downloads
 									</Label>
 									<p id="auto-delete-description" class="text-xs text-muted-foreground">
@@ -629,15 +608,15 @@
 					<Separator />
 
 					<section class="space-y-4">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Network usage
 						</h4>
 						<div class="space-y-3">
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="wifi-only" class="text-foreground text-sm font-medium">
+									<Label for="wifi-only" class="text-sm font-medium text-foreground">
 										Wi-Fi only downloads
 									</Label>
 									<p id="wifi-only-description" class="text-xs text-muted-foreground">
@@ -651,16 +630,13 @@
 								/>
 							</div>
 							<div
-								class="border-border bg-background flex items-start justify-between gap-4 rounded-lg border p-4"
+								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
 							>
 								<div class="space-y-1">
-									<Label for="background-refresh" class="text-foreground text-sm font-medium">
+									<Label for="background-refresh" class="text-sm font-medium text-foreground">
 										Background refresh
 									</Label>
-									<p
-										id="background-refresh-description"
-										class="text-xs text-muted-foreground"
-									>
+									<p id="background-refresh-description" class="text-xs text-muted-foreground">
 										Sync downloads and continue unfinished transfers in the background.
 									</p>
 								</div>
@@ -676,17 +652,17 @@
 
 				<TabsContent value="data" class="mt-4 flex-1 space-y-6 overflow-y-auto pr-1">
 					<section class="space-y-3">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Account storage
 						</h4>
 						<div class="grid gap-3 sm:grid-cols-2">
-							<div class="border-border bg-background rounded-lg border p-4">
-								<p class="text-xs uppercase text-muted-foreground">Watchlist items</p>
-								<p class="text-foreground text-2xl font-semibold">{watchlistCount}</p>
+							<div class="rounded-lg border border-border bg-background p-4">
+								<p class="text-xs text-muted-foreground uppercase">Watchlist items</p>
+								<p class="text-2xl font-semibold text-foreground">{watchlistCount}</p>
 							</div>
-							<div class="border-border bg-background rounded-lg border p-4">
-								<p class="text-xs uppercase text-muted-foreground">History entries</p>
-								<p class="text-foreground text-2xl font-semibold">{historyCount}</p>
+							<div class="rounded-lg border border-border bg-background p-4">
+								<p class="text-xs text-muted-foreground uppercase">History entries</p>
+								<p class="text-2xl font-semibold text-foreground">{historyCount}</p>
 							</div>
 						</div>
 					</section>
@@ -694,7 +670,7 @@
 					<Separator />
 
 					<section class="space-y-3">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Data management
 						</h4>
 						<div class="grid gap-2 sm:grid-cols-2">
@@ -719,7 +695,7 @@
 					<Separator />
 
 					<section class="space-y-3">
-						<h4 class="text-foreground text-xs font-semibold uppercase tracking-wider">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
 							Quick cleanup
 						</h4>
 						<div class="grid gap-2 sm:grid-cols-2">
@@ -727,17 +703,14 @@
 								<ListX class="h-4 w-4" />
 								Clear watchlist
 							</Button>
-							<Button
-								variant="destructive"
-								class="justify-start gap-2"
-								onclick={clearWatchHistory}
-							>
+							<Button variant="destructive" class="justify-start gap-2" onclick={clearWatchHistory}>
 								<Trash2 class="h-4 w-4" />
 								Clear watch history
 							</Button>
 						</div>
 						<p class="text-xs text-muted-foreground">
-							Clearing data removes it from this device. Export your data first if you want a backup.
+							Clearing data removes it from this device. Export your data first if you want a
+							backup.
 						</p>
 					</section>
 				</TabsContent>
@@ -754,6 +727,3 @@
 		</div>
 	</DialogContent>
 </Dialog>
-
-
-

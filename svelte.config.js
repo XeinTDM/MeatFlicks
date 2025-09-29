@@ -10,7 +10,7 @@ const config = {
 		adapter: adapter(),
 		alias: {
 			'@': './src',
-			'types': '$lib/types'
+			types: '$lib/types'
 		}
 	}
 };

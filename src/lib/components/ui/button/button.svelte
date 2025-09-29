@@ -1,19 +1,24 @@
 <script lang="ts" module>
-	export { buttonVariants, type ButtonProps, type ButtonSize, type ButtonVariant } from "./button.config";
+	export {
+		buttonVariants,
+		type ButtonProps,
+		type ButtonSize,
+		type ButtonVariant
+	} from './button.config';
 </script>
 
 <script lang="ts">
-	import { cn } from "$lib/utils.js";
-	import { buttonVariants } from "./button.config";
-	import type { ButtonProps } from "./button.config";
+	import { cn } from '$lib/utils.js';
+	import { buttonVariants } from './button.config';
+	import type { ButtonProps } from './button.config';
 
 	let {
 		class: className,
-		variant = "default",
-		size = "default",
+		variant = 'default',
+		size = 'default',
 		ref = $bindable(null),
 		href = undefined,
-		type = "button",
+		type = 'button',
 		disabled,
 		children,
 		...restProps
@@ -27,7 +32,7 @@
 		class={cn(buttonVariants({ variant, size }), className)}
 		href={disabled ? undefined : href}
 		aria-disabled={disabled}
-		role={disabled ? "link" : undefined}
+		role={disabled ? 'link' : undefined}
 		tabindex={disabled ? -1 : undefined}
 		{...restProps}
 	>

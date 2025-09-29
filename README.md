@@ -64,51 +64,51 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 
 ### Core backend
 
-| Variable | Description |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string used by Prisma in the request pipeline (pgbouncer-friendly in production). |
-| `DIRECT_URL` | Direct PostgreSQL connection string used for Prisma migrations. |
-| `TMDB_API_KEY` | Server-side TMDB API key for enriching movie records. |
-| `TMDB_IMAGE_BASE_URL` | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`). |
-| `TMDB_POSTER_SIZE` | Poster size path segment (e.g. `w500`). |
-| `TMDB_BACKDROP_SIZE` | Backdrop size path segment (e.g. `original`). |
-| `AUTH_SECRET` | Secret used by NextAuth JWT sessions. |
-| `NEXTAUTH_SECRET` | Duplicate of `AUTH_SECRET` required by runtime config validation. |
-| `GITHUB_ID` / `GITHUB_SECRET` | OAuth client credentials for GitHub sign-in. |
-| `GOOGLE_ID` / `GOOGLE_SECRET` | OAuth client credentials for Google sign-in (optional but supported). |
+| Variable                      | Description                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | PostgreSQL connection string used by Prisma in the request pipeline (pgbouncer-friendly in production). |
+| `DIRECT_URL`                  | Direct PostgreSQL connection string used for Prisma migrations.                                         |
+| `TMDB_API_KEY`                | Server-side TMDB API key for enriching movie records.                                                   |
+| `TMDB_IMAGE_BASE_URL`         | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`).                                              |
+| `TMDB_POSTER_SIZE`            | Poster size path segment (e.g. `w500`).                                                                 |
+| `TMDB_BACKDROP_SIZE`          | Backdrop size path segment (e.g. `original`).                                                           |
+| `AUTH_SECRET`                 | Secret used by NextAuth JWT sessions.                                                                   |
+| `NEXTAUTH_SECRET`             | Duplicate of `AUTH_SECRET` required by runtime config validation.                                       |
+| `GITHUB_ID` / `GITHUB_SECRET` | OAuth client credentials for GitHub sign-in.                                                            |
+| `GOOGLE_ID` / `GOOGLE_SECRET` | OAuth client credentials for Google sign-in (optional but supported).                                   |
 
 ### Client-facing
 
-| Variable | Description |
-| --- | --- |
-| `NEXT_PUBLIC_BASE_URL` | Absolute URL the browser should use when calling internal APIs (e.g. `http://localhost:5173`). |
-| `NEXT_PUBLIC_TMDB_API_KEY` | Optional: overrides the public TMDB key exposed to the client; falls back to `TMDB_API_KEY` if omitted. |
-| `NEXT_PUBLIC_TMDB_IMAGE_BASE_URL` | Optional: overrides the image base URL exposed to the client; defaults to the server value. |
-| `NEXT_PUBLIC_TMDB_POSTER_SIZE` / `NEXT_PUBLIC_TMDB_BACKDROP_SIZE` | Optional poster/backdrop size overrides; default to server values. |
+| Variable                                                          | Description                                                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_BASE_URL`                                            | Absolute URL the browser should use when calling internal APIs (e.g. `http://localhost:5173`).          |
+| `NEXT_PUBLIC_TMDB_API_KEY`                                        | Optional: overrides the public TMDB key exposed to the client; falls back to `TMDB_API_KEY` if omitted. |
+| `NEXT_PUBLIC_TMDB_IMAGE_BASE_URL`                                 | Optional: overrides the image base URL exposed to the client; defaults to the server value.             |
+| `NEXT_PUBLIC_TMDB_POSTER_SIZE` / `NEXT_PUBLIC_TMDB_BACKDROP_SIZE` | Optional poster/backdrop size overrides; default to server values.                                      |
 
 ### Streaming providers (optional overrides)
 
-| Variable | Description |
-| --- | --- |
+| Variable                               | Description                                                                |
+| -------------------------------------- | -------------------------------------------------------------------------- |
 | `VIDLINK_BASE_URL` / `VIDLINK_API_KEY` | Base URL and key for Vidlink resolver (defaults to `https://vidlink.pro`). |
-| `VIDSRC_BASE_URL` / `VIDSRC_API_KEY` | Base URL and key for Vidsrc resolver (defaults to `https://vidsrc.me`). |
-| `EMBEDSU_BASE_URL` | Base URL for EmbedSu resolver (defaults to `https://embed.su`). |
-| `TWOEMBED_BASE_URL` | Base URL for TwoEmbed resolver (defaults to `https://www.2embed.to`). |
+| `VIDSRC_BASE_URL` / `VIDSRC_API_KEY`   | Base URL and key for Vidsrc resolver (defaults to `https://vidsrc.me`).    |
+| `EMBEDSU_BASE_URL`                     | Base URL for EmbedSu resolver (defaults to `https://embed.su`).            |
+| `TWOEMBED_BASE_URL`                    | Base URL for TwoEmbed resolver (defaults to `https://www.2embed.to`).      |
 
 Keep secrets out of version control and rotate credentials regularly.
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `bun dev` | Start the SvelteKit development server. |
-| `bun run build` | Create a production build. |
-| `bun preview` | Preview the production build locally. |
-| `bun run lint` | Run Prettier check and ESLint. |
-| `bun run check` | Run SvelteKit sync and type-checking (svelte-check + TypeScript). |
-| `bun test` | Execute Vitest unit tests (`--run` configured in package). |
-| `bunx prisma migrate dev` | Apply database migrations during development. |
-| `bunx prisma studio` | Open Prisma Studio for inspecting data. |
+| Command                   | Description                                                       |
+| ------------------------- | ----------------------------------------------------------------- |
+| `bun dev`                 | Start the SvelteKit development server.                           |
+| `bun run build`           | Create a production build.                                        |
+| `bun preview`             | Preview the production build locally.                             |
+| `bun run lint`            | Run Prettier check and ESLint.                                    |
+| `bun run check`           | Run SvelteKit sync and type-checking (svelte-check + TypeScript). |
+| `bun test`                | Execute Vitest unit tests (`--run` configured in package).        |
+| `bunx prisma migrate dev` | Apply database migrations during development.                     |
+| `bunx prisma studio`      | Open Prisma Studio for inspecting data.                           |
 
 ## Project Structure
 
