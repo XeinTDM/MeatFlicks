@@ -1,3 +1,5 @@
+import { writeFile, mkdir } from 'fs/promises';
+
 export class ApiError extends Error {
 	constructor(
 		message: string,
@@ -63,5 +65,14 @@ export function safeParseApiResponse<T>(
 			data: null,
 			error: error instanceof Error ? error.message : 'Parse error'
 		};
+	}
+}
+
+export async function updateLastRefreshTime() {
+	try {
+		await mkdir('data', { recursive: true });
+		await writeFile('data/last-refresh.txt', Date.now().toString());
+	} catch (error) {
+		console.error('Failed to update refresh timestamp:', error);
 	}
 }

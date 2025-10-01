@@ -1,1 +1,3 @@
-export { prisma as default, prisma } from './client';
+export { sqlite as default, sqlite } from "./client";
+export * from "./types";
+

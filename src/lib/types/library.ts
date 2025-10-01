@@ -1,4 +1,4 @@
-import type { Collection, Genre, Movie } from '@prisma/client';
+import type { CollectionRecord, GenreRecord, MovieSummary } from '$lib/server/db';
 
 export type CastMember = {
 	id: number;
@@ -6,10 +6,10 @@ export type CastMember = {
 	character: string;
 };
 
-export type GenreSummary = Pick<Genre, 'id' | 'name'>;
+export type GenreSummary = GenreRecord;
 
-export type LibraryMovie = Omit<Movie, 'releaseDate'> & {
-	releaseDate: Movie['releaseDate'] | string | null;
+export type LibraryMovie = MovieSummary & {
+	releaseDate: MovieSummary['releaseDate'] | string | null;
 	trailerUrl?: string | null;
 	media_type?: string | null;
 	genres?: GenreSummary[];
@@ -19,11 +19,11 @@ export type LibraryMovie = Omit<Movie, 'releaseDate'> & {
 	addedAt?: string;
 };
 
-export type LibraryCollection = Collection & {
+export type LibraryCollection = CollectionRecord & {
 	movies: LibraryMovie[];
 };
 
-export type LibraryGenre = Genre & {
+export type LibraryGenre = GenreRecord & {
 	slug: string;
 	movies: LibraryMovie[];
 };

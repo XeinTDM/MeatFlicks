@@ -1,13 +1,9 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { Prisma } from '@prisma/client';
+import type { MovieRecord } from '$lib/server/db';
 import { resolveStreaming } from '$lib/server';
 
-type MovieWithDetails = Prisma.MovieGetPayload<{
-	include: {
-		genres: true;
-	};
-}> & {
+type MovieWithDetails = MovieRecord & {
 	imdbId: string | null;
 	cast: { id: number; name: string; character: string }[];
 	trailerUrl: string | null;
@@ -30,6 +26,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 
 	if (!identifier) {
 		return {
+			mediaType: 'movie' as const,
 			movie: null,
 			streaming: { source: null, resolutions: [] }
 		} as const;
@@ -41,7 +38,11 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 
 	if (!response.ok) {
 		if (response.status === 404) {
-			return { movie: null, streaming: { source: null, resolutions: [] } } as const;
+			return {
+				mediaType: 'movie' as const,
+				movie: null,
+				streaming: { source: null, resolutions: [] }
+			} as const;
 		}
 
 		throw new Error(`Failed to fetch movie ${identifier}`);
@@ -50,7 +51,11 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 	const movie = (await response.json()) as MovieWithDetails | null;
 
 	if (!movie) {
-		return { movie: null, streaming: { source: null, resolutions: [] } } as const;
+		return {
+			mediaType: 'movie' as const,
+			movie: null,
+			streaming: { source: null, resolutions: [] }
+		} as const;
 	}
 
 	if (movie.imdbId && queryMode !== 'imdb') {
@@ -69,6 +74,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		});
 
 		return {
+			mediaType: 'movie' as const,
 			movie,
 			streaming,
 			canonicalPath,
@@ -78,6 +84,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 	} catch (error) {
 		console.error('[movie][load] Failed to resolve streaming sources', error);
 		return {
+			mediaType: 'movie' as const,
 			movie,
 			streaming: { source: null, resolutions: [] },
 			canonicalPath,

@@ -1,14 +1,14 @@
 # MeatFlicks
 
-MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and streaming movies and TV series. It stores a curated library in PostgreSQL via Prisma, augments records with TMDB metadata, resolves playable sources from multiple third-party streaming providers, and lets authenticated users maintain a personal watchlist.
+MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and streaming movies and TV series. It stores a curated library in a local SQLite database with FTS5 full-text search, augments records with TMDB metadata, resolves playable sources from multiple third-party streaming providers, and lets authenticated users maintain a personal watchlist.
 
 ## Features
 
 - Server-rendered Svelte 5 experience with Tailwind CSS v4 styling and responsive design.
-- Library ingestion backed by Prisma + PostgreSQL with TMDB enrichment (cast, trailers, artwork).
+- Library ingestion backed by SQLite + TMDB enrichment (cast, trailers, artwork).
 - Streaming resolver that queries Vidlink, Vidsrc, TwoEmbed, and EmbedSu, with provider prioritisation and diagnostics.
 - OAuth authentication with GitHub and Google via @auth/sveltekit/NextAuth and JWT sessions.
-- Personal watchlist controls backed by the Prisma database and exposed through `/api/watchlist`.
+- Personal watchlist controls persisted alongside the catalog in SQLite and exposed through `/api/watchlist`.
 - Global search endpoint (`/api/search`) with debounced UI, category/collection browsing, and light/dark theme toggle.
 
 ## Tech Stack
@@ -16,15 +16,14 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 - SvelteKit 2 / Svelte 5 runes mode / TypeScript (strict)
 - Tailwind CSS v4 with utility-first design
 - Bun for runtime, dependency management, and scripts
-- Prisma ORM + PostgreSQL
-- @auth/sveltekit (NextAuth) + Prisma adapter
+- SQLite (better-sqlite3) with FTS5 full-text search
+- @auth/sveltekit (NextAuth) for OAuth flows
 - Zod validation for configuration, Font Awesome icons, Axios for outbound requests, Vitest/Playwright for testing
 
 ## Prerequisites
 
 - Bun >= 1.1.0 (installs dependencies and runs scripts)
 - Node.js >= 18 (Bun still relies on system Node toolchain for some utilities)
-- Access to a PostgreSQL database instance
 - TMDB API key
 - OAuth credentials for GitHub (required) and optionally Google
 - Secrets store or `.env` file containing the configuration below (never commit production secrets)
@@ -39,41 +38,27 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 
 2. Create a `.env` file (or configure your secrets manager) using the variables listed below.
 
-3. Apply database migrations:
-
-   ```bash
-   bunx prisma migrate deploy
-   # or bunx prisma migrate dev --name init for local development
-   ```
-
-4. (Optional) Inspect or edit data with Prisma Studio:
-
-   ```bash
-   bunx prisma studio
-   ```
-
-5. Start the development server:
+3. Start the development server:
 
    ```bash
    bun dev
    ```
 
-   The app will be available on the host/port reported by Vite (default `http://localhost:5173`). Keep `NEXT_PUBLIC_BASE_URL` aligned with this URL.
+   The app will be available on the host/port reported by Vite (default `http://localhost:5173`). The SQLite database file is created automatically on first run (defaults to `data/meatflicks.db`; override with `SQLITE_DB_PATH` if desired).
 
 ## Environment Variables
 
 ### Core backend
 
-| Variable                      | Description                                                                                             |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | PostgreSQL connection string used by Prisma in the request pipeline (pgbouncer-friendly in production). |
-| `DIRECT_URL`                  | Direct PostgreSQL connection string used for Prisma migrations.                                         |
-| `TMDB_API_KEY`                | Server-side TMDB API key for enriching movie records.                                                   |
-| `TMDB_IMAGE_BASE_URL`         | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`).                                              |
-| `TMDB_POSTER_SIZE`            | Poster size path segment (e.g. `w500`).                                                                 |
-| `TMDB_BACKDROP_SIZE`          | Backdrop size path segment (e.g. `original`).                                                           |
-| `AUTH_SECRET`                 | Secret used by NextAuth JWT sessions.                                                                   |
-| `NEXTAUTH_SECRET`             | Duplicate of `AUTH_SECRET` required by runtime config validation.                                       |
+| Variable              | Description                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `SQLITE_DB_PATH`      | Optional absolute/relative path for the SQLite database file (defaults to `data/meatflicks.db`).      |
+| `TMDB_API_KEY`        | Server-side TMDB API key for enriching movie records.                                                   |
+| `TMDB_IMAGE_BASE_URL` | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`).                                              |
+| `TMDB_POSTER_SIZE`    | Poster size path segment (e.g. `w500`).                                                                 |
+| `TMDB_BACKDROP_SIZE`  | Backdrop size path segment (e.g. `original`).                                                           |
+| `AUTH_SECRET`         | Secret used by NextAuth JWT sessions.                                                                   |
+| `NEXTAUTH_SECRET`     | Duplicate of `AUTH_SECRET` required by runtime config validation.                                       |
 | `GITHUB_ID` / `GITHUB_SECRET` | OAuth client credentials for GitHub sign-in.                                                            |
 | `GOOGLE_ID` / `GOOGLE_SECRET` | OAuth client credentials for Google sign-in (optional but supported).                                   |
 
@@ -107,18 +92,15 @@ Keep secrets out of version control and rotate credentials regularly.
 | `bun run lint`            | Run Prettier check and ESLint.                                    |
 | `bun run check`           | Run SvelteKit sync and type-checking (svelte-check + TypeScript). |
 | `bun test`                | Execute Vitest unit tests (`--run` configured in package).        |
-| `bunx prisma migrate dev` | Apply database migrations during development.                     |
-| `bunx prisma studio`      | Open Prisma Studio for inspecting data.                           |
 
 ## Project Structure
 
 ```
-prisma/                # Prisma schema, migrations, and local dev database
 src/
   lib/
     components/        # Reusable Svelte components (hero, cards, header, etc.)
     config/            # Runtime environment and streaming provider configuration
-    server/            # Prisma client, repositories, services, Auth config
+    server/            # SQLite client, repositories, services, Auth config
     state/             # Svelte stores (theme, watchlist)
     streaming/         # Provider registry and resolution helpers
     utils/             # Shared utility helpers (slugs, etc.)
@@ -130,6 +112,14 @@ static/                # Static assets served as-is
 tailwind.config.ts     # Tailwind CSS configuration (v4)
 vite.config.ts         # Vite configuration for SvelteKit
 ```
+
+## Caching
+
+- Memory-first LRU cache lives in `src/lib/server/cache.ts`, backed by a singleton `lru-cache` instance. Entries are stored as JSON with TTLs so they expire automatically.
+- On a memory miss we consult the SQLite `cache` table (`key`, `data`, `expiresAt`). Fresh hits repopulate the LRU for fast subsequent lookups; expired rows are pruned lazily.
+- Library queries in `src/lib/server/repositories/library.repository.ts` plus the movie/search API routes (`src/routes/api/...`) always go through the helper functions in `src/lib/server/cache.ts`, so the pipeline is Memory → SQLite.
+- Tune TTLs with `CACHE_TTL_SHORT`, `CACHE_TTL_MEDIUM`, `CACHE_TTL_LONG`, and `CACHE_TTL_MOVIE` (seconds, clamped to 5-30 minutes). `CACHE_MEMORY_MAX_ITEMS` controls the LRU size.
+- SQLite writes are best-effort: if the database file is unavailable the app falls back to the in-process cache, trading shared consistency for availability.
 
 ## API Surface
 
@@ -157,3 +147,5 @@ Streaming resolution calls multiple unofficial providers (Vidlink, Vidsrc, TwoEm
 ## License
 
 This project is distributed under the [MIT License](LICENSE).
+
+

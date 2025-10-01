@@ -1,14 +1,28 @@
 import { createTtlCache } from '$lib/server/cache';
-import { clone } from '$lib/server/utils';
 import { toSlug } from '$lib/utils';
-import { libraryRepository } from '../repositories/library.repository';
+import { updateLastRefreshTime } from '$lib/server/utils';
+import { libraryRepository } from '$lib/server/repositories/library.repository';
+import { ensureHomeLibraryPrimed } from '$lib/server/services/home-library-optimizer';
+import type { MovieSummary } from '$lib/server/db';
+
+// Simple deep clone function
+function clone<T>(obj: T): T {
+	return JSON.parse(JSON.stringify(obj));
+}
+
 import type {
 	HomeLibrary,
 	LibraryCollection,
 	LibraryGenre,
 	LibraryMovie
 } from '$lib/types/library';
-import { fetchTmdbMovieExtras } from '$lib/server/services/tmdb.service';
+import {
+	fetchTmdbMovieDetails,
+	fetchTmdbMovieExtras,
+	fetchTrendingMovieIds,
+	type TmdbMovieDetails,
+	type TmdbMovieGenre
+} from '$lib/server/services/tmdb.service';
 
 const HOME_LIBRARY_CACHE_KEY = 'home-library';
 const HOME_LIBRARY_MOVIES_LIMIT = 20;
@@ -16,6 +30,71 @@ const homeLibraryCache = createTtlCache<string, HomeLibrary>({
 	ttlMs: 1000 * 60 * 5,
 	maxEntries: 1
 });
+
+const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
+	...movie,
+	releaseDate: movie.releaseDate ?? null,
+	durationMinutes: movie.durationMinutes ?? null,
+	genres: movie.genres ?? []
+});
+
+const tmdbDetailsToLibraryMovie = (details: TmdbMovieDetails): LibraryMovie => ({
+	id: details.tmdbId ? String(details.tmdbId) : `tmdb-fallback-${Math.random().toString(36).slice(2)}`,
+	tmdbId: details.tmdbId,
+	title: details.title ?? 'Untitled',
+	overview: details.overview ?? null,
+	posterPath: details.posterPath ?? null,
+	backdropPath: details.backdropPath ?? null,
+	releaseDate: details.releaseDate ?? null,
+	rating: details.rating ?? null,
+	durationMinutes: details.runtime ?? null,
+	is4K: false,
+	isHD: true,
+	collectionId: null,
+	genres: details.genres.map((genre: TmdbMovieGenre) => ({ id: genre.id, name: genre.name })),
+	cast: details.cast,
+	trailerUrl: details.trailerUrl ?? null,
+	imdbId: details.imdbId ?? null,
+	canonicalPath: details.imdbId
+		? `/movie/${details.imdbId}`
+		: details.tmdbId
+			? `/movie/${details.tmdbId}`
+			: undefined
+});
+
+const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | null> => {
+	try {
+		const ids = await fetchTrendingMovieIds(limit);
+		const detailsList = await Promise.all(
+			ids.map(async (id) => {
+				try {
+					const details = await fetchTmdbMovieDetails(id);
+					return details.found ? details : null;
+				} catch (error) {
+					console.warn('[library][fallback] failed to fetch TMDB details for', id, error);
+					return null;
+				}
+			})
+		);
+
+		const fallbackMovies = detailsList
+			.filter((details): details is TmdbMovieDetails => Boolean(details?.found))
+			.map((details) => tmdbDetailsToLibraryMovie(details));
+
+		if (fallbackMovies.length === 0) {
+			return null;
+		}
+
+		return {
+			trendingMovies: fallbackMovies,
+			collections: [],
+			genres: []
+		};
+	} catch (error) {
+		console.error('[library][fallback] failed to build fallback library', error);
+		return null;
+	}
+};
 
 const buildExtrasMap = async (
 	movies: { tmdbId: number | null }[]
@@ -37,7 +116,7 @@ const buildExtrasMap = async (
 				trailerUrl: extras.trailerUrl ?? null
 			});
 		} catch (error) {
-			console.error(`[library][tmdb] Failed to fetch metadata for TMDB ${tmdbId}`, error);
+			console.error('[library][tmdb] Failed to fetch metadata for TMDB ' + tmdbId, error);
 			extrasMap.set(tmdbId, { imdbId: null, trailerUrl: null });
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
@@ -53,7 +132,7 @@ const attachIdentifiers = (
 	const extras = movie.tmdbId ? extrasMap.get(movie.tmdbId) ?? null : null;
 	const imdbId = extras?.imdbId ?? null;
 	const trailerUrl = extras?.trailerUrl ?? (movie.trailerUrl ?? null);
-	const canonicalPath = imdbId ? `/movie/${imdbId}` : `/movie/${movie.tmdbId ?? movie.id}`;
+	const canonicalPath = imdbId ? '/movie/' + imdbId : '/movie/' + (movie.tmdbId ?? movie.id);
 
 	return {
 		...movie,
@@ -64,18 +143,19 @@ const attachIdentifiers = (
 };
 
 async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
-	const [trendingMovies, collections, genres] = await Promise.all([
+	const [trendingRaw, collections, genres] = await Promise.all([
 		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT),
 		libraryRepository.listCollections(),
 		libraryRepository.listGenres()
 	]);
 
+	const trendingMovies = trendingRaw.map(toLibraryMovie);
+
 	const collectionsWithMovies = await Promise.all(
 		collections.map(async (collection) => {
-			const movies = await libraryRepository.findCollectionMovies(
-				collection.slug,
-				HOME_LIBRARY_MOVIES_LIMIT
-			);
+			const movies = await libraryRepository
+				.findCollectionMovies(collection.slug, HOME_LIBRARY_MOVIES_LIMIT)
+				.then((items) => items.map(toLibraryMovie));
 			return {
 				...collection,
 				movies
@@ -85,7 +165,9 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 
 	const genresWithMovies = await Promise.all(
 		genres.map(async (genre) => {
-			const movies = await libraryRepository.findGenreMovies(genre.name, HOME_LIBRARY_MOVIES_LIMIT);
+			const movies = await libraryRepository
+				.findGenreMovies(genre.name, HOME_LIBRARY_MOVIES_LIMIT)
+				.then((items) => items.map(toLibraryMovie));
 			return {
 				...genre,
 				slug: toSlug(genre.name),
@@ -102,14 +184,14 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 
 	const decorate = (movie: LibraryMovie) => attachIdentifiers(movie, extrasMap);
 
-	const decoratedTrending = trendingMovies.map((movie) => decorate(movie as LibraryMovie));
+	const decoratedTrending = trendingMovies.map(decorate);
 	const decoratedCollections = collectionsWithMovies.map((collection) => ({
 		...collection,
-		movies: collection.movies.map((movie) => decorate(movie as LibraryMovie))
+		movies: collection.movies.map(decorate)
 	}));
 	const decoratedGenres = genresWithMovies.map((genre) => ({
 		...genre,
-		movies: genre.movies.map((movie) => decorate(movie as LibraryMovie))
+		movies: genre.movies.map(decorate)
 	}));
 
 	return {
@@ -132,10 +214,22 @@ export async function fetchHomeLibrary(
 		homeLibraryCache.delete(HOME_LIBRARY_CACHE_KEY);
 	}
 
+	try {
+		await ensureHomeLibraryPrimed({ force: forceRefresh });
+	} catch (error) {
+		console.error('[library] Failed to prime home library data', error);
+	}
+
 	const result = await homeLibraryCache.getOrSet(
 		HOME_LIBRARY_CACHE_KEY,
 		fetchHomeLibraryFromSource
 	);
+
+	// Update the last refresh timestamp after successful fetch
+	if (forceRefresh) {
+		await updateLastRefreshTime();
+	}
+
 	return clone(result);
 }
 
@@ -147,3 +241,4 @@ export const libraryService = {
 	fetchHomeLibrary,
 	invalidateHomeLibraryCache
 };
+

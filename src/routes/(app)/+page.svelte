@@ -13,6 +13,7 @@
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
 	let lastResolvedLibrary = $state<HomeLibrary | null>(null);
+	let activePromise: Promise<HomeLibrary | null> | null = null;
 
 	async function refreshHomeLibrary() {
 		if (isRefreshing) return;
@@ -56,6 +57,23 @@
 			homeLibraryPromise = streamed as Promise<HomeLibrary | null>;
 		}
 	});
+$effect(() => {
+	const promise = homeLibraryPromise;
+	if (!promise) {
+		return;
+	}
+
+	const current = promise;
+	activePromise = current;
+	current
+		.then((value) => {
+			if (activePromise !== current) return;
+			if (value) {
+				lastResolvedLibrary = value;
+			}
+		})
+		.catch(() => undefined);
+});
 </script>
 
 <div class="min-h-screen text-foreground">
@@ -67,26 +85,23 @@
 				{#if !resolved}
 					<HomePageSkeleton />
 				{:else}
-					{@const _ = resolved ? (lastResolvedLibrary = resolved) : null}
-
 					{@const library = resolved}
 					{@const trendingMovies = Array.isArray(library?.trendingMovies)
 						? library.trendingMovies
 						: []}
 					{@const collections = Array.isArray(library?.collections) ? library.collections : []}
 					{@const genres = Array.isArray(library?.genres) ? library.genres : []}
+					{@const featuredMovie = trendingMovies.at(0) ?? null}
 
 					<main
 						class="flex min-h-[calc(100vh-2rem)] flex-col gap-12 overflow-hidden rounded-lg bg-card/80 shadow-xl backdrop-blur"
 					>
-						{#if trendingMovies.length > 0}
-							<Hero
-							movie={trendingMovies[0]}
+						<Hero
+							movie={featuredMovie}
 							movies={trendingMovies}
 							onRefresh={refreshHomeLibrary}
 							refreshing={isRefreshing}
 						/>
-						{/if}
 
 						{#if refreshError}
 							<p class="px-[5%] text-sm text-destructive sm:px-5">{refreshError}</p>
@@ -95,6 +110,10 @@
 						<div class="p-6 sm:p-5 lg:p-5">
 							{#if trendingMovies.length > 0}
 								<TrendingMoviesSlider title="Trending Now" movies={trendingMovies} />
+							{/if}
+
+							{#if trendingMovies.length === 0 && collections.length === 0 && genres.length === 0}
+								<p class="text-sm text-foreground/70">No movies available yet. Try refreshing the library.</p>
 							{/if}
 
 							{#each collections as collection (collection.id)}
@@ -127,3 +146,4 @@
 		{/if}
 	</div>
 </div>
+

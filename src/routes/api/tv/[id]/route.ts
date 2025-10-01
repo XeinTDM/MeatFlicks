@@ -1,0 +1,75 @@
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { buildCacheKey, CACHE_TTL_LONG_SECONDS, withCache } from '$lib/server/cache';
+import { fetchTmdbTvDetails, lookupTmdbIdByImdbId } from '$lib/server/services/tmdb.service';
+import type { TmdbTvDetails } from '$lib/server/services/tmdb.service';
+
+const detectQueryMode = (identifier: string): 'tmdb' | 'imdb' => {
+	if (/^tt\d{7,}$/i.test(identifier)) {
+		return 'imdb';
+	}
+
+	return 'tmdb';
+};
+
+const parseNumericId = (value: string): number | null => {
+	const parsed = Number.parseInt(value, 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+export const GET: RequestHandler = async ({ params, url }) => {
+	const { id: identifier } = params;
+
+	if (!identifier) {
+		return json({ error: 'TV identifier is required.' }, { status: 400 });
+	}
+
+	const queryModeParam = url.searchParams.get('by');
+	const queryMode = queryModeParam === 'imdb' ? 'imdb' : detectQueryMode(identifier);
+
+	try {
+		let tmdbId: number | null = null;
+
+		if (queryMode === 'imdb') {
+			tmdbId = await lookupTmdbIdByImdbId(identifier);
+			if (!tmdbId) {
+				return json({ message: 'TV show not found' }, { status: 404 });
+			}
+		} else {
+			tmdbId = parseNumericId(identifier);
+			if (!tmdbId) {
+				return json({ error: 'A valid TMDB id is required.' }, { status: 400 });
+			}
+		}
+
+		const cacheKey = buildCacheKey('tv', tmdbId);
+		const details = await withCache<TmdbTvDetails>(cacheKey, CACHE_TTL_LONG_SECONDS, () => fetchTmdbTvDetails(tmdbId!));
+
+		if (!details.found || !details.name) {
+			return json({ message: 'TV show not found' }, { status: 404 });
+		}
+
+		return json({
+			id: String(details.tmdbId),
+			tmdbId: details.tmdbId,
+			title: details.name,
+			overview: details.overview ?? null,
+			posterPath: details.posterPath ?? null,
+			backdropPath: details.backdropPath ?? null,
+			releaseDate: details.firstAirDate ?? null,
+			rating: details.rating ?? null,
+			durationMinutes: details.episodeRuntime ?? null,
+			genres: details.genres,
+			cast: details.cast,
+			trailerUrl: details.trailerUrl ?? null,
+			imdbId: details.imdbId ?? null,
+			seasonCount: details.seasonCount ?? null,
+			episodeCount: details.episodeCount ?? null,
+			is4K: false,
+			isHD: true,
+			media_type: 'tv'
+		});
+	} catch (error) {
+		console.error('Error fetching TV show:', error);
+		return json({ error: 'Failed to fetch TV show' }, { status: 500 });
+	}
+};

@@ -12,6 +12,10 @@
 	import { buttonVariants } from './button.config';
 	import type { ButtonProps } from './button.config';
 
+interface $$Events {
+	click: MouseEvent;
+}
+
 	let {
 		class: className,
 		variant = 'default',

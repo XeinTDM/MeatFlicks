@@ -1,3 +1,4 @@
+import { env as privateEnv } from '$env/dynamic/private';
 import { z } from 'zod';
 
 const serverSchema = z.object({
@@ -8,10 +9,10 @@ const serverSchema = z.object({
 });
 
 const serverResult = serverSchema.safeParse({
-	TMDB_API_KEY: process.env.TMDB_API_KEY,
-	TMDB_IMAGE_BASE_URL: process.env.TMDB_IMAGE_BASE_URL,
-	TMDB_POSTER_SIZE: process.env.TMDB_POSTER_SIZE,
-	TMDB_BACKDROP_SIZE: process.env.TMDB_BACKDROP_SIZE
+	TMDB_API_KEY: privateEnv.TMDB_API_KEY,
+	TMDB_IMAGE_BASE_URL: privateEnv.TMDB_IMAGE_BASE_URL,
+	TMDB_POSTER_SIZE: privateEnv.TMDB_POSTER_SIZE,
+	TMDB_BACKDROP_SIZE: privateEnv.TMDB_BACKDROP_SIZE
 });
 
 if (!serverResult.success) {
