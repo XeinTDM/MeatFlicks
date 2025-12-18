@@ -1,8 +1,9 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import sqlite from "$lib/server/db";
+import { db } from "$lib/server/db";
+import { movies, genres, moviesGenres } from "$lib/server/db/schema";
+import { eq, sql, inArray } from "drizzle-orm";
 import type { GenreRecord, MovieRecord, MovieRow } from "$lib/server/db";
 import {
-	MOVIE_COLUMNS,
 	mapRowsToRecords
 } from "$lib/server/db/movie-select";
 import {
@@ -31,87 +32,21 @@ const MOVIE_CACHE_TTL_SECONDS = clampTtl(
 	Number.parseInt(process.env.CACHE_TTL_MOVIE ?? "", 10) || CACHE_TTL_LONG_SECONDS
 );
 
-const selectMovieByIdStatement = sqlite.prepare(
-	`SELECT ${MOVIE_COLUMNS} FROM movies m WHERE m.id = ? LIMIT 1`
-);
-
-const selectMovieByTmdbStatement = sqlite.prepare(
-	`SELECT ${MOVIE_COLUMNS} FROM movies m WHERE m.tmdbId = ? LIMIT 1`
-);
-
-const selectGenreByNameStatement = sqlite.prepare(
-	"SELECT id, name FROM genres WHERE name = ?"
-);
-
-const insertGenreStatement = sqlite.prepare(
-	"INSERT INTO genres (name) VALUES (?)"
-);
-
-const deleteMovieGenresStatement = sqlite.prepare(
-	"DELETE FROM movies_genres WHERE movieId = ?"
-);
-
-const insertMovieGenreStatement = sqlite.prepare(
-	"INSERT OR IGNORE INTO movies_genres (movieId, genreId) VALUES (?, ?)"
-);
-
-const insertMovieStatement = sqlite.prepare(
-	`INSERT INTO movies (
-		id,
-		tmdbId,
-		title,
-		overview,
-		posterPath,
-		backdropPath,
-		releaseDate,
-		rating,
-		durationMinutes,
-		is4K,
-		isHD,
-		collectionId
-	) VALUES (
-		@id,
-		@tmdbId,
-		@title,
-		@overview,
-		@posterPath,
-		@backdropPath,
-		@releaseDate,
-		@rating,
-		@durationMinutes,
-		@is4K,
-		@isHD,
-		NULL
-	)`
-);
-
-const updateMovieStatement = sqlite.prepare(
-	`UPDATE movies SET
-		title = @title,
-		overview = @overview,
-		posterPath = @posterPath,
-		backdropPath = @backdropPath,
-		releaseDate = @releaseDate,
-		rating = @rating,
-		durationMinutes = @durationMinutes,
-		is4K = @is4K,
-		isHD = @isHD
-	WHERE tmdbId = @tmdbId`
-);
-
 type MovieLookup = { kind: "id"; value: string } | { kind: "tmdb"; value: number };
 
-const loadMovie = (lookup: MovieLookup): MovieRecord | null => {
-	const row =
-		lookup.kind === "id"
-			? (selectMovieByIdStatement.get(lookup.value) as MovieRow | undefined)
-			: (selectMovieByTmdbStatement.get(lookup.value) as MovieRow | undefined);
+const loadMovie = async (lookup: MovieLookup): Promise<MovieRecord | null> => {
+	let rows: any[] = [];
+	if (lookup.kind === "id") {
+		rows = await db.select().from(movies).where(eq(movies.id, lookup.value)).limit(1);
+	} else {
+		rows = await db.select().from(movies).where(eq(movies.tmdbId, lookup.value)).limit(1);
+	}
 
-	if (!row) {
+	if (rows.length === 0) {
 		return null;
 	}
 
-	const [movie] = mapRowsToRecords([row]);
+	const [movie] = await mapRowsToRecords(rows as MovieRow[]);
 	return movie ?? null;
 };
 
@@ -155,7 +90,7 @@ async function fetchMovieWithCache(
 	extraKeySelector?: (movie: MovieRecord) => string[]
 ): Promise<MovieRecord | null> {
 	return withCache<MovieRecord | null>(cacheKey, MOVIE_CACHE_TTL_SECONDS, async () => {
-		const movie = loadMovie(lookup);
+		const movie = await loadMovie(lookup);
 
 		if (movie) {
 			const extraKeys = extraKeySelector ? extraKeySelector(movie) : [];
@@ -211,34 +146,37 @@ async function resolveMovieByIdentifier(identifier: string, queryMode: "id" | "t
 	}
 }
 
-const upsertMovieWithGenres = sqlite.transaction(
-	(payload: {
-		tmdbId: number;
-		title: string;
-		overview: string | null;
-		posterPath: string | null;
-		backdropPath: string | null;
-		releaseDate: string | null;
-		rating: number | null;
-		durationMinutes: number | null;
-		is4K: boolean;
-		isHD: boolean;
-		genreNames: string[];
-	}) => {
+async function upsertMovieWithGenres(payload: {
+	tmdbId: number;
+	title: string;
+	overview: string | null;
+	posterPath: string | null;
+	backdropPath: string | null;
+	releaseDate: string | null;
+	rating: number | null;
+	durationMinutes: number | null;
+	is4K: boolean;
+	isHD: boolean;
+	genreNames: string[];
+}) {
+	return await db.transaction(async (tx) => {
 		const genreIds: number[] = [];
 		for (const rawName of payload.genreNames) {
 			const name = rawName.trim();
 			if (!name) continue;
-			const existing = selectGenreByNameStatement.get(name) as GenreRecord | undefined;
-			if (existing) {
-				genreIds.push(existing.id);
+
+			const existing = await tx.select().from(genres).where(eq(genres.name, name)).limit(1);
+			if (existing.length > 0) {
+				genreIds.push(existing[0].id);
 				continue;
 			}
-			const runResult = insertGenreStatement.run(name);
-			genreIds.push(Number(runResult.lastInsertRowid));
+
+			const result = await tx.insert(genres).values({ name }).returning({ id: genres.id });
+			genreIds.push(result[0].id);
 		}
 
-		const existingRow = selectMovieByTmdbStatement.get(payload.tmdbId) as MovieRow | undefined;
+		const existingResults = await tx.select().from(movies).where(eq(movies.tmdbId, payload.tmdbId)).limit(1);
+		const existingRow = existingResults[0];
 		const movieId = existingRow?.id ?? randomUUID();
 
 		const movieData = {
@@ -252,29 +190,30 @@ const upsertMovieWithGenres = sqlite.transaction(
 			rating: payload.rating,
 			durationMinutes: payload.durationMinutes,
 			is4K: payload.is4K ? 1 : 0,
-			isHD: payload.isHD ? 1 : 0
+			isHD: payload.isHD ? 1 : 0,
+			updatedAt: Date.now()
 		};
 
 		if (existingRow) {
-			updateMovieStatement.run(movieData);
+			await tx.update(movies).set(movieData).where(eq(movies.tmdbId, payload.tmdbId));
 		} else {
-			insertMovieStatement.run(movieData);
+			await tx.insert(movies).values({ ...movieData, createdAt: Date.now() });
 		}
 
-		deleteMovieGenresStatement.run(movieId);
+		await tx.delete(moviesGenres).where(eq(moviesGenres.movieId, movieId));
 		for (const genreId of genreIds) {
-			insertMovieGenreStatement.run(movieId, genreId);
+			await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
 		}
 
-		const refreshed = selectMovieByIdStatement.get(movieId) as MovieRow | undefined;
-		if (!refreshed) {
+		const refreshed = await tx.select().from(movies).where(eq(movies.id, movieId)).limit(1);
+		if (refreshed.length === 0) {
 			return null;
 		}
 
-		const [movie] = mapRowsToRecords([refreshed]);
+		const [movie] = await mapRowsToRecords(refreshed as MovieRow[]);
 		return movie ?? null;
-	}
-);
+	});
+}
 
 const isValidTmdbId = (value: unknown): value is number => {
 	return typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -308,7 +247,7 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 		)
 	);
 
-	const movie = upsertMovieWithGenres({
+	const movie = await upsertMovieWithGenres({
 		tmdbId,
 		title: details.title ?? "Untitled",
 		overview: details.overview ?? null,

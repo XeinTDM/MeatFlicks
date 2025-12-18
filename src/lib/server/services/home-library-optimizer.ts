@@ -94,7 +94,7 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
 	const { label, minRating } = options;
 	for (const tmdbId of tmdbIds) {
 		try {
-			const existing = loadMovieByTmdb(tmdbId);
+			const existing = await loadMovieByTmdb(tmdbId);
 			if (existing) {
 				continue;
 			}

@@ -1,10 +1,8 @@
-import sqlite from "$lib/server/db";
+import { db } from "$lib/server/db";
+import { movies, collections, genres, moviesGenres } from "$lib/server/db/schema";
+import { eq, and, isNotNull, desc, asc, sql } from "drizzle-orm";
 import type { CollectionRecord, GenreRecord, MovieRow, MovieSummary } from "$lib/server/db";
-import {
-	MOVIE_COLUMNS,
-	MOVIE_ORDER_BY,
-	mapRowsToSummaries
-} from "$lib/server/db/movie-select";
+import { mapRowsToSummaries } from "$lib/server/db/movie-select";
 import {
 	CACHE_TTL_LONG_SECONDS,
 	CACHE_TTL_MEDIUM_SECONDS,
@@ -36,15 +34,15 @@ export const libraryRepository = {
 		try {
 			const cacheKey = buildCacheKey("movies", "trending", take);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
-				const statement = sqlite.prepare(
-					`SELECT ${MOVIE_COLUMNS}
-					FROM movies m
-					WHERE m.rating IS NOT NULL
-					${MOVIE_ORDER_BY}
-					LIMIT ?`
-				);
-				const rows = statement.all(take) as MovieRow[];
-				return mapRowsToSummaries(rows);
+				const rows = await db.select().from(movies)
+					.where(isNotNull(movies.rating))
+					.orderBy(
+						desc(movies.rating),
+						desc(movies.releaseDate),
+						asc(movies.title)
+					)
+					.limit(take);
+				return await mapRowsToSummaries(rows as MovieRow[]);
 			});
 		} catch (error) {
 			console.error("Error fetching trending movies:", error);
@@ -57,12 +55,7 @@ export const libraryRepository = {
 
 		try {
 			return await withCache<CollectionRecord[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const statement = sqlite.prepare(
-					`SELECT id, name, slug, description
-					FROM collections
-					ORDER BY name COLLATE NOCASE ASC`
-				);
-				return statement.all() as CollectionRecord[];
+				return await db.select().from(collections).orderBy(asc(collections.name));
 			});
 		} catch (error) {
 			console.error("Error fetching collections:", error);
@@ -90,25 +83,27 @@ export const libraryRepository = {
 				cacheKey,
 				CACHE_TTL_LONG_SECONDS,
 				async () => {
-					const collectionStmt = sqlite.prepare(
-						`SELECT id, name, slug, description FROM collections WHERE slug = ?`
-					);
-					const collection = collectionStmt.get(collectionSlug) as CollectionRecord | undefined;
+					const collectionResults = await db.select().from(collections).where(eq(collections.slug, collectionSlug)).limit(1);
+					const collection = collectionResults[0];
 					if (!collection) {
 						return null;
 					}
 
-					const limitValue = take ?? -1;
-					const moviesStmt = sqlite.prepare(
-						`SELECT ${MOVIE_COLUMNS}
-						FROM movies m
-						WHERE m.collectionId = ?
-						${MOVIE_ORDER_BY}
-						LIMIT ? OFFSET ?`
-					);
+					let query = db.select().from(movies)
+						.where(eq(movies.collectionId, collection.id))
+						.orderBy(
+							desc(movies.rating),
+							desc(movies.releaseDate),
+							asc(movies.title)
+						)
+						.offset(skip);
 
-					const rows = moviesStmt.all(collection.id, limitValue, skip) as MovieRow[];
-					return { ...collection, movies: mapRowsToSummaries(rows) };
+					if (take !== undefined) {
+						query = query.limit(take) as any;
+					}
+
+					const rows = await query;
+					return { ...collection, movies: await mapRowsToSummaries(rows as MovieRow[]) };
 				}
 			);
 		} catch (error) {
@@ -128,22 +123,23 @@ export const libraryRepository = {
 		try {
 			const cacheKey = buildCacheKey("movies", "collection", collectionSlug, take, skip);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const collectionStmt = sqlite.prepare("SELECT id FROM collections WHERE slug = ?");
-				const collection = collectionStmt.get(collectionSlug) as { id: number } | undefined;
+				const collectionResults = await db.select({ id: collections.id }).from(collections).where(eq(collections.slug, collectionSlug)).limit(1);
+				const collection = collectionResults[0];
 				if (!collection) {
 					return [];
 				}
 
-				const moviesStmt = sqlite.prepare(
-					`SELECT ${MOVIE_COLUMNS}
-					FROM movies m
-					WHERE m.collectionId = ?
-					${MOVIE_ORDER_BY}
-					LIMIT ? OFFSET ?`
-				);
+				const rows = await db.select().from(movies)
+					.where(eq(movies.collectionId, collection.id))
+					.orderBy(
+						desc(movies.rating),
+						desc(movies.releaseDate),
+						asc(movies.title)
+					)
+					.limit(take)
+					.offset(skip);
 
-				const rows = moviesStmt.all(collection.id, take, skip) as MovieRow[];
-				return mapRowsToSummaries(rows);
+				return await mapRowsToSummaries(rows as MovieRow[]);
 			});
 		} catch (error) {
 			console.error("Error fetching movies for collection " + collectionSlug + ":", error);
@@ -156,10 +152,7 @@ export const libraryRepository = {
 
 		try {
 			return await withCache<GenreRecord[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const statement = sqlite.prepare(
-					"SELECT id, name FROM genres ORDER BY name COLLATE NOCASE ASC"
-				);
-				return statement.all() as GenreRecord[];
+				return await db.select().from(genres).orderBy(asc(genres.name));
 			});
 		} catch (error) {
 			console.error("Error fetching genres:", error);
@@ -169,10 +162,8 @@ export const libraryRepository = {
 
 	async findGenreByName(genreName: string): Promise<GenreRecord | null> {
 		try {
-			const statement = sqlite.prepare(
-				"SELECT id, name FROM genres WHERE name = ?"
-			);
-			return (statement.get(genreName) as GenreRecord | undefined) ?? null;
+			const results = await db.select().from(genres).where(eq(genres.name, genreName)).limit(1);
+			return results[0] ?? null;
 		} catch (error) {
 			console.error("Error fetching genre " + genreName + ":", error);
 			throw new Error("Failed to fetch genre " + genreName);
@@ -191,18 +182,22 @@ export const libraryRepository = {
 		try {
 			const cacheKey = buildCacheKey("movies", "genre", normalizedGenre.toLowerCase(), take, skip);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const statement = sqlite.prepare(
-					`SELECT ${MOVIE_COLUMNS}
-					FROM movies m
-					JOIN movies_genres mg ON mg.movieId = m.id
-					JOIN genres g ON g.id = mg.genreId
-					WHERE g.name = ?
-					${MOVIE_ORDER_BY}
-					LIMIT ? OFFSET ?`
-				);
+				const rows = await db.select({ movies })
+					.from(movies)
+					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
+					.innerJoin(genres, eq(genres.id, moviesGenres.genreId))
+					.where(eq(genres.name, normalizedGenre))
+					.orderBy(
+						desc(movies.rating),
+						desc(movies.releaseDate),
+						asc(movies.title)
+					)
+					.limit(take)
+					.offset(skip);
 
-				const rows = statement.all(normalizedGenre, take, skip) as MovieRow[];
-				return mapRowsToSummaries(rows);
+				// Drizzle returns { movies: MovieRow } because of the select({ movies })
+				const movieRows = rows.map(r => r.movies);
+				return await mapRowsToSummaries(movieRows as MovieRow[]);
 			});
 		} catch (error) {
 			console.error("Error fetching movies for genre " + genreName + ":", error);

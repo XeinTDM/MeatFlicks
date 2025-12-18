@@ -1,29 +1,28 @@
-import DatabaseConstructor from 'better-sqlite3';
-import type BetterSqlite3 from 'better-sqlite3';
+import { type Client, createClient } from '@libsql/client';
+import { type LibSQLDatabase, drizzle } from 'drizzle-orm/libsql';
 import { mkdirSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
-
-export type SQLiteDatabase = BetterSqlite3.Database;
-
-type GlobalWithDb = typeof globalThis & {
-	__meatflicksDb?: BetterSqlite3.Database;
-};
+import * as schema from './schema';
 
 const DEFAULT_DB_PATH = 'data/meatflicks.db';
 
 const resolveDatabasePath = () => {
 	const configured = process.env.SQLITE_DB_PATH?.trim();
 	const target = configured && configured.length > 0 ? configured : DEFAULT_DB_PATH;
-	return isAbsolute(target) ? target : resolve(process.cwd(), target);
+	const absPath = isAbsolute(target) ? target : resolve(process.cwd(), target);
+	return `file:${absPath}`;
 };
 
 const ensureDirectory = (dbPath: string) => {
-	const folder = dirname(dbPath);
+	// Remove 'file:' prefix for fs operations
+	const folder = dirname(dbPath.replace(/^file:/, ''));
 	mkdirSync(folder, { recursive: true });
 };
 
-const runMigrations = (db: BetterSqlite3.Database) => {
-	db.exec(`
+const runInitSql = async (client: any) => {
+	// We still need FTS5 and Triggers which are easier to manage as raw SQL for now
+	// Drizzle handles the basic tables, but FTS is special.
+	await client.executeMultiple(`
 		CREATE TABLE IF NOT EXISTS schema_info (
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL
@@ -73,15 +72,20 @@ const runMigrations = (db: BetterSqlite3.Database) => {
 			expiresAt INTEGER NOT NULL
 		);
 
+		CREATE TABLE IF NOT EXISTS watchlist (
+			id TEXT PRIMARY KEY,
+			movieData TEXT NOT NULL,
+			addedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
+		);
+
 		CREATE INDEX IF NOT EXISTS idx_movies_tmdbId ON movies(tmdbId);
 		CREATE INDEX IF NOT EXISTS idx_movies_collectionId ON movies(collectionId);
 		CREATE INDEX IF NOT EXISTS idx_movies_rating ON movies(rating);
 		CREATE INDEX IF NOT EXISTS idx_cache_expiresAt ON cache(expiresAt);
 		CREATE INDEX IF NOT EXISTS idx_movies_genres_movie ON movies_genres(movieId);
 		CREATE INDEX IF NOT EXISTS idx_movies_genres_genre ON movies_genres(genreId);
-	`);
+		CREATE INDEX IF NOT EXISTS idx_watchlist_addedAt ON watchlist(addedAt);
 
-	db.exec(`
 		CREATE VIRTUAL TABLE IF NOT EXISTS movie_fts USING fts5(
 			title,
 			overview,
@@ -117,23 +121,29 @@ const runMigrations = (db: BetterSqlite3.Database) => {
 	`);
 };
 
-const buildDatabase = () => {
-	const dbPath = resolveDatabasePath();
-	ensureDirectory(dbPath);
-	const db = new DatabaseConstructor(dbPath);
-	db.pragma('journal_mode = WAL');
-	db.pragma('foreign_keys = ON');
-	db.pragma('busy_timeout = 5000');
-	runMigrations(db);
-	return db;
+type GlobalWithDb = typeof globalThis & {
+	__meatflicksClient?: any;
+	__meatflicksDb?: any;
 };
 
 const globalRef = globalThis as GlobalWithDb;
 
-export const sqlite = globalRef.__meatflicksDb ?? (() => {
-	const db = buildDatabase();
-	globalRef.__meatflicksDb = db;
-	return db;
+export const client: Client = globalRef.__meatflicksClient ?? (() => {
+	const url = resolveDatabasePath();
+	ensureDirectory(url);
+	const c = createClient({ url });
+	globalRef.__meatflicksClient = c;
+	// Fire and forget init in background for this specific app's simple needs
+	runInitSql(c).catch(console.error);
+	return c;
 })();
 
-export default sqlite;
+export const db = (globalRef.__meatflicksDb as LibSQLDatabase<typeof schema>) ?? (() => {
+	const d = drizzle(client, { schema });
+	globalRef.__meatflicksDb = d;
+	return d;
+})();
+
+export const sqlite = client;
+
+export default db;

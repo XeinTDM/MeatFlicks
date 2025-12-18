@@ -1,7 +1,8 @@
+import Keyv from "keyv";
+import { KeyvSqlite } from "@keyv/sqlite";
 import { LRUCache } from "lru-cache";
-import sqlite from "$lib/server/db";
-export { createTtlCache } from "./cache/ttl-cache";
 
+// Cache settings
 const TTL_MIN_SECONDS = 300; // 5 minutes
 const TTL_MAX_SECONDS = 1800; // 30 minutes
 const DEFAULT_CACHE_MAX_ENTRIES = Number.parseInt(process.env.CACHE_MEMORY_MAX_ITEMS ?? "", 10) || 512;
@@ -31,145 +32,23 @@ export const CACHE_TTL_SHORT_SECONDS = parseTtl("CACHE_TTL_SHORT", 300);
 export const CACHE_TTL_MEDIUM_SECONDS = parseTtl("CACHE_TTL_MEDIUM", 900);
 export const CACHE_TTL_LONG_SECONDS = parseTtl("CACHE_TTL_LONG", 1500);
 
-const deepClone = <T>(value: T): T => {
-	if (value === null || typeof value !== "object") {
-		return value;
-	}
+// Initialize Keyv with tiered storage
+// Note: We use the same SQLite file for consistency
+const dbPath = process.env.SQLITE_DB_PATH || 'data/meatflicks.db';
+const store = new KeyvSqlite({ uri: `sqlite://${dbPath}`, table: 'cache_v2' });
 
-	if (typeof structuredClone === "function") {
-		return structuredClone(value);
-	}
+const lruStore = new LRUCache<string, any>({
+	max: DEFAULT_CACHE_MAX_ENTRIES,
+	ttl: CACHE_TTL_MEDIUM_SECONDS * 1000,
+});
 
-	return JSON.parse(JSON.stringify(value)) as T;
-};
+const cache = new Keyv({
+	store,
+	namespace: 'meatflicks',
+});
 
-type MemoryEnvelope<T> = { value: T };
-
-type GlobalWithCache = typeof globalThis & {
-	__meatflicksMemoryCache?: LRUCache<string, MemoryEnvelope<unknown>>;
-	__meatflicksPersistentCacheDisabled?: boolean;
-};
-
-const globalRef = globalThis as GlobalWithCache;
-
-const memoryCache = (() => {
-	if (globalRef.__meatflicksMemoryCache) {
-		return globalRef.__meatflicksMemoryCache;
-	}
-
-	const cache = new LRUCache<string, MemoryEnvelope<unknown>>({
-		max: DEFAULT_CACHE_MAX_ENTRIES,
-		ttl: CACHE_TTL_MEDIUM_SECONDS * 1000,
-		allowStale: false
-	});
-
-	globalRef.__meatflicksMemoryCache = cache;
-	return cache;
-})();
-
-let persistentCacheDisabled = Boolean(globalRef.__meatflicksPersistentCacheDisabled);
-
-const selectCacheStatement = sqlite.prepare("SELECT data, expiresAt FROM cache WHERE key = ?");
-const deleteCacheStatement = sqlite.prepare("DELETE FROM cache WHERE key = ?");
-const upsertCacheStatement = sqlite.prepare(
-	"INSERT INTO cache (key, data, expiresAt) VALUES (@key, @data, @expiresAt) " +
-		"ON CONFLICT(key) DO UPDATE SET data = excluded.data, expiresAt = excluded.expiresAt"
-);
-const purgeExpiredStatement = sqlite.prepare("DELETE FROM cache WHERE expiresAt <= ?");
-
-const markPersistentCacheDisabled = (error: unknown) => {
-	if (persistentCacheDisabled) {
-		return;
-	}
-	persistentCacheDisabled = true;
-	globalRef.__meatflicksPersistentCacheDisabled = true;
-	console.warn("[cache] Disabling persistent SQLite-backed cache after repeated errors.", error);
-};
-
-const setMemoryValue = <T>(key: string, value: T, ttlSeconds: number) => {
-	if (ttlSeconds <= 0) {
-		memoryCache.delete(key);
-		return;
-	}
-
-	memoryCache.set(key, { value: deepClone(value) }, { ttl: ttlSeconds * 1000 });
-};
-
-const getMemoryValue = <T>(key: string): T | undefined => {
-	const envelope = memoryCache.get(key);
-	if (!envelope) {
-		return undefined;
-	}
-	return deepClone(envelope.value) as T;
-};
-
-const deleteMemoryValue = (key: string) => {
-	memoryCache.delete(key);
-};
-
-const readPersistentValue = <T>(key: string): T | undefined => {
-	if (persistentCacheDisabled) {
-		return undefined;
-	}
-
-	try {
-		const record = selectCacheStatement.get(key) as { data: string; expiresAt: number } | undefined;
-		if (!record) {
-			return undefined;
-		}
-
-		const expiresInMs = record.expiresAt - Date.now();
-		if (expiresInMs <= 0) {
-			deleteCacheStatement.run(key);
-			return undefined;
-		}
-
-		try {
-			const parsed = JSON.parse(record.data) as T;
-			const ttlSeconds = Math.max(1, Math.floor(expiresInMs / 1000));
-			setMemoryValue(key, parsed, ttlSeconds);
-			return deepClone(parsed);
-		} catch (error) {
-			console.warn(`[cache] Failed to parse cached payload for key ${key}.`, error);
-			deleteCacheStatement.run(key);
-			return undefined;
-		}
-	} catch (error) {
-		markPersistentCacheDisabled(error);
-		return undefined;
-	}
-};
-
-const writePersistentValue = <T>(key: string, value: T, ttlSeconds: number) => {
-	if (persistentCacheDisabled) {
-		return;
-	}
-
-	try {
-		if (ttlSeconds <= 0) {
-			deleteCacheStatement.run(key);
-			return;
-		}
-
-		const expiresAt = Date.now() + ttlSeconds * 1000;
-		const payload = JSON.stringify(deepClone(value));
-		upsertCacheStatement.run({ key, data: payload, expiresAt });
-	} catch (error) {
-		markPersistentCacheDisabled(error);
-	}
-};
-
-const deletePersistentValue = (key: string) => {
-	if (persistentCacheDisabled) {
-		return;
-	}
-
-	try {
-		deleteCacheStatement.run(key);
-	} catch (error) {
-		markPersistentCacheDisabled(error);
-	}
-};
+// In-memory level 1 cache
+cache.on('error', (err) => console.error('Keyv Connection Error', err));
 
 export function buildCacheKey(
 	...segments: Array<string | number | boolean | null | undefined>
@@ -187,29 +66,32 @@ export function buildCacheKey(
 }
 
 export async function getCachedValue<T>(key: string): Promise<T | undefined> {
-	const memoryHit = getMemoryValue<T>(key);
-	if (memoryHit !== undefined) {
-		return memoryHit;
-	}
+	// Level 1: LRU Memory Hit
+	const memHit = lruStore.get(key);
+	if (memHit !== undefined) return memHit as T;
 
-	return readPersistentValue<T>(key);
+	// Level 2: Persistent Keyv Hit
+	const val = await cache.get(key);
+	if (val !== undefined) {
+		lruStore.set(key, val); // Backfill L1
+		return val as T;
+	}
+	return undefined;
 }
 
 export async function setCachedValue<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-	setMemoryValue(key, value, ttlSeconds);
-	writePersistentValue(key, value, ttlSeconds);
-
-	try {
-		purgeExpiredStatement.run(Date.now());
-	} catch (error) {
-		console.warn("[cache] Failed to purge expired entries", error);
-	}
+	const ttlMs = ttlSeconds * 1000;
+	lruStore.set(key, value as any, { ttl: ttlMs });
+	await cache.set(key, value, ttlMs);
 }
 
 export async function deleteCachedValue(key: string): Promise<void> {
-	deleteMemoryValue(key);
-	deletePersistentValue(key);
+	lruStore.delete(key);
+	await cache.delete(key);
 }
+
+// Optimized withCache with request deduplication
+const inflight = new Map<string, Promise<unknown>>();
 
 export async function withCache<T>(
 	key: string,
@@ -221,11 +103,75 @@ export async function withCache<T>(
 		return cached;
 	}
 
-	const value = await factory();
-	if (typeof value === "undefined") {
-		return value;
+	// Request deduplication (Inflight merging)
+	const pending = inflight.get(key);
+	if (pending) {
+		return pending as Promise<T>;
 	}
 
-	await setCachedValue(key, value, ttlSeconds);
-	return value;
+	const task = (async () => {
+		try {
+			const value = await factory();
+			if (value !== undefined) {
+				await setCachedValue(key, value, ttlSeconds);
+			}
+			return value;
+		} finally {
+			inflight.delete(key);
+		}
+	})();
+
+	inflight.set(key, task);
+	return task as Promise<T>;
 }
+
+// Backward compatibility for createTtlCache used in services
+export interface TtlCacheOptions {
+	ttlMs: number;
+	maxEntries?: number;
+}
+
+export function createTtlCache<K, V>(options: TtlCacheOptions) {
+	const localLru = new LRUCache<string, any>({
+		max: options.maxEntries || 500,
+		ttl: options.ttlMs
+	});
+
+	const inflight = new Map<string, Promise<V>>();
+
+	return {
+		get: (key: K) => localLru.get(String(key)) ?? null,
+		set: (key: K, value: V, setOptions?: { ttlMs?: number }) => {
+			const ttl = setOptions?.ttlMs ?? options.ttlMs;
+			localLru.set(String(key), value as any, { ttl });
+		},
+		getOrSet: async (key: K, loader: () => Promise<V>, setOptions?: { ttlMs?: number }): Promise<V> => {
+			const sKey = String(key);
+			const cached = localLru.get(sKey);
+			if (cached !== undefined) return cached;
+
+			const pending = inflight.get(sKey);
+			if (pending) return pending;
+
+			const task = (async () => {
+				try {
+					const val = await loader();
+					const ttl = setOptions?.ttlMs ?? options.ttlMs;
+					localLru.set(sKey, val as any, { ttl });
+					return val;
+				} finally {
+					inflight.delete(sKey);
+				}
+			})();
+
+			inflight.set(sKey, task);
+			return task;
+		},
+		clear: () => localLru.clear(),
+		delete: (key: K) => localLru.delete(String(key)),
+		size: () => localLru.size
+	};
+}
+
+
+

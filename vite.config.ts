@@ -4,6 +4,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	ssr: {
+		external: ['better-sqlite3']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [

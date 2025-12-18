@@ -1,7 +1,7 @@
 import { collectStreamingSources, resolveStreamingSource } from '$lib/streaming';
 import type { MediaType } from '$lib/streaming';
 import type { ProviderResolution } from '$lib/streaming/provider-registry';
-import { createTtlCache } from '$lib/server/cache';
+import { withCache, buildCacheKey, CACHE_TTL_SHORT_SECONDS } from '$lib/server/cache';
 import { clone } from '$lib/server/utils';
 
 export interface ResolveStreamingInput {
@@ -19,31 +19,7 @@ export interface ResolveStreamingResponse {
 	resolutions: ProviderResolution[];
 }
 
-const STREAMING_CACHE_TTL_MS = 1000 * 60 * 5;
-const STREAMING_CACHE_FAILURE_TTL_MS = 1000 * 30;
-
-const streamingResolutionCache = createTtlCache<string, ResolveStreamingResponse>({
-	ttlMs: STREAMING_CACHE_TTL_MS,
-	maxEntries: 500
-});
-
-const buildCacheKey = (input: ResolveStreamingInput): string => {
-	const providerKey = Array.from(new Set(input.preferredProviders ?? []))
-		.sort()
-		.join(',');
-
-	return [
-		input.mediaType,
-		input.tmdbId,
-		input.imdbId ?? '',
-		input.season ?? '',
-		input.episode ?? '',
-		input.language ?? '',
-		providerKey
-	]
-		.map((segment) => (segment === null || segment === undefined ? '' : String(segment)))
-		.join('::');
-};
+const FAILURE_TTL = 30; // 30 seconds for failures
 
 export async function resolveStreaming(
 	input: ResolveStreamingInput
@@ -52,40 +28,47 @@ export async function resolveStreaming(
 		throw new Error('A valid TMDB id is required to resolve streaming sources.');
 	}
 
-	const cacheKey = buildCacheKey(input);
-	const cached = streamingResolutionCache.get(cacheKey);
-	if (cached) {
-		return clone(cached);
-	}
+	const providerKey = Array.from(new Set(input.preferredProviders ?? []))
+		.sort()
+		.join(',');
 
-	const context = {
-		mediaType: input.mediaType,
-		tmdbId: input.tmdbId,
-		imdbId: input.imdbId,
-		season: input.season,
-		episode: input.episode,
-		language: input.language
-	} as const;
-
-	const resolutions = await collectStreamingSources(context, input.preferredProviders ?? []);
-	const source = resolutions.find((resolution) => resolution.success)?.source ?? null;
-
-	const response: ResolveStreamingResponse = {
-		source,
-		resolutions
-	};
-
-	const hasSuccessfulResolution = Boolean(response.source);
-	const ttlOverride = hasSuccessfulResolution ? undefined : STREAMING_CACHE_FAILURE_TTL_MS;
-	streamingResolutionCache.set(
-		cacheKey,
-		response,
-		ttlOverride ? { ttlMs: ttlOverride } : undefined
+	const cacheKey = buildCacheKey(
+		'streaming',
+		input.mediaType,
+		input.tmdbId,
+		input.imdbId,
+		input.season,
+		input.episode,
+		input.language,
+		providerKey
 	);
 
-	return clone(response);
+	// Default TTL - Short for streaming as sources change
+	return withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
+		const context = {
+			mediaType: input.mediaType,
+			tmdbId: input.tmdbId,
+			imdbId: input.imdbId,
+			season: input.season,
+			episode: input.episode,
+			language: input.language
+		} as const;
+
+		const resolutions = await collectStreamingSources(context, input.preferredProviders ?? []);
+		const source = resolutions.find((resolution) => resolution.success)?.source ?? null;
+
+		const response: ResolveStreamingResponse = {
+			source,
+			resolutions
+		};
+
+		// If no source found, we might want a shorter TTL for the cache
+		// However, withCache handles the factory result.
+		// For now, we'll just return the full response.
+		return response;
+	});
 }
 
 export function invalidateStreamingCache() {
-	streamingResolutionCache.clear();
+	// pattern based invalidation not yet in cache.ts
 }

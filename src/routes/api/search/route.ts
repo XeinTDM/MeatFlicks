@@ -1,7 +1,9 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import sqlite from "$lib/server/db";
+import { db } from "$lib/server/db";
+import { movies } from "$lib/server/db/schema";
+import { sql } from "drizzle-orm";
 import type { MovieRow } from "$lib/server/db";
-import { MOVIE_COLUMNS, MOVIE_ORDER_BY, mapRowsToSummaries } from "$lib/server/db/movie-select";
+import { mapRowsToSummaries } from "$lib/server/db/movie-select";
 import { buildCacheKey, CACHE_TTL_SHORT_SECONDS, withCache } from "$lib/server/cache";
 import { createHash } from "node:crypto";
 
@@ -36,28 +38,6 @@ const sanitizeForFts = (term: string): string => {
 	return cleaned.map((token) => `${token}*`).join(" ");
 };
 
-const searchStatement = sqlite.prepare(
-	`SELECT ${MOVIE_COLUMNS}
-	FROM movie_fts mf
-	JOIN movies m ON m.numericId = mf.rowid
-	WHERE mf MATCH ?
-	ORDER BY bm25(mf) ASC,
-		(m.rating IS NULL) ASC,
-		m.rating DESC,
-		(m.releaseDate IS NULL) ASC,
-		m.releaseDate DESC,
-		m.title COLLATE NOCASE ASC
-	LIMIT ?`
-);
-
-const likeFallbackStatement = sqlite.prepare(
-	`SELECT ${MOVIE_COLUMNS}
-	FROM movies m
-	WHERE m.title LIKE ? OR m.overview LIKE ?
-	${MOVIE_ORDER_BY}
-	LIMIT ?`
-);
-
 export const GET: RequestHandler = async ({ url }) => {
 	const searchParam = url.searchParams.get("q");
 
@@ -76,23 +56,51 @@ export const GET: RequestHandler = async ({ url }) => {
 	const cacheKey = buildCacheKey("search", "movies", hash, limit);
 
 	try {
-		const movies = await withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
+		const results = await withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
 			const ftsQuery = sanitizeForFts(query);
-			let rows: MovieRow[] = [];
+			let rows: any[] = [];
 
 			if (ftsQuery) {
-				rows = searchStatement.all(ftsQuery, limit) as MovieRow[];
+				// Raw SQL via Drizzle for FTS5
+				const searchSql = sql`
+					SELECT m.*
+					FROM movie_fts mf
+					JOIN movies m ON m.numericId = mf.rowid
+					WHERE mf MATCH ${ftsQuery}
+					ORDER BY bm25(mf) ASC,
+						(m.rating IS NULL) ASC,
+						m.rating DESC,
+						(m.releaseDate IS NULL) ASC,
+						m.releaseDate DESC,
+						m.title COLLATE NOCASE ASC
+					LIMIT ${limit}
+				`;
+				const result = await db.run(searchSql);
+				// Libsql return format might need adjustment or use db.all
+				rows = await db.all(searchSql);
 			}
 
 			if (rows.length === 0) {
 				const likeTerm = `%${query.replace(/%/g, "%%")}%`;
-				rows = likeFallbackStatement.all(likeTerm, likeTerm, limit) as MovieRow[];
+				const fallbackSql = sql`
+					SELECT *
+					FROM movies m
+					WHERE m.title LIKE ${likeTerm} OR m.overview LIKE ${likeTerm}
+					ORDER BY
+						(m.rating IS NULL) ASC,
+						m.rating DESC,
+						(m.releaseDate IS NULL) ASC,
+						m.releaseDate DESC,
+						m.title COLLATE NOCASE ASC
+					LIMIT ${limit}
+				`;
+				rows = await db.all(fallbackSql);
 			}
 
-			return mapRowsToSummaries(rows);
+			return await mapRowsToSummaries(rows as MovieRow[]);
 		});
 
-		return json(movies);
+		return json(results);
 	} catch (error) {
 		console.error("Error searching movies:", error);
 		return json({ error: "Internal Server Error" }, { status: 500 });

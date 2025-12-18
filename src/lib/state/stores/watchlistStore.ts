@@ -159,16 +159,47 @@ function createWatchlistStore() {
 
 	const store = writable<WatchlistState>(initialState);
 
-	const syncFromStorage = () => {
-		const stored = readStorage();
-		store.update((state) => ({ ...state, watchlist: stored, loading: false, error: null }));
+	const syncFromServer = async () => {
+		if (typeof window === 'undefined') return;
+
+		store.update((state) => ({ ...state, loading: true }));
+		try {
+			const response = await fetch('/api/watchlist');
+			if (response.ok) {
+				const serverMovies = await response.json();
+				const sanitized = serverMovies
+					.map(sanitizeMovie)
+					.filter((movie: Movie | null): movie is Movie => Boolean(movie));
+
+				store.update((state) => ({
+					...state,
+					watchlist: sanitized,
+					loading: false,
+					error: null
+				}));
+				persist(sanitized);
+			} else {
+				throw new Error('Failed to fetch from server');
+			}
+		} catch (error) {
+			console.error('[watchlist][syncFromServer] Failed', error);
+			// Fallback to local storage if server fails
+			const stored = readStorage();
+			store.update((state) => ({
+				...state,
+				watchlist: stored,
+				loading: false,
+				error: 'Could not sync with server. Using local data.'
+			}));
+		}
 	};
 
-	if (hasStorage && typeof window !== 'undefined') {
-		syncFromStorage();
+	if (typeof window !== 'undefined') {
+		syncFromServer();
 		window.addEventListener('storage', (event) => {
 			if (event.key === STORAGE_KEY) {
-				syncFromStorage();
+				const stored = readStorage();
+				store.update((state) => ({ ...state, watchlist: stored }));
 			}
 		});
 	}
@@ -181,7 +212,7 @@ function createWatchlistStore() {
 		store.update((state) => ({ ...state, error: null }));
 	};
 
-	const addToWatchlist = (movie: WatchlistCandidate) => {
+	const addToWatchlist = async (movie: WatchlistCandidate) => {
 		const sanitized = sanitizeMovie(movie);
 
 		if (!sanitized) {
@@ -189,6 +220,9 @@ function createWatchlistStore() {
 			return;
 		}
 
+		const previousState = get(store).watchlist;
+
+		// Optimistic update
 		store.update((state) => {
 			const existing = state.watchlist.find((item) => item.id === sanitized.id);
 			const updatedEntry = existing ? { ...sanitized, addedAt: existing.addedAt } : sanitized;
@@ -200,25 +234,60 @@ function createWatchlistStore() {
 			persist(updated);
 			return { ...state, watchlist: updated, error: null };
 		});
+
+		try {
+			const response = await fetch('/api/watchlist', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ movie: sanitized })
+			});
+			if (!response.ok) throw new Error('Failed to sync with server');
+		} catch (error) {
+			console.error('[watchlist][addToWatchlist] sync failed', error);
+			// Revert optimistic update
+			store.update((state) => {
+				persist(previousState);
+				return { ...state, watchlist: previousState, error: 'Failed to sync with server.' };
+			});
+		}
 	};
 
-	const removeFromWatchlist = (movieId: string) => {
+	const removeFromWatchlist = async (movieId: string) => {
 		if (!movieId) {
 			setError('Movie id is required to remove from watchlist.');
 			return;
 		}
 
+		const previousState = get(store).watchlist;
+
+		// Optimistic update
 		store.update((state) => {
 			const updated = state.watchlist.filter((movie) => movie.id !== movieId);
 			persist(updated);
 			return { ...state, watchlist: updated, error: null };
 		});
+
+		try {
+			const response = await fetch('/api/watchlist', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ movieId })
+			});
+			if (!response.ok) throw new Error('Failed to sync removal with server');
+		} catch (error) {
+			console.error('[watchlist][removeFromWatchlist] sync failed', error);
+			// Revert optimistic update
+			store.update((state) => {
+				persist(previousState);
+				return { ...state, watchlist: previousState, error: 'Failed to sync removal with server.' };
+			});
+		}
 	};
 
 	const isInWatchlist = (movieId: string) =>
 		get(store).watchlist.some((movie) => movie.id === movieId);
 
-	const replaceAll = (movies: Movie[]) => {
+	const replaceAll = async (movies: Movie[]) => {
 		const sanitized = movies.map(sanitizeMovie).filter((movie): movie is Movie => Boolean(movie));
 
 		const deduped = sanitized.reduce<Movie[]>((accumulator, movie) => {
@@ -229,11 +298,35 @@ function createWatchlistStore() {
 
 		store.update((state) => ({ ...state, watchlist: deduped, error: null }));
 		persist(deduped);
+
+		try {
+			const response = await fetch('/api/watchlist', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ movies: deduped })
+			});
+			if (!response.ok) throw new Error('Failed to replace watchlist on server');
+		} catch (error) {
+			console.error('[watchlist][replaceAll] sync failed', error);
+			setError('Replaced locally, but failed to sync with server.');
+		}
 	};
 
-	const clear = () => {
+	const clear = async () => {
 		store.set({ ...initialState });
 		persist([]);
+
+		try {
+			const response = await fetch('/api/watchlist', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ clearAll: true })
+			});
+			if (!response.ok) throw new Error('Failed to clear on server');
+		} catch (error) {
+			console.error('[watchlist][clear] sync failed', error);
+			setError('Cleared locally, but failed to sync with server.');
+		}
 	};
 
 	const exportData = () => structuredClone(get(store).watchlist);
