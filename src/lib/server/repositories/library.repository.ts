@@ -195,7 +195,6 @@ export const libraryRepository = {
 					.limit(take)
 					.offset(skip);
 
-				// Drizzle returns { movies: MovieRow } because of the select({ movies })
 				const movieRows = rows.map(r => r.movies);
 				return await mapRowsToSummaries(movieRows as MovieRow[]);
 			});

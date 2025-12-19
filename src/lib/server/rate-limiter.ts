@@ -1,54 +1,60 @@
+import Bottleneck from 'bottleneck';
+
 interface RateLimitConfig {
 	maxRequests: number;
 	windowMs: number;
 }
 
-interface RateLimitEntry {
-	count: number;
-	resetTime: number;
-}
-
 export class RateLimiter {
-	private requests = new Map<string, RateLimitEntry>();
+	private limiters = new Map<string, Bottleneck>();
 	private config: RateLimitConfig;
 
 	constructor(config: RateLimitConfig) {
 		this.config = config;
 	}
 
+	private getLimiter(key: string): Bottleneck {
+		let limiter = this.limiters.get(key);
+		if (!limiter) {
+			limiter = new Bottleneck({
+				id: key,
+				reservoir: this.config.maxRequests,
+				reservoirRefreshInterval: this.config.windowMs,
+				reservoirRefreshAmount: this.config.maxRequests,
+				maxConcurrent: 5,
+			});
+			this.limiters.set(key, limiter);
+
+			limiter.on('error', (error) => {
+				console.error(`[RateLimiter] Error in limiter ${key}:`, error);
+			});
+		}
+		return limiter;
+	}
+
 	async checkLimit(key: string): Promise<{ allowed: boolean; resetTime?: number }> {
-		const now = Date.now();
-		let entry = this.requests.get(key);
+		const limiter = this.getLimiter(key);
+		const reservoir = await limiter.currentReservoir();
 
-		if (!entry || now >= entry.resetTime) {
-			entry = {
-				count: 0,
-				resetTime: now + this.config.windowMs
+		if (reservoir !== null && reservoir <= 0) {
+			return {
+				allowed: false,
+				resetTime: Date.now() + this.config.windowMs / 2
 			};
-			this.requests.set(key, entry);
 		}
 
-		if (entry.count >= this.config.maxRequests) {
-			return { allowed: false, resetTime: entry.resetTime };
-		}
-
-		entry.count += 1;
+		await limiter.incrementReservoir(-1);
 		return { allowed: true };
 	}
 
-	cleanup(): void {
-		const now = Date.now();
-		for (const [key, entry] of this.requests) {
-			if (now > entry.resetTime) {
-				this.requests.delete(key);
-			}
-		}
+	async schedule<T>(key: string, fn: () => Promise<T>): Promise<T> {
+		return this.getLimiter(key).schedule(fn);
 	}
+
+	cleanup(): void { }
 }
 
 export const tmdbRateLimiter = new RateLimiter({
-	maxRequests: 30,
-	windowMs: 1000
+	maxRequests: 40,
+	windowMs: 10000
 });
-
-setInterval(() => tmdbRateLimiter.cleanup(), 60 * 1000);

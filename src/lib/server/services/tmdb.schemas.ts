@@ -39,6 +39,28 @@ export const TmdbMovieSchema = z.object({
     }).optional()
 });
 
+export const TmdbTvEpisodeSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    overview: z.string().nullable().optional(),
+    episode_number: z.number(),
+    season_number: z.number(),
+    air_date: z.string().nullable().optional(),
+    still_path: z.string().nullable().optional(),
+    vote_average: z.number().nullable().optional()
+});
+
+export const TmdbTvSeasonSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    overview: z.string().nullable().optional(),
+    poster_path: z.string().nullable().optional(),
+    season_number: z.number(),
+    episode_count: z.number().optional(),
+    air_date: z.string().nullable().optional(),
+    episodes: z.array(TmdbTvEpisodeSchema).optional()
+});
+
 export const TmdbTvSchema = z.object({
     id: z.number(),
     name: z.string().optional(),
@@ -51,6 +73,7 @@ export const TmdbTvSchema = z.object({
     episode_run_time: z.array(z.number()).optional(),
     number_of_seasons: z.number().nullable().optional(),
     number_of_episodes: z.number().nullable().optional(),
+    seasons: z.array(TmdbTvSeasonSchema).optional(),
     genres: z.array(TmdbGenreSchema).optional(),
     external_ids: z.object({
         imdb_id: z.string().nullable().optional()
@@ -62,6 +85,7 @@ export const TmdbTvSchema = z.object({
         results: z.array(TmdbVideoSchema)
     }).optional()
 });
+
 
 export const TmdbTrendingResultSchema = z.object({
     id: z.number()

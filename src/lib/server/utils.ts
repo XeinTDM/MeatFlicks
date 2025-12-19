@@ -1,4 +1,5 @@
 import { writeFile, mkdir } from 'fs/promises';
+import { logger } from '$lib/server/logger';
 
 export class ApiError extends Error {
 	constructor(
@@ -73,6 +74,7 @@ export async function updateLastRefreshTime() {
 		await mkdir('data', { recursive: true });
 		await writeFile('data/last-refresh.txt', Date.now().toString());
 	} catch (error) {
-		console.error('Failed to update refresh timestamp:', error);
+		logger.error({ error }, 'Failed to update refresh timestamp');
 	}
 }
+

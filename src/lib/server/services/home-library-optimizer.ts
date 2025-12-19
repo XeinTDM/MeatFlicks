@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-
+import { logger } from '$lib/server/logger';
+import { tmdbRateLimiter } from '$lib/server/rate-limiter';
 import { loadMovieByTmdb, upsertMovieWithGenres } from '$lib/server/db/mutations';
 import {
 	discoverMovieIds,
@@ -99,7 +100,7 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
 				continue;
 			}
 
-			const details = await fetchTmdbMovieDetails(tmdbId);
+			const details = await tmdbRateLimiter.schedule(`ingest-${label}`, () => fetchTmdbMovieDetails(tmdbId));
 			if (!details.found) {
 				continue;
 			}
@@ -113,7 +114,9 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
 				new Set(details.genres.map((genre) => genre.name).filter(Boolean))
 			);
 
-			upsertMovieWithGenres({
+			logger.debug({ tmdbId, title: details.title, label }, '[home-library] Ingesting movie');
+
+			await upsertMovieWithGenres({
 				tmdbId,
 				title: details.title ?? 'Untitled',
 				overview: details.overview ?? null,
@@ -127,22 +130,25 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
 				genreNames
 			});
 		} catch (error) {
-			console.error(`[home-library] Failed to ingest TMDB id ${tmdbId} for ${label}`, error);
+			logger.error({ tmdbId, label, error }, '[home-library] Failed to ingest TMDB movie');
 		}
 	}
 };
 
 const runTrendingTask = async () => {
+	logger.info('[home-library] Running trending movies refresh task');
 	const ids = await fetchTrendingMovieIds(40);
 	await ingestMovies(ids, { label: 'trending' });
 };
 
 const runPopularTask = async () => {
+	logger.info('[home-library] Running popular movies refresh task');
 	const ids = await fetchPopularMovieIds(40);
 	await ingestMovies(ids, { label: 'popular' });
 };
 
 const runGenrePoolsTask = async () => {
+	logger.info('[home-library] Running genre pools refresh task');
 	for (const genre of GENRE_TARGETS) {
 		try {
 			const ids = await discoverMovieIds({
@@ -154,12 +160,13 @@ const runGenrePoolsTask = async () => {
 			});
 			await ingestMovies(ids, { label: `genre:${genre.name}`, minRating: 6 });
 		} catch (error) {
-			console.error(`[home-library] Failed to refresh genre pool for ${genre.name}`, error);
+			logger.error({ genre: genre.name, error }, '[home-library] Failed to refresh genre pool');
 		}
 	}
 };
 
 const runHighRatedTask = async () => {
+	logger.info('[home-library] Running high-rated movies refresh task');
 	const ids = await discoverMovieIds({
 		limit: 60,
 		minVoteAverage: 7.5,
@@ -206,8 +213,11 @@ export const ensureHomeLibraryPrimed = async (
 			: TASK_ORDER.filter((task) => isTaskDue(state, task));
 
 		if (tasksToRun.length === 0) {
+			logger.debug('[home-library] All refresh tasks are up to date');
 			return;
 		}
+
+		logger.info({ tasksToRun }, '[home-library] Starting library priming tasks');
 
 		for (const task of tasksToRun) {
 			try {
@@ -215,7 +225,7 @@ export const ensureHomeLibraryPrimed = async (
 				state.lastRun[task] = Date.now();
 				await saveState(state);
 			} catch (error) {
-				console.error(`[home-library] Task ${task} failed`, error);
+				logger.error({ task, error }, '[home-library] Refresh task failed');
 			}
 		}
 	})()
@@ -225,3 +235,4 @@ export const ensureHomeLibraryPrimed = async (
 
 	return refreshPromise;
 };
+

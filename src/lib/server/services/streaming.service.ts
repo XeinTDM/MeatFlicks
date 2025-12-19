@@ -19,7 +19,7 @@ export interface ResolveStreamingResponse {
 	resolutions: ProviderResolution[];
 }
 
-const FAILURE_TTL = 30; // 30 seconds for failures
+const FAILURE_TTL = 30;
 
 export async function resolveStreaming(
 	input: ResolveStreamingInput
@@ -43,7 +43,6 @@ export async function resolveStreaming(
 		providerKey
 	);
 
-	// Default TTL - Short for streaming as sources change
 	return withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
 		const context = {
 			mediaType: input.mediaType,
@@ -62,13 +61,10 @@ export async function resolveStreaming(
 			resolutions
 		};
 
-		// If no source found, we might want a shorter TTL for the cache
-		// However, withCache handles the factory result.
-		// For now, we'll just return the full response.
 		return response;
 	});
 }
 
 export function invalidateStreamingCache() {
-	// pattern based invalidation not yet in cache.ts
+	// TODO: Implement pattern based invalidation
 }

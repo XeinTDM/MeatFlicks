@@ -1,15 +1,11 @@
-import { createTtlCache } from '$lib/server/cache';
+import { withCache, CACHE_TTL_MEDIUM_SECONDS } from '$lib/server/cache';
 import { toSlug } from '$lib/utils';
 import { updateLastRefreshTime } from '$lib/server/utils';
+import { logger } from '$lib/server/logger';
 import { libraryRepository } from '$lib/server/repositories/library.repository';
 import { ensureHomeLibraryPrimed } from '$lib/server/services/home-library-optimizer';
+import { tmdbRateLimiter } from '$lib/server/rate-limiter';
 import type { MovieSummary } from '$lib/server/db';
-
-// Simple deep clone function
-function clone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
-}
-
 import type {
 	HomeLibrary,
 	LibraryCollection,
@@ -26,10 +22,6 @@ import {
 
 const HOME_LIBRARY_CACHE_KEY = 'home-library';
 const HOME_LIBRARY_MOVIES_LIMIT = 20;
-const homeLibraryCache = createTtlCache<string, HomeLibrary>({
-	ttlMs: 1000 * 60 * 5,
-	maxEntries: 1
-});
 
 const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
 	...movie,
@@ -68,10 +60,10 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 		const detailsList = await Promise.all(
 			ids.map(async (id) => {
 				try {
-					const details = await fetchTmdbMovieDetails(id);
+					const details = await tmdbRateLimiter.schedule('tmdb-bulk-fallback', () => fetchTmdbMovieDetails(id));
 					return details.found ? details : null;
 				} catch (error) {
-					console.warn('[library][fallback] failed to fetch TMDB details for', id, error);
+					logger.warn({ id, error }, '[library][fallback] failed to fetch TMDB details');
 					return null;
 				}
 			})
@@ -91,7 +83,7 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 			genres: []
 		};
 	} catch (error) {
-		console.error('[library][fallback] failed to build fallback library', error);
+		logger.error({ error }, '[library][fallback] failed to build fallback library');
 		return null;
 	}
 };
@@ -108,19 +100,18 @@ const buildExtrasMap = async (
 
 	const extrasMap = new Map<number, { imdbId: string | null; trailerUrl: string | null }>();
 
-	for (const tmdbId of uniqueIds) {
+	await Promise.all(uniqueIds.map(async (tmdbId) => {
 		try {
-			const extras = await fetchTmdbMovieExtras(tmdbId);
+			const extras = await tmdbRateLimiter.schedule('tmdb-home-extras', () => fetchTmdbMovieExtras(tmdbId));
 			extrasMap.set(tmdbId, {
 				imdbId: extras.imdbId ?? null,
 				trailerUrl: extras.trailerUrl ?? null
 			});
 		} catch (error) {
-			console.error('[library][tmdb] Failed to fetch metadata for TMDB ' + tmdbId, error);
+			logger.error({ tmdbId, error }, '[library][tmdb] Failed to fetch metadata');
 			extrasMap.set(tmdbId, { imdbId: null, trailerUrl: null });
-			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
-	}
+	}));
 
 	return extrasMap;
 };
@@ -211,34 +202,37 @@ export async function fetchHomeLibrary(
 	const { forceRefresh = false } = options;
 
 	if (forceRefresh) {
-		homeLibraryCache.delete(HOME_LIBRARY_CACHE_KEY);
+		const { deleteCachedValue } = await import('$lib/server/cache');
+		await deleteCachedValue(HOME_LIBRARY_CACHE_KEY);
 	}
 
 	try {
 		await ensureHomeLibraryPrimed({ force: forceRefresh });
 	} catch (error) {
-		console.error('[library] Failed to prime home library data', error);
+		logger.error({ error }, '[library] Failed to prime home library data');
 	}
 
-	const result = await homeLibraryCache.getOrSet(
+	const result = await withCache(
 		HOME_LIBRARY_CACHE_KEY,
+		CACHE_TTL_MEDIUM_SECONDS,
 		fetchHomeLibraryFromSource
 	);
 
-	// Update the last refresh timestamp after successful fetch
 	if (forceRefresh) {
 		await updateLastRefreshTime();
 	}
 
-	return clone(result);
+	return structuredClone(result);
 }
 
-export function invalidateHomeLibraryCache() {
-	homeLibraryCache.delete(HOME_LIBRARY_CACHE_KEY);
+export async function invalidateHomeLibraryCache() {
+	const { deleteCachedValue } = await import('$lib/server/cache');
+	await deleteCachedValue(HOME_LIBRARY_CACHE_KEY);
 }
 
 export const libraryService = {
 	fetchHomeLibrary,
 	invalidateHomeLibraryCache
 };
+
 

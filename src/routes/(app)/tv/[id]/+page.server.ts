@@ -18,6 +18,13 @@ type TvWithDetails = {
 	imdbId?: string | null;
 	seasonCount?: number | null;
 	episodeCount?: number | null;
+	seasons?: {
+		id: number;
+		name: string;
+		seasonNumber: number;
+		episodeCount: number;
+		posterPath: string | null;
+	}[];
 };
 
 const detectQueryMode = (identifier: string): 'tmdb' | 'imdb' => {

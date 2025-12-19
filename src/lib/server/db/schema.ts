@@ -87,7 +87,6 @@ export const watchlist = sqliteTable(
     (table) => [index('idx_watchlist_addedAt').on(table.addedAt)]
 );
 
-// Relations
 export const collectionsRelations = relations(collections, ({ many }) => ({
     movies: many(movies)
 }));

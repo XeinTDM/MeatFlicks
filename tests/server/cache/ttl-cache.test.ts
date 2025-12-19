@@ -1,33 +1,40 @@
-import { describe, expect, it } from 'vitest';
-import { createTtlCache } from '$lib/server/cache';
+import { describe, expect, it, vi } from 'vitest';
+import { withCache, getCachedValue, deleteCachedValue } from '$lib/server/cache';
 
-describe('createTtlCache', () => {
-	it('returns cached value before ttl expires', async () => {
-		const cache = createTtlCache<string, number>({ ttlMs: 1000 });
+describe('withCache', () => {
+	it('returns cached value after first call', async () => {
+		const key = 'test-cache-key';
+		await deleteCachedValue(key);
 
-		const value = await cache.getOrSet('alpha', async () => 42);
-		expect(value).toBe(42);
+		const factory = vi.fn().mockResolvedValue(42);
 
-		expect(cache.get('alpha')).toBe(42);
+		const first = await withCache(key, 60, factory);
+		expect(first).toBe(42);
+		expect(factory).toHaveBeenCalledTimes(1);
+
+		const second = await withCache(key, 60, factory);
+		expect(second).toBe(42);
+		expect(factory).toHaveBeenCalledTimes(1);
 	});
 
-	it('deduplicates concurrent loaders', async () => {
-		let calls = 0;
-		const cache = createTtlCache<string, number>({ ttlMs: 5000 });
+	it('deduplicates concurrent calls', async () => {
+		const key = 'test-concurrent-key';
+		await deleteCachedValue(key);
 
-		const loader = async () => {
-			await new Promise(r => setTimeout(r, 10));
+		let calls = 0;
+		const factory = async () => {
+			await new Promise(r => setTimeout(r, 50));
 			calls += 1;
-			return 99;
+			return 'result';
 		};
 
-		const [first, second] = await Promise.all([
-			cache.getOrSet('gamma', loader),
-			cache.getOrSet('gamma', loader)
+		const [res1, res2] = await Promise.all([
+			withCache(key, 60, factory),
+			withCache(key, 60, factory)
 		]);
 
-		expect(first).toBe(99);
-		expect(second).toBe(99);
+		expect(res1).toBe('result');
+		expect(res2).toBe('result');
 		expect(calls).toBe(1);
 	});
 });

@@ -1,20 +1,20 @@
 import { env } from '$lib/config/env';
 import { withCache, buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, CACHE_TTL_LONG_SECONDS } from '$lib/server/cache';
 import { tmdbRateLimiter } from '$lib/server/rate-limiter';
-import { ApiError, RateLimitError, toNumber } from '$lib/server/utils';
+import { ApiError, toNumber } from '$lib/server/utils';
 import { ofetch } from 'ofetch';
 import {
 	TmdbMovieSchema,
 	TmdbTvSchema,
 	TmdbTrendingResponseSchema,
-	TmdbFindResponseSchema
+	TmdbFindResponseSchema,
+	TmdbTvSeasonSchema
 } from './tmdb.schemas';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-// Cache TTLs in seconds (using constants from cache.ts where possible)
-const DETAILS_TTL = CACHE_TTL_LONG_SECONDS; // 25 mins
-const LIST_TTL = CACHE_TTL_MEDIUM_SECONDS; // 15 mins
+const DETAILS_TTL = CACHE_TTL_LONG_SECONDS;
+const LIST_TTL = CACHE_TTL_MEDIUM_SECONDS;
 
 export interface TmdbMovieExtras {
 	tmdbId: number;
@@ -56,6 +56,30 @@ export interface TmdbTvDetails {
 	firstAirDate: string | null;
 	seasonCount: number | null;
 	episodeCount: number | null;
+
+	seasons: TmdbTvSeason[];
+}
+
+export interface TmdbTvSeason {
+	id: number;
+	name: string;
+	overview: string | null;
+	posterPath: string | null;
+	seasonNumber: number;
+	episodeCount: number;
+	airDate: string | null;
+	episodes?: TmdbTvEpisode[];
+}
+
+export interface TmdbTvEpisode {
+	id: number;
+	name: string;
+	overview: string | null;
+	episodeNumber: number;
+	seasonNumber: number;
+	airDate: string | null;
+	stillPath: string | null;
+	voteAverage: number | null;
 }
 
 const api = ofetch.create({
@@ -66,9 +90,6 @@ const api = ofetch.create({
 	retry: 3,
 	retryDelay: 1000,
 	onResponseError({ response }) {
-		if (response.status === 429) {
-			throw new RateLimitError('TMDB API rate limited', undefined);
-		}
 		throw new ApiError(`TMDB responded with status ${response.status}: ${response._data?.status_message || response.statusText}`, response.status);
 	}
 });
@@ -109,19 +130,14 @@ const fetchMovieListIds = async (
 	const totalPages = Math.ceil(limit / TMDB_PAGE_SIZE);
 
 	for (let page = 1; page <= totalPages; page++) {
-		const rateLimit = await tmdbRateLimiter.checkLimit(rateLimitKey);
-		if (!rateLimit.allowed) {
-			throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
-		}
-
-		const payload = await api(path, {
+		const payload = await tmdbRateLimiter.schedule(rateLimitKey, () => api(path, {
 			query: {
 				language: 'en-US',
 				include_adult: 'false',
 				page,
 				...params
 			}
-		});
+		}));
 
 		const results = payload.results;
 		if (!Array.isArray(results)) break;
@@ -142,15 +158,10 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 	const cacheKey = buildCacheKey('tmdb', 'tv', tmdbId);
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
-		const rateLimit = await tmdbRateLimiter.checkLimit('tmdb-tv-details');
-		if (!rateLimit.allowed) {
-			throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
-		}
-
 		try {
-			const rawData = await api(`/tv/${tmdbId}`, {
+			const rawData = await tmdbRateLimiter.schedule('tmdb-tv-details', () => api(`/tv/${tmdbId}`, {
 				query: { append_to_response: 'credits,videos,external_ids' }
-			});
+			}));
 
 			const data = TmdbTvSchema.parse(rawData);
 
@@ -174,7 +185,18 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 				episodeRuntime: data.episode_run_time?.[0] || null,
 				firstAirDate: data.first_air_date || null,
 				seasonCount: data.number_of_seasons || null,
-				episodeCount: data.number_of_episodes || null
+				episodeCount: data.number_of_episodes || null,
+				seasons: (data.seasons || [])
+					.filter(s => s.season_number > 0) // Usually skip season 0 (specials) unless requested
+					.map(s => ({
+						id: s.id,
+						name: s.name,
+						overview: s.overview || null,
+						posterPath: buildImageUrl(s.poster_path, env.TMDB_POSTER_SIZE),
+						seasonNumber: s.season_number,
+						episodeCount: s.episode_count || 0,
+						airDate: s.air_date || null
+					}))
 			};
 		} catch (error) {
 			if (error instanceof ApiError && error.statusCode === 404) {
@@ -185,19 +207,52 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 	});
 }
 
+
+export async function fetchTmdbTvSeason(tmdbId: number, seasonNumber: number): Promise<TmdbTvSeason | null> {
+	const cacheKey = buildCacheKey('tmdb', 'tv', tmdbId, 'season', seasonNumber);
+
+	return withCache(cacheKey, DETAILS_TTL, async () => {
+		try {
+			const rawData = await tmdbRateLimiter.schedule('tmdb-tv-season', () => api(`/tv/${tmdbId}/season/${seasonNumber}`));
+			const data = TmdbTvSeasonSchema.parse(rawData);
+
+			return {
+				id: data.id,
+				name: data.name,
+				overview: data.overview || null,
+				posterPath: buildImageUrl(data.poster_path, env.TMDB_POSTER_SIZE),
+				seasonNumber: data.season_number,
+				episodeCount: data.episode_count || 0,
+				airDate: data.air_date || null,
+				episodes: (data.episodes || []).map(e => ({
+					id: e.id,
+					name: e.name,
+					overview: e.overview || null,
+					episodeNumber: e.episode_number,
+					seasonNumber: e.season_number,
+					airDate: e.air_date || null,
+					stillPath: buildImageUrl(e.still_path, env.TMDB_STILL_SIZE || 'original'),
+					voteAverage: e.vote_average || null
+				}))
+			};
+		} catch (error) {
+			if (error instanceof ApiError && error.statusCode === 404) {
+				return null;
+			}
+			throw error;
+		}
+	});
+}
+
+
 export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
 	const cacheKey = buildCacheKey('tmdb', 'movie', tmdbId);
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
-		const rateLimit = await tmdbRateLimiter.checkLimit('tmdb-movie-details');
-		if (!rateLimit.allowed) {
-			throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
-		}
-
 		try {
-			const rawData = await api(`/movie/${tmdbId}`, {
+			const rawData = await tmdbRateLimiter.schedule('tmdb-movie-details', () => api(`/movie/${tmdbId}`, {
 				query: { append_to_response: 'credits,videos' }
-			});
+			}));
 
 			const data = TmdbMovieSchema.parse(rawData);
 
@@ -234,14 +289,9 @@ export async function fetchTrendingMovieIds(limit = 20): Promise<number[]> {
 	const cacheKey = buildCacheKey('tmdb', 'trending', limit);
 
 	return withCache(cacheKey, LIST_TTL, async () => {
-		const rateLimit = await tmdbRateLimiter.checkLimit('tmdb-trending');
-		if (!rateLimit.allowed) {
-			throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
-		}
-
-		const rawData = await api('/trending/movie/week', {
+		const rawData = await tmdbRateLimiter.schedule('tmdb-trending', () => api('/trending/movie/week', {
 			query: { language: 'en-US' }
-		});
+		}));
 
 		const data = TmdbTrendingResponseSchema.parse(rawData);
 		return data.results.slice(0, limit).map(r => r.id);
@@ -307,14 +357,9 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
 	const cacheKey = buildCacheKey('tmdb', 'lookup', normalized);
 
 	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
-		const rateLimit = await tmdbRateLimiter.checkLimit('tmdb-imdb-lookup');
-		if (!rateLimit.allowed) {
-			throw new RateLimitError('TMDB rate limit exceeded', rateLimit.resetTime);
-		}
-
-		const rawData = await api(`/find/${normalized}`, {
+		const rawData = await tmdbRateLimiter.schedule('tmdb-imdb-lookup', () => api(`/find/${normalized}`, {
 			query: { external_source: 'imdb_id' }
-		});
+		}));
 
 		const data = TmdbFindResponseSchema.parse(rawData);
 		return data.movie_results[0]?.id || data.tv_results[0]?.id || null;
@@ -322,6 +367,6 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
 }
 
 export function invalidateTmdbCaches() {
-	// Note: With persistent cache, we don't have a simple 'clear' for specific patterns yet
-	// but we can clear the memory L1 cache if needed.
+	// TODO: Implement persistent cache clearing for specific patterns
 }
+

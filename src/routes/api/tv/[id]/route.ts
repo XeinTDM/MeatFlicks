@@ -64,6 +64,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			imdbId: details.imdbId ?? null,
 			seasonCount: details.seasonCount ?? null,
 			episodeCount: details.episodeCount ?? null,
+			seasons: details.seasons,
 			is4K: false,
 			isHD: true,
 			media_type: 'tv'
