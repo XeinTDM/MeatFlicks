@@ -27,3 +27,4 @@
 	<MovieScrollContainer title="Top Rated" movies={topRatedMovies} />
 {/if}
 
+
