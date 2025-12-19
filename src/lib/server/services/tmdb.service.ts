@@ -413,8 +413,31 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
 	});
 }
 
-export function invalidateTmdbCaches() {
-	// TODO: Implement persistent cache clearing for specific patterns
+/**
+ * Invalidate TMDB caches matching a pattern
+ * @param pattern - Pattern to match (e.g., 'tmdb:movie:*', 'tmdb:tv:123:*', 'tmdb:person:*')
+ * @returns Number of cache entries invalidated
+ */
+export async function invalidateTmdbCaches(pattern?: string): Promise<number> {
+	const { invalidateCachePattern, invalidateCachePrefix } = await import('$lib/server/cache');
+	
+	if (pattern) {
+		return invalidateCachePattern(pattern);
+	}
+	
+	// Default: invalidate all TMDB caches
+	return invalidateCachePrefix('tmdb:');
+}
+
+/**
+ * Invalidate caches for a specific TMDB ID
+ * @param tmdbId - TMDB ID to invalidate
+ * @param mediaType - Optional media type filter
+ * @returns Number of cache entries invalidated
+ */
+export async function invalidateTmdbId(tmdbId: number, mediaType?: 'movie' | 'tv'): Promise<number> {
+	const { invalidateTmdbId: invalidateById } = await import('$lib/server/cache');
+	return invalidateById(tmdbId, mediaType);
 }
 
 export async function fetchTmdbRecommendations(

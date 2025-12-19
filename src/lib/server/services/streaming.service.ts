@@ -65,6 +65,36 @@ export async function resolveStreaming(
 	});
 }
 
-export function invalidateStreamingCache() {
-	// TODO: Implement pattern based invalidation
+/**
+ * Invalidate streaming caches matching a pattern
+ * @param pattern - Pattern to match (e.g., 'streaming:movie:*', 'streaming:tv:123:*')
+ * @returns Number of cache entries invalidated
+ */
+export async function invalidateStreamingCache(pattern?: string): Promise<number> {
+	const { invalidateCachePattern, invalidateCachePrefix } = await import('$lib/server/cache');
+	
+	if (pattern) {
+		return invalidateCachePattern(pattern);
+	}
+	
+	// Default: invalidate all streaming caches
+	return invalidateCachePrefix('streaming:');
+}
+
+/**
+ * Invalidate cache for a specific streaming source
+ * @param tmdbId - TMDB ID to invalidate
+ * @param mediaType - Media type ('movie' or 'tv')
+ * @param season - Optional season number
+ * @param episode - Optional episode number
+ * @returns Number of cache entries invalidated
+ */
+export async function invalidateStreamingSource(
+	tmdbId: number,
+	mediaType: 'movie' | 'tv',
+	season?: number,
+	episode?: number
+): Promise<number> {
+	const { invalidateStreamingSource: invalidateSource } = await import('$lib/server/cache');
+	return invalidateSource(tmdbId, mediaType, season, episode);
 }

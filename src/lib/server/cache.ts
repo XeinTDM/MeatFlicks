@@ -93,7 +93,142 @@ export async function withCache<T>(
 	return task as Promise<T>;
 }
 
+/**
+ * Invalidate cache entries matching a pattern
+ * @param pattern - Pattern to match (supports wildcards: * for any characters)
+ * @returns Number of keys invalidated
+ */
+export async function invalidateCachePattern(pattern: string): Promise<number> {
+	let invalidated = 0;
+	
+	try {
+		// Convert pattern to regex
+		// Escape special regex characters except * and :
+		// Replace * with .* (any characters)
+		const escapedPattern = pattern
+			.replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+			.replace(/\*/g, '.*'); // Replace * with .*
+		
+		const regex = new RegExp(`^meatflicks:${escapedPattern}$`);
+		
+		// Clear matching keys from LRU cache
+		const lruKeys = Array.from(lruStore.keys());
+		for (const key of lruKeys) {
+			if (regex.test(key)) {
+				lruStore.delete(key);
+				invalidated++;
+			}
+		}
+		
+		// For SQLite cache, try to access KeyvSqlite's internal database
+		// KeyvSqlite uses better-sqlite3 internally
+		try {
+			const sqliteStore = (store as any);
+			const db = sqliteStore.db || sqliteStore.client;
+			
+			if (db) {
+				// Convert pattern to SQL LIKE pattern
+				// Keyv stores keys with namespace prefix: "meatflicks:key"
+				const sqlPattern = `meatflicks:${pattern.replace(/\*/g, '%')}`;
+				
+				// Query matching keys from SQLite
+				let rows: Array<{ key: string }> = [];
+				
+				if (typeof db.prepare === 'function') {
+					// better-sqlite3 style
+					const stmt = db.prepare('SELECT key FROM cache_v2 WHERE key LIKE ?');
+					rows = stmt.all(sqlPattern) as Array<{ key: string }>;
+				} else if (typeof db.query === 'function') {
+					// Async query style
+					const result = await db.query('SELECT key FROM cache_v2 WHERE key LIKE ?', [sqlPattern]);
+					rows = Array.isArray(result) ? result : result.rows || [];
+				}
+				
+				for (const row of rows) {
+					const fullKey = row.key;
+					// Remove namespace prefix for deletion
+					const keyWithoutNamespace = fullKey.replace(/^meatflicks:/, '');
+					
+					if (regex.test(fullKey)) {
+						await cache.delete(keyWithoutNamespace);
+						invalidated++;
+					}
+				}
+			}
+		} catch (dbError) {
+			// If database access fails, log warning but continue
+			// LRU cache clearing is still effective for immediate performance
+			logger.warn({ err: dbError, pattern }, 'Failed to query SQLite cache, only cleared LRU cache');
+		}
+		
+		logger.info({ pattern, invalidated }, 'Cache pattern invalidation completed');
+	} catch (error) {
+		logger.error({ err: error, pattern }, 'Error invalidating cache pattern');
+		throw error;
+	}
+	
+	return invalidated;
+}
 
+/**
+ * Invalidate all cache entries with a specific prefix
+ * @param prefix - Prefix to match (e.g., 'tmdb:', 'streaming:')
+ * @returns Number of keys invalidated
+ */
+export async function invalidateCachePrefix(prefix: string): Promise<number> {
+	return invalidateCachePattern(`${prefix}*`);
+}
 
+/**
+ * Invalidate cache entries for a specific TMDB ID
+ * @param tmdbId - TMDB ID to invalidate
+ * @param mediaType - Optional media type filter ('movie' or 'tv')
+ * @returns Number of keys invalidated
+ */
+export async function invalidateTmdbId(tmdbId: number, mediaType?: 'movie' | 'tv'): Promise<number> {
+	const patterns: string[] = [];
+	
+	if (mediaType) {
+		patterns.push(`tmdb:${mediaType}:${tmdbId}:*`);
+	} else {
+		patterns.push(`tmdb:movie:${tmdbId}:*`);
+		patterns.push(`tmdb:tv:${tmdbId}:*`);
+	}
+	
+	let totalInvalidated = 0;
+	for (const pattern of patterns) {
+		totalInvalidated += await invalidateCachePattern(pattern);
+	}
+	
+	return totalInvalidated;
+}
 
+/**
+ * Invalidate cache entries for a specific streaming source
+ * @param tmdbId - TMDB ID to invalidate
+ * @param mediaType - Media type ('movie' or 'tv')
+ * @param season - Optional season number
+ * @param episode - Optional episode number
+ * @returns Number of keys invalidated
+ */
+export async function invalidateStreamingSource(
+	tmdbId: number,
+	mediaType: 'movie' | 'tv',
+	season?: number,
+	episode?: number
+): Promise<number> {
+	let pattern = `streaming:${mediaType}:${tmdbId}`;
+	
+	if (season !== undefined) {
+		pattern += `:${season}`;
+		if (episode !== undefined) {
+			pattern += `:${episode}`;
+		}
+		pattern += '*';
+	} else {
+		pattern += '*';
+	}
+	
+	return invalidateCachePattern(pattern);
+}
 
