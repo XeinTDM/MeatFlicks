@@ -19,6 +19,18 @@ export const TmdbVideoSchema = z.object({
     official: z.boolean()
 });
 
+export const TmdbProductionCompanySchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    logo_path: z.string().nullable().optional(),
+    origin_country: z.string().optional()
+});
+
+export const TmdbProductionCountrySchema = z.object({
+    iso_3166_1: z.string(),
+    name: z.string()
+});
+
 export const TmdbMovieSchema = z.object({
     id: z.number(),
     imdb_id: z.string().nullable().optional(),
@@ -36,7 +48,9 @@ export const TmdbMovieSchema = z.object({
     }).optional(),
     videos: z.object({
         results: z.array(TmdbVideoSchema)
-    }).optional()
+    }).optional(),
+    production_companies: z.array(TmdbProductionCompanySchema).optional(),
+    production_countries: z.array(TmdbProductionCountrySchema).optional()
 });
 
 export const TmdbTvEpisodeSchema = z.object({
@@ -83,7 +97,9 @@ export const TmdbTvSchema = z.object({
     }).optional(),
     videos: z.object({
         results: z.array(TmdbVideoSchema)
-    }).optional()
+    }).optional(),
+    production_companies: z.array(TmdbProductionCompanySchema).optional(),
+    origin_country: z.array(z.string()).optional()
 });
 
 
@@ -114,4 +130,52 @@ export const TmdbRecommendationResultSchema = z.object({
 
 export const TmdbRecommendationResponseSchema = z.object({
     results: z.array(TmdbRecommendationResultSchema)
+});
+
+
+
+
+export const TmdbPersonCreditsSchema = z.object({
+    cast: z.array(
+        z.object({
+            id: z.number(),
+            title: z.string().optional(),
+            name: z.string().optional(),
+            character: z.string().optional(),
+            poster_path: z.string().nullable().optional(),
+            backdrop_path: z.string().nullable().optional(),
+            media_type: z.string().optional(),
+            release_date: z.string().nullable().optional(),
+            first_air_date: z.string().nullable().optional(),
+            vote_average: z.number().nullable().optional(),
+            episode_count: z.number().optional()
+        })
+    ).optional(),
+    crew: z.array(
+        z.object({
+            id: z.number(),
+            title: z.string().optional(),
+            name: z.string().optional(),
+            department: z.string().optional(),
+            job: z.string().optional(),
+            media_type: z.string().optional(),
+            poster_path: z.string().nullable().optional()
+        })
+    ).optional()
+});
+
+export const TmdbPersonSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    biography: z.string().optional(),
+    birthday: z.string().nullable().optional(),
+    deathday: z.string().nullable().optional(),
+    place_of_birth: z.string().nullable().optional(),
+    profile_path: z.string().nullable().optional(),
+    combined_credits: TmdbPersonCreditsSchema.optional(),
+    images: z.object({
+        profiles: z.array(z.object({
+            file_path: z.string()
+        })).optional()
+    }).optional()
 });

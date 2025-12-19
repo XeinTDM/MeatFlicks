@@ -10,7 +10,8 @@ import {
 	TmdbTrendingResponseSchema,
 	TmdbFindResponseSchema,
 	TmdbTvSeasonSchema,
-	TmdbRecommendationResponseSchema
+	TmdbRecommendationResponseSchema,
+	TmdbPersonSchema
 } from './tmdb.schemas';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -25,6 +26,8 @@ export interface TmdbMovieExtras {
 	trailerUrl: string | null;
 	runtime: number | null;
 	releaseDate: string | null;
+	productionCompanies: { id: number; name: string; logoPath: string | null }[];
+	productionCountries: { iso: string; name: string }[];
 }
 
 export interface TmdbMovieGenre {
@@ -60,6 +63,8 @@ export interface TmdbTvDetails {
 	episodeCount: number | null;
 
 	seasons: TmdbTvSeason[];
+	productionCompanies: { id: number; name: string; logoPath: string | null }[];
+	originCountry: string[];
 }
 
 export interface TmdbTvSeason {
@@ -82,6 +87,29 @@ export interface TmdbTvEpisode {
 	airDate: string | null;
 	stillPath: string | null;
 	voteAverage: number | null;
+}
+
+export interface TmdbPersonCredit {
+	id: number;
+	title: string;
+	character?: string;
+	job?: string;
+	department?: string;
+	posterPath: string | null;
+	mediaType: 'movie' | 'tv';
+	year: string;
+}
+
+export interface TmdbPersonDetails {
+	id: number;
+	name: string;
+	biography: string;
+	birthday: string | null;
+	deathday: string | null;
+	placeOfBirth: string | null;
+	profilePath: string | null;
+	knownFor: TmdbPersonCredit[];
+	images: string[];
 }
 
 const api = ofetch.create({
@@ -198,7 +226,13 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 						seasonNumber: s.season_number,
 						episodeCount: s.episode_count || 0,
 						airDate: s.air_date || null
-					}))
+					})),
+				productionCompanies: (data.production_companies || []).map(c => ({
+					id: c.id,
+					name: c.name,
+					logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
+				})),
+				originCountry: data.origin_country || []
 			};
 		} catch (error) {
 			if (error instanceof ApiError && error.statusCode === 404) {
@@ -276,7 +310,16 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 				posterPath: buildImageUrl(data.poster_path, env.TMDB_POSTER_SIZE),
 				backdropPath: buildImageUrl(data.backdrop_path, env.TMDB_BACKDROP_SIZE),
 				rating: data.vote_average || null,
-				genres: data.genres || []
+				genres: data.genres || [],
+				productionCompanies: (data.production_companies || []).map(c => ({
+					id: c.id,
+					name: c.name,
+					logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
+				})),
+				productionCountries: (data.production_countries || []).map(c => ({
+					iso: c.iso_3166_1,
+					name: c.name
+				}))
 			};
 		} catch (error) {
 			if (error instanceof ApiError && error.statusCode === 404) {
@@ -346,7 +389,9 @@ export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExt
 		cast: details.cast,
 		trailerUrl: details.trailerUrl,
 		runtime: details.runtime,
-		releaseDate: details.releaseDate
+		releaseDate: details.releaseDate,
+		productionCompanies: details.productionCompanies,
+		productionCountries: details.productionCountries
 	};
 }
 
@@ -424,6 +469,59 @@ export async function fetchTmdbRecommendations(
 					isHD: true
 				} as LibraryMovie;
 			});
+	});
+}
+
+export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPersonDetails> {
+	const cacheKey = buildCacheKey('tmdb', 'person', personId);
+
+	return withCache(cacheKey, DETAILS_TTL, async () => {
+		try {
+			const rawData = await tmdbRateLimiter.schedule('tmdb-person-details', () => api(`/person/${personId}`, {
+				query: { append_to_response: 'combined_credits,images' }
+			}));
+
+			const data = TmdbPersonSchema.parse(rawData);
+
+			const credits = [
+				...(data.combined_credits?.cast || []).map(c => ({ ...c, job: 'Actor' })),
+				...(data.combined_credits?.crew || [])
+			]
+				.filter(c => 'vote_average' in c ? (c.vote_average && c.vote_average > 0) : true) // Filter out noise from cast, keep crew
+				.sort((a, b) => {
+					//Sort by popularity/votes or date? Let's sort by date descending safely
+					const dateA = ('release_date' in a ? a.release_date : '') || ('first_air_date' in a ? a.first_air_date : '') || '';
+					const dateB = ('release_date' in b ? b.release_date : '') || ('first_air_date' in b ? b.first_air_date : '') || '';
+					return dateB.localeCompare(dateA);
+				})
+				.map(c => ({
+					id: c.id,
+					title: c.title || c.name || 'Untitled',
+					character: 'character' in c ? c.character : undefined,
+					job: 'job' in c ? c.job : undefined,
+					department: 'department' in c ? c.department : undefined,
+					posterPath: buildImageUrl(c.poster_path, env.TMDB_POSTER_SIZE),
+					mediaType: (c.media_type as 'movie' | 'tv') || 'movie',
+					year: (('release_date' in c ? c.release_date : '') || ('first_air_date' in c ? c.first_air_date : '') || '').substring(0, 4)
+				}));
+
+			return {
+				id: data.id,
+				name: data.name,
+				biography: data.biography || '',
+				birthday: data.birthday || null,
+				deathday: data.deathday || null,
+				placeOfBirth: data.place_of_birth || null,
+				profilePath: buildImageUrl(data.profile_path, env.TMDB_POSTER_SIZE),
+				knownFor: credits,
+				images: (data.images?.profiles || []).map(i => buildImageUrl(i.file_path, env.TMDB_POSTER_SIZE)).filter((s): s is string => s !== null)
+			};
+		} catch (error) {
+			if (error instanceof ApiError && error.statusCode === 404) {
+				throw new Error('Person not found');
+			}
+			throw error;
+		}
 	});
 }
 

@@ -38,6 +38,9 @@
 			episodeCount: number;
 			posterPath: string | null;
 		}[];
+		productionCompanies?: { id: number; name: string; logoPath: string | null }[];
+		productionCountries?: { iso: string; name: string }[];
+		originCountry?: string[];
 	};
 
 	type Episode = {
@@ -525,11 +528,55 @@
 							<h2 class="mb-4 text-2xl font-semibold">Cast</h2>
 							<ul class="grid gap-3 md:grid-cols-2">
 								{#each movie.cast as member}
-									<li class="rounded-md border border-border/40 bg-background/80 px-3 py-2">
-										<p class="font-semibold text-foreground">{member.name}</p>
-										<p class="text-xs text-muted-foreground">{member.character}</p>
+									<li
+										class="rounded-md border border-border/40 bg-background/80 px-3 py-2 transition-colors hover:bg-muted/50"
+									>
+										<a href={`/person/${member.id}`} class="block">
+											<p class="font-semibold text-foreground hover:underline">{member.name}</p>
+											<p class="text-xs text-muted-foreground">{member.character}</p>
+										</a>
 									</li>
 								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					{#if movie.productionCompanies?.length}
+						<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
+							<h2 class="mb-4 text-xl font-semibold">Production Companies</h2>
+							<div class="flex flex-wrap gap-4">
+								{#each movie.productionCompanies as company}
+									<div
+										class="flex items-center gap-2 rounded-md border border-border/40 bg-background/80 px-3 py-2"
+									>
+										{#if company.logoPath}
+											<img src={company.logoPath} alt={company.name} class="h-6 object-contain" />
+										{/if}
+										<span class="text-sm font-medium">{company.name}</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if movie.productionCountries?.length || movie.originCountry?.length}
+						<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
+							<h2 class="mb-4 text-xl font-semibold">Country of Origin</h2>
+							<ul class="flex flex-wrap gap-2">
+								{#if movie.productionCountries}
+									{#each movie.productionCountries as country}
+										<li class="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+											{country.name}
+										</li>
+									{/each}
+								{/if}
+								{#if movie.originCountry}
+									{#each movie.originCountry as countryCode}
+										<li class="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+											{countryCode}
+										</li>
+									{/each}
+								{/if}
 							</ul>
 						</div>
 					{/if}

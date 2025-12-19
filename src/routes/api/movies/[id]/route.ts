@@ -312,7 +312,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			durationMinutes: movie.durationMinutes ?? extras.runtime ?? null,
 			imdbId: extras.imdbId,
 			cast: extras.cast,
-			trailerUrl: extras.trailerUrl
+			trailerUrl: extras.trailerUrl,
+			productionCompanies: extras.productionCompanies,
+			productionCountries: extras.productionCountries
 		};
 
 		return json(payload);
