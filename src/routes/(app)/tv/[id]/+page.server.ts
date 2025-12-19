@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { resolveStreaming } from '$lib/server';
+import { fetchTmdbRecommendations } from '$lib/server/services/tmdb.service';
 
 type TvWithDetails = {
 	id: string;
@@ -85,26 +86,31 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 	}
 
 	try {
-		const streaming = await resolveStreaming({
-			mediaType: 'tv',
-			tmdbId: Number(tvShow.tmdbId),
-			imdbId: tvShow.imdbId ?? undefined
-		});
+		const [streaming, recommendations] = await Promise.all([
+			resolveStreaming({
+				mediaType: 'tv',
+				tmdbId: Number(tvShow.tmdbId),
+				imdbId: tvShow.imdbId ?? undefined
+			}),
+			fetchTmdbRecommendations(Number(tvShow.tmdbId), 'tv')
+		]);
 
 		return {
 			mediaType: 'tv' as const,
 			movie: tvShow,
 			streaming,
+			recommendations,
 			canonicalPath,
 			identifier,
 			queryMode
 		};
 	} catch (error) {
-		console.error('[tv][load] Failed to resolve streaming sources', error);
+		console.error('[tv][load] Failed to resolve data', error);
 		return {
 			mediaType: 'tv' as const,
 			movie: tvShow,
 			streaming: { source: null, resolutions: [] },
+			recommendations: [],
 			canonicalPath,
 			identifier,
 			queryMode

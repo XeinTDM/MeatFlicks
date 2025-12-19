@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type { MovieRecord } from '$lib/server/db';
 import { resolveStreaming } from '$lib/server';
+import { fetchTmdbRecommendations } from '$lib/server/services/tmdb.service';
 
 type MovieWithDetails = MovieRecord & {
 	imdbId: string | null;
@@ -67,29 +68,34 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		: `/movie/${movie.tmdbId ?? movie.id}`;
 
 	try {
-		const streaming = await resolveStreaming({
-			mediaType: 'movie',
-			tmdbId: Number(movie.tmdbId),
-			imdbId: movie.imdbId ?? undefined
-		});
+		const [streaming, recommendations] = await Promise.all([
+			resolveStreaming({
+				mediaType: 'movie',
+				tmdbId: Number(movie.tmdbId),
+				imdbId: movie.imdbId ?? undefined
+			}),
+			fetchTmdbRecommendations(Number(movie.tmdbId), 'movie')
+		]);
 
 		return {
 			mediaType: 'movie' as const,
 			movie,
 			streaming,
+			recommendations,
 			canonicalPath,
 			identifier,
 			queryMode
-		} as const;
+		};
 	} catch (error) {
-		console.error('[movie][load] Failed to resolve streaming sources', error);
+		console.error('[movie][load] Failed to resolve data', error);
 		return {
 			mediaType: 'movie' as const,
 			movie,
 			streaming: { source: null, resolutions: [] },
+			recommendations: [],
 			canonicalPath,
 			identifier,
 			queryMode
-		} as const;
+		};
 	}
 };

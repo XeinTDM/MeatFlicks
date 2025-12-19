@@ -99,3 +99,19 @@ export const TmdbFindResponseSchema = z.object({
     movie_results: z.array(z.object({ id: z.number() })),
     tv_results: z.array(z.object({ id: z.number() }))
 });
+
+export const TmdbRecommendationResultSchema = z.object({
+    id: z.number(),
+    title: z.string().optional(),
+    name: z.string().optional(), // for TV
+    poster_path: z.string().nullable().optional(),
+    backdrop_path: z.string().nullable().optional(),
+    vote_average: z.number().nullable().optional(),
+    release_date: z.string().nullable().optional(),
+    first_air_date: z.string().nullable().optional(), // for TV
+    media_type: z.string().optional() // sometimes returned, sometimes not
+});
+
+export const TmdbRecommendationResponseSchema = z.object({
+    results: z.array(TmdbRecommendationResultSchema)
+});

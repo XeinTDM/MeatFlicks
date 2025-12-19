@@ -1,5 +1,6 @@
 import { env } from '$lib/config/env';
 import { withCache, buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, CACHE_TTL_LONG_SECONDS } from '$lib/server/cache';
+import type { LibraryMovie } from '$lib/types/library';
 import { tmdbRateLimiter } from '$lib/server/rate-limiter';
 import { ApiError, toNumber } from '$lib/server/utils';
 import { ofetch } from 'ofetch';
@@ -8,7 +9,8 @@ import {
 	TmdbTvSchema,
 	TmdbTrendingResponseSchema,
 	TmdbFindResponseSchema,
-	TmdbTvSeasonSchema
+	TmdbTvSeasonSchema,
+	TmdbRecommendationResponseSchema
 } from './tmdb.schemas';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -368,5 +370,60 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
 
 export function invalidateTmdbCaches() {
 	// TODO: Implement persistent cache clearing for specific patterns
+}
+
+export async function fetchTmdbRecommendations(
+	tmdbId: number,
+	mediaType: 'movie' | 'tv',
+	limit = 12
+): Promise<LibraryMovie[]> {
+	const cacheKey = buildCacheKey('tmdb', mediaType, tmdbId, 'recommendations', limit);
+
+	return withCache(cacheKey, LIST_TTL, async () => {
+		// Parallel fetch similar and recommended
+		const [similarRes, recommendRes] = await Promise.all([
+			tmdbRateLimiter.schedule(`tmdb-${mediaType}-similar`, () =>
+				api(`/${mediaType}/${tmdbId}/similar`, { query: { language: 'en-US', page: 1 } })
+			),
+			tmdbRateLimiter.schedule(`tmdb-${mediaType}-recommendations`, () =>
+				api(`/${mediaType}/${tmdbId}/recommendations`, { query: { language: 'en-US', page: 1 } })
+			)
+		]);
+
+		const similar = TmdbRecommendationResponseSchema.parse(similarRes).results;
+		const recommended = TmdbRecommendationResponseSchema.parse(recommendRes).results;
+
+		// Combine and deduplicate
+		const combined = [...recommended, ...similar];
+		const unique = new Map<number, (typeof combined)[0]>();
+		for (const item of combined) {
+			if (!unique.has(item.id)) {
+				unique.set(item.id, item);
+			}
+		}
+
+		return Array.from(unique.values())
+			.slice(0, limit)
+			.map((item) => {
+				const title = item.title || item.name || 'Untitled';
+				const releaseDate = item.release_date || item.first_air_date || null;
+				const isTv = mediaType === 'tv' || item.media_type === 'tv' || Boolean(item.name);
+
+				return {
+					id: String(item.id),
+					tmdbId: item.id,
+					title,
+					overview: null,
+					posterPath: buildImageUrl(item.poster_path, env.TMDB_POSTER_SIZE),
+					backdropPath: buildImageUrl(item.backdrop_path, env.TMDB_BACKDROP_SIZE),
+					releaseDate,
+					rating: item.vote_average || 0,
+					genres: [], // Lightweight summary doesn't need full genres often
+					media_type: isTv ? 'tv' : 'movie',
+					is4K: false,
+					isHD: true
+				} as LibraryMovie;
+			});
+	});
 }
 

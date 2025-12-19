@@ -3,6 +3,8 @@
 	import type { StreamingSource } from '$lib/streaming';
 	import { Button } from '$lib/components/ui/button';
 	import { watchHistory } from '$lib/state/stores/historyStore';
+	import { MovieScrollContainer } from '$lib/components';
+	import type { LibraryMovie } from '$lib/types/library';
 
 	type MediaType = 'movie' | 'tv';
 
@@ -58,6 +60,7 @@
 			movie: MediaDetails | null;
 			streaming?: StreamingPayloadLike;
 			mediaType?: MediaType;
+			recommendations?: LibraryMovie[];
 		} & Record<string, unknown>;
 	} = $props();
 
@@ -532,6 +535,12 @@
 					{/if}
 				</div>
 			</section>
+
+			{#if data.recommendations && data.recommendations.length > 0}
+				<section class="mt-12 mb-8">
+					<MovieScrollContainer title="More Like This" movies={data.recommendations} />
+				</section>
+			{/if}
 		</main>
 	</div>
 {/if}
