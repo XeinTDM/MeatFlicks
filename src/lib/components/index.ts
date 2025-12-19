@@ -10,3 +10,5 @@ export { default as GlobalSearch } from './GlobalSearch.svelte';
 export { default as NotificationPortal } from './NotificationPortal.svelte';
 export { default as ContinueWatchingRow } from './ContinueWatchingRow.svelte';
 export { default as ShareButton } from './ShareButton.svelte';
+export { default as RecentlyAddedRow } from './RecentlyAddedRow.svelte';
+export { default as TopRatedRow } from './TopRatedRow.svelte';

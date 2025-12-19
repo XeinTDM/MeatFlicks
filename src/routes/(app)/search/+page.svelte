@@ -3,9 +3,10 @@
 	import MovieCard from '$lib/components/MovieCard.svelte';
 	import SearchHeader from '$lib/components/SearchHeader.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
+	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import type { LibraryMovie } from '$lib/types/library';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import {
 		addToSearchHistory,
 		sortMovies,
@@ -35,6 +36,8 @@
 	let qualityFilter = $state<QualityFilter>('any');
 	let onlyWithOverview = $state(false);
 	let lastSearchedTerm = $state('');
+	let searchHistoryItems = $state<Array<{ id: number; query: string; searchedAt: number }>>([]);
+	let showHistory = $derived(!lastSearchedTerm && searchHistoryItems.length > 0);
 
 	async function performSearch(rawTerm: string) {
 		const trimmed = rawTerm.trim();
@@ -110,6 +113,57 @@
 		onlyWithOverview = false;
 	}
 
+	async function loadSearchHistory() {
+		if (!browser) return;
+		try {
+			const response = await fetch('/api/search/history');
+			if (response.ok) {
+				const data = await response.json();
+				searchHistoryItems = data.searches || [];
+			}
+		} catch (error) {
+			// Silently fail - search history is optional
+			console.error('Failed to load search history:', error);
+		}
+	}
+
+	async function handleSearchSelect(selectedQuery: string) {
+		query = selectedQuery;
+		await performSearch(selectedQuery);
+	}
+
+	async function handleDeleteHistory(id: number) {
+		try {
+			const response = await fetch('/api/search/history', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ id })
+			});
+			if (response.ok) {
+				searchHistoryItems = searchHistoryItems.filter((item) => item.id !== id);
+			}
+		} catch (error) {
+			console.error('Failed to delete search history item:', error);
+		}
+	}
+
+	async function handleClearHistory() {
+		try {
+			const response = await fetch('/api/search/history', {
+				method: 'DELETE'
+			});
+			if (response.ok) {
+				searchHistoryItems = [];
+			}
+		} catch (error) {
+			console.error('Failed to clear search history:', error);
+		}
+	}
+
+	onMount(() => {
+		void loadSearchHistory();
+	});
+
 	onDestroy(() => {
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
@@ -153,6 +207,16 @@
 			class="space-y-2 rounded-3xl border border-border/60 bg-card/70 p-6 shadow-xl backdrop-blur-sm sm:p-8"
 		>
 			<SearchHeader {query} {loading} {performSearch} {handleSubmit} {trendingQueries} />
+
+			{#if showHistory}
+				<SearchHistory
+					searches={searchHistoryItems}
+					onSearchSelect={handleSearchSelect}
+					onDelete={handleDeleteHistory}
+					onClearAll={handleClearHistory}
+					maxItems={10}
+				/>
+			{/if}
 
 			<SearchFilters
 				{sortBy}

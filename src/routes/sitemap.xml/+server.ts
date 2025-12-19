@@ -45,6 +45,10 @@ export async function GET() {
             })
             .join('');
 
+        // Note: TV shows are fetched dynamically from TMDB API and not stored in database
+        // They are accessible via /tv/[tmdbId] but cannot be included in static sitemap
+        // TV show URLs are generated on-demand when accessed
+
         const staticEntries = staticPages
             .map(
                 (page) => `

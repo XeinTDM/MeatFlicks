@@ -60,14 +60,14 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 
 	try {
 		const body = await request.json().catch(() => ({}));
-		const { searchId } = body;
+		const { id } = body;
 
-		if (searchId !== undefined) {
+		if (id !== undefined) {
 			// Delete specific search entry
-			if (typeof searchId !== 'number') {
+			if (typeof id !== 'number') {
 				return json({ error: 'Invalid search ID' }, { status: 400 });
 			}
-			await searchHistoryRepository.deleteSearch(user.id, searchId);
+			await searchHistoryRepository.deleteSearch(user.id, id);
 		} else {
 			// Clear all history
 			await searchHistoryRepository.clearHistory(user.id);

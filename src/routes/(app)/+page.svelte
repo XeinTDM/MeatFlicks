@@ -2,6 +2,8 @@
 	import Hero from '$lib/components/Hero.svelte';
 	import { TrendingMoviesSlider, MovieScrollContainer, PersonalizedRows } from '$lib/components';
 	import ContinueWatchingRow from '$lib/components/ContinueWatchingRow.svelte';
+	import RecentlyAddedRow from '$lib/components/RecentlyAddedRow.svelte';
+	import TopRatedRow from '$lib/components/TopRatedRow.svelte';
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
@@ -138,6 +140,9 @@
 							{#if trendingMovies.length > 0}
 								<TrendingMoviesSlider title="Trending Now" movies={trendingMovies} />
 							{/if}
+
+							<RecentlyAddedRow />
+							<TopRatedRow />
 
 							{#if trendingMovies.length === 0 && collections.length === 0 && genres.length === 0}
 								<p class="text-sm text-foreground/70">

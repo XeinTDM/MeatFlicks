@@ -4,8 +4,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MovieScrollContainer } from '$lib/components';
+	import ShareButton from '$lib/components/ShareButton.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
+	import { PictureInPicture, Gauge } from '@lucide/svelte';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 
 	type MediaType = 'movie' | 'tv';
 
@@ -239,6 +242,28 @@
 					if (currentDisplayPlayer) {
 						event.preventDefault();
 						// This would need to be implemented with postMessage to iframe
+					}
+					break;
+				case '+':
+				case '=':
+					// Increase playback speed
+					if (currentDisplayPlayer) {
+						event.preventDefault();
+						playbackSpeed = Math.min(2.0, playbackSpeed + 0.25);
+					}
+					break;
+				case '-':
+					// Decrease playback speed
+					if (currentDisplayPlayer) {
+						event.preventDefault();
+						playbackSpeed = Math.max(0.25, playbackSpeed - 0.25);
+					}
+					break;
+				case 'i':
+					// Toggle Picture-in-Picture
+					if (currentDisplayPlayer && 'pictureInPictureEnabled' in document) {
+						event.preventDefault();
+						// PiP toggle logic
 					}
 					break;
 			}
@@ -635,11 +660,12 @@
 
 					{#if primarySource?.embedUrl}
 						<iframe
+							bind:this={iframeElement}
 							src={playbackUrl!}
 							title="Player"
 							class="h-full w-full border-none"
 							allowfullscreen
-							allow="autoplay; fullscreen"
+							allow="autoplay; fullscreen; picture-in-picture"
 						></iframe>
 					{:else}
 						<div class="flex h-full w-full items-center justify-center text-white">
