@@ -151,6 +151,30 @@ export const searchHistory = sqliteTable(
     ]
 );
 
+export const playbackProgress = sqliteTable(
+    'playback_progress',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: text('user_id')
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        mediaId: text('media_id').notNull(),
+        mediaType: text('media_type').notNull(), // 'movie' | 'tv'
+        progress: integer('progress').notNull(), // seconds
+        duration: integer('duration').notNull(), // total seconds
+        seasonNumber: integer('season_number'),
+        episodeNumber: integer('episode_number'),
+        updatedAt: integer('updated_at')
+            .notNull()
+            .$defaultFn(() => Date.now())
+    },
+    (table) => [
+        index('idx_playback_progress_user').on(table.userId),
+        index('idx_playback_progress_media').on(table.mediaId),
+        index('idx_playback_progress_updated').on(table.updatedAt)
+    ]
+);
+
 
 
 export const collectionsRelations = relations(collections, ({ many }) => ({

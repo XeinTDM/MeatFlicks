@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Hero from '$lib/components/Hero.svelte';
 	import { TrendingMoviesSlider, MovieScrollContainer, PersonalizedRows } from '$lib/components';
+	import ContinueWatchingRow from '$lib/components/ContinueWatchingRow.svelte';
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
@@ -130,6 +131,7 @@
 
 						<div class="p-6 sm:p-5 lg:p-5">
 							<div class="mb-12">
+								<ContinueWatchingRow />
 								<PersonalizedRows />
 							</div>
 

@@ -9,6 +9,21 @@
 	import WatchlistContext from '$lib/state/contexts/WatchlistContext.svelte';
 	import ErrorContext from '$lib/state/contexts/ErrorContext.svelte';
 	import { ModeWatcher } from 'mode-watcher';
+	import { onMount } from 'svelte';
+
+	// Register service worker for PWA
+	onMount(() => {
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker
+				.register('/service-worker.js')
+				.then((registration) => {
+					console.log('Service Worker registered:', registration);
+				})
+				.catch((error) => {
+					console.error('Service Worker registration failed:', error);
+				});
+		}
+	});
 </script>
 
 <svelte:head>

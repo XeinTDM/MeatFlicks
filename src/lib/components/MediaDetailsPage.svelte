@@ -117,6 +117,139 @@
 	let nextEpTimer: ReturnType<typeof setTimeout> | null = null;
 	let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 
+	// Save playback progress periodically
+	let progressSaveInterval: ReturnType<typeof setInterval> | null = null;
+
+	function stopProgressTracking() {
+		if (progressSaveInterval) {
+			clearInterval(progressSaveInterval);
+			progressSaveInterval = null;
+		}
+	}
+
+	$effect(() => {
+		// Track all reactive variables used in the interval
+		// This ensures the effect re-runs when any of these change
+		const currentDisplayPlayer = displayPlayer;
+		const currentMovie = movie;
+		const currentMediaType = mediaType;
+		const currentSelectedSeason = selectedSeason;
+		const currentSelectedEpisode = selectedEpisode;
+
+		if (currentDisplayPlayer && currentMovie) {
+			// Stop any existing interval first
+			stopProgressTracking();
+
+			// Start new interval with current values
+			if (progressSaveInterval) {
+				clearInterval(progressSaveInterval);
+			}
+
+			// Save progress every 30 seconds
+			progressSaveInterval = setInterval(async () => {
+				// Re-check current values inside interval
+				if (!movie || !displayPlayer) return;
+
+				try {
+					const duration = movie.durationMinutes ? movie.durationMinutes * 60 : 0;
+					if (duration > 0) {
+						await fetch('/api/playback/progress', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								mediaId: movie.id,
+								mediaType,
+								progress: Math.floor(duration * 0.1), // Placeholder - would be actual progress
+								duration,
+								seasonNumber: mediaType === 'tv' ? selectedSeason : undefined,
+								episodeNumber: mediaType === 'tv' ? selectedEpisode : undefined
+							})
+						});
+					}
+				} catch (error) {
+					console.error('Failed to save playback progress:', error);
+				}
+			}, 30000); // Every 30 seconds
+		} else {
+			stopProgressTracking();
+		}
+
+		return () => {
+			stopProgressTracking();
+		};
+	});
+
+	// Add keyboard event listener
+	$effect(() => {
+		// Define handler inside effect to capture current reactive values
+		function handleKeyDown(event: KeyboardEvent) {
+			// Don't trigger shortcuts when typing in inputs
+			if (
+				event.target instanceof HTMLInputElement ||
+				event.target instanceof HTMLTextAreaElement ||
+				event.target instanceof HTMLSelectElement
+			) {
+				return;
+			}
+
+			// Access reactive variables directly - they'll be current values
+			const currentDisplayPlayer = displayPlayer;
+			const currentIsTheaterMode = isTheaterMode;
+			const currentMediaType = mediaType;
+			const currentSelectedEpisode = selectedEpisode;
+
+			switch (event.key.toLowerCase()) {
+				case 'f':
+					// Toggle fullscreen/theater mode
+					if (currentDisplayPlayer) {
+						event.preventDefault();
+						toggleTheaterMode();
+					}
+					break;
+				case 'escape':
+					// Exit theater mode
+					if (currentIsTheaterMode) {
+						event.preventDefault();
+						isTheaterMode = false;
+					}
+					break;
+				case 'n':
+					// Next episode (TV only)
+					if (currentDisplayPlayer && currentMediaType === 'tv') {
+						event.preventDefault();
+						goToNextEpisode();
+					}
+					break;
+				case 'p':
+					// Previous episode (TV only)
+					if (currentDisplayPlayer && currentMediaType === 'tv' && currentSelectedEpisode > 1) {
+						event.preventDefault();
+						handleEpisodeSelect(currentSelectedEpisode - 1);
+					}
+					break;
+				case 'arrowright':
+					// Skip forward 10 seconds (if we had direct video control)
+					if (currentDisplayPlayer) {
+						event.preventDefault();
+						// This would need to be implemented with postMessage to iframe
+					}
+					break;
+				case 'arrowleft':
+					// Skip backward 10 seconds (if we had direct video control)
+					if (currentDisplayPlayer) {
+						event.preventDefault();
+						// This would need to be implemented with postMessage to iframe
+					}
+					break;
+			}
+		}
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown);
+		};
+	});
+
 	let primaryLabel = $derived(
 		primarySource
 			? (providerResolutions.find(
