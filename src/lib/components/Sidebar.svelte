@@ -16,6 +16,7 @@
 		SidebarMenuItem,
 		SidebarMenuButton
 	} from '$lib/components/ui/sidebar';
+	import { GlobalSearch } from '$lib/components';
 	import SettingsDialog from '$lib/components/SettingsDialog.svelte';
 	import NavigationMenu from '$lib/components/NavigationMenu.svelte';
 	import {
@@ -55,6 +56,9 @@
 	>
 		<SidebarHeader class="px-2 py-2">
 			<SidebarGroup class="rounded-lg bg-card">
+				<div class="px-2 pt-2 pb-4">
+					<GlobalSearch />
+				</div>
 				<SidebarGroupContent>
 					<NavigationMenu items={primaryNavItems} onItemSelected={handleItemSelect} />
 				</SidebarGroupContent>

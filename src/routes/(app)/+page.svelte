@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Hero from '$lib/components/Hero.svelte';
-	import { TrendingMoviesSlider, MovieScrollContainer } from '$lib/components';
+	import { TrendingMoviesSlider, MovieScrollContainer, PersonalizedRows } from '$lib/components';
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
@@ -27,7 +27,11 @@
 				throw new Error(message || 'Unable to refresh spotlight.');
 			}
 
-			const payload = (await response.json()) as { success: boolean; data: HomeLibrary | null; error?: string };
+			const payload = (await response.json()) as {
+				success: boolean;
+				data: HomeLibrary | null;
+				error?: string;
+			};
 			if (!payload.success || !payload.data) {
 				throw new Error(payload.error ?? 'No spotlight data returned.');
 			}
@@ -57,23 +61,23 @@
 			homeLibraryPromise = streamed as Promise<HomeLibrary | null>;
 		}
 	});
-$effect(() => {
-	const promise = homeLibraryPromise;
-	if (!promise) {
-		return;
-	}
+	$effect(() => {
+		const promise = homeLibraryPromise;
+		if (!promise) {
+			return;
+		}
 
-	const current = promise;
-	activePromise = current;
-	current
-		.then((value) => {
-			if (activePromise !== current) return;
-			if (value) {
-				lastResolvedLibrary = value;
-			}
-		})
-		.catch(() => undefined);
-});
+		const current = promise;
+		activePromise = current;
+		current
+			.then((value) => {
+				if (activePromise !== current) return;
+				if (value) {
+					lastResolvedLibrary = value;
+				}
+			})
+			.catch(() => undefined);
+	});
 </script>
 
 <div class="min-h-screen text-foreground">
@@ -108,12 +112,18 @@ $effect(() => {
 						{/if}
 
 						<div class="p-6 sm:p-5 lg:p-5">
+							<div class="mb-12">
+								<PersonalizedRows />
+							</div>
+
 							{#if trendingMovies.length > 0}
 								<TrendingMoviesSlider title="Trending Now" movies={trendingMovies} />
 							{/if}
 
 							{#if trendingMovies.length === 0 && collections.length === 0 && genres.length === 0}
-								<p class="text-sm text-foreground/70">No movies available yet. Try refreshing the library.</p>
+								<p class="text-sm text-foreground/70">
+									No movies available yet. Try refreshing the library.
+								</p>
 							{/if}
 
 							{#each collections as collection (collection.id)}
@@ -146,4 +156,3 @@ $effect(() => {
 		{/if}
 	</div>
 </div>
-

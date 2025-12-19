@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import type { LibraryMovie } from '$lib/types/library';
+import { notifications } from './notificationStore';
 
 export type Movie = {
 	id: string;
@@ -217,6 +218,7 @@ function createWatchlistStore() {
 
 		if (!sanitized) {
 			setError('Unable to add movie to watchlist. Missing required fields.');
+			notifications.error('Error', 'Unable to add movie. Missing data.');
 			return;
 		}
 
@@ -242,6 +244,18 @@ function createWatchlistStore() {
 				body: JSON.stringify({ movie: sanitized })
 			});
 			if (!response.ok) throw new Error('Failed to sync with server');
+
+			// Notify success only if it was a new addition (simple check against previous state)
+			const wasAlreadyIn = previousState.some(i => i.id === sanitized.id);
+			if (!wasAlreadyIn) {
+				notifications.movieAdded({
+					title: sanitized.title,
+					posterPath: sanitized.posterPath,
+					tmdbId: sanitized.tmdbId ?? 0
+				});
+			} else {
+				notifications.success('Updated', `Updated "${sanitized.title}" in your watchlist.`);
+			}
 		} catch (error) {
 			console.error('[watchlist][addToWatchlist] sync failed', error);
 			// Revert optimistic update
@@ -249,6 +263,7 @@ function createWatchlistStore() {
 				persist(previousState);
 				return { ...state, watchlist: previousState, error: 'Failed to sync with server.' };
 			});
+			notifications.error('Sync Error', 'Failed to save to server. Reverting.');
 		}
 	};
 
@@ -259,6 +274,7 @@ function createWatchlistStore() {
 		}
 
 		const previousState = get(store).watchlist;
+		const movieTitle = previousState.find(m => m.id === movieId)?.title ?? 'Movie';
 
 		// Optimistic update
 		store.update((state) => {
@@ -274,6 +290,8 @@ function createWatchlistStore() {
 				body: JSON.stringify({ movieId })
 			});
 			if (!response.ok) throw new Error('Failed to sync removal with server');
+
+			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
 		} catch (error) {
 			console.error('[watchlist][removeFromWatchlist] sync failed', error);
 			// Revert optimistic update
@@ -281,6 +299,7 @@ function createWatchlistStore() {
 				persist(previousState);
 				return { ...state, watchlist: previousState, error: 'Failed to sync removal with server.' };
 			});
+			notifications.error('Sync Error', 'Failed to remove from server. Reverting.');
 		}
 	};
 

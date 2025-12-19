@@ -5,3 +5,6 @@ export { default as Hero } from './Hero.svelte';
 export { default as MovieCard } from './MovieCard.svelte';
 export { default as TrendingMoviesSlider } from './TrendingMoviesSlider.svelte';
 export { default as MovieScrollContainer } from './MovieScrollContainer.svelte';
+export { default as PersonalizedRows } from './PersonalizedRows.svelte';
+export { default as GlobalSearch } from './GlobalSearch.svelte';
+export { default as NotificationPortal } from './NotificationPortal.svelte';

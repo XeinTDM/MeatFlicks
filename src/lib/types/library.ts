@@ -12,7 +12,7 @@ export type LibraryMovie = MovieSummary & {
 	releaseDate: MovieSummary['releaseDate'] | string | null;
 	trailerUrl?: string | null;
 	media_type?: string | null;
-	genres?: GenreSummary[];
+	genres?: GenreSummary[] | string[];
 	cast?: CastMember[];
 	imdbId?: string | null;
 	canonicalPath?: string;

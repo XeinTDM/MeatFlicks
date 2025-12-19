@@ -4,6 +4,7 @@
 	import AppShell from '$lib/components/Sidebar.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import GlobalErrorDisplay from '$lib/components/GlobalErrorDisplay.svelte';
+	import { NotificationPortal } from '$lib/components';
 	import ThemeContext from '$lib/state/contexts/ThemeContext.svelte';
 	import WatchlistContext from '$lib/state/contexts/WatchlistContext.svelte';
 	import ErrorContext from '$lib/state/contexts/ErrorContext.svelte';
@@ -29,6 +30,7 @@
 				</div>
 			</AppShell>
 			<GlobalErrorDisplay />
+			<NotificationPortal />
 		</ErrorContext>
 	</WatchlistContext>
 </ThemeContext>

@@ -119,13 +119,18 @@
 
 				<CardContent class="text-sm text-muted-foreground">
 					<div class=" flex items-center gap-3">
-						<span>{releaseYear}</span>
+						<span>{releaseYear()}</span>
 						{#if qualityTag}
 							<Badge variant="secondary" class="bg-background text-foreground">
 								{qualityTag}
 							</Badge>
 						{/if}
 					</div>
+					{#if (movie as any).season && (movie as any).episode}
+						<div class="mt-1 text-xs font-medium text-primary">
+							S{(movie as any).season} E{(movie as any).episode}
+						</div>
+					{/if}
 					<p class="h-10 overflow-hidden text-sm leading-relaxed text-muted-foreground">
 						{movie.overview}
 					</p>

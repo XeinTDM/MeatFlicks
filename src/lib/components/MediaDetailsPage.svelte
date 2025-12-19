@@ -119,7 +119,7 @@
 			const normalizedGenres =
 				movie.genres?.map((genre) => ('name' in genre ? String(genre.name) : String(genre))) ?? [];
 
-			watchHistory.recordWatch({
+			const watchPayload: any = {
 				id: movie.id,
 				title: movie.title,
 				posterPath: movie.posterPath ?? null,
@@ -136,7 +136,14 @@
 				imdbId: movie.imdbId ?? undefined,
 				durationMinutes: movie.durationMinutes ?? null,
 				collectionId: movie.collectionId ?? null
-			});
+			};
+
+			if (mediaType === 'tv') {
+				watchPayload.season = selectedSeason;
+				watchPayload.episode = selectedEpisode;
+			}
+
+			watchHistory.recordWatch(watchPayload);
 		}
 	});
 

@@ -59,28 +59,33 @@ export const GET: RequestHandler = async ({ url }) => {
 		const results = await withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
 			const ftsQuery = sanitizeForFts(query);
 			let rows: any[] = [];
+			let ftsFailed = false;
 
 			if (ftsQuery) {
-				// Raw SQL via Drizzle for FTS5
-				const searchSql = sql`
-					SELECT m.*
-					FROM movie_fts mf
-					JOIN movies m ON m.numericId = mf.rowid
-					WHERE mf MATCH ${ftsQuery}
-					ORDER BY bm25(mf) ASC,
-						(m.rating IS NULL) ASC,
-						m.rating DESC,
-						(m.releaseDate IS NULL) ASC,
-						m.releaseDate DESC,
-						m.title COLLATE NOCASE ASC
-					LIMIT ${limit}
-				`;
-				const result = await db.run(searchSql);
-				// Libsql return format might need adjustment or use db.all
-				rows = await db.all(searchSql);
+				try {
+					// Raw SQL via Drizzle for FTS5
+					const searchSql = sql`
+						SELECT m.*
+						FROM movie_fts mf
+						JOIN movies m ON m.numericId = mf.rowid
+						WHERE mf MATCH ${ftsQuery}
+						ORDER BY bm25(mf) ASC,
+							(m.rating IS NULL) ASC,
+							m.rating DESC,
+							(m.releaseDate IS NULL) ASC,
+							m.releaseDate DESC,
+							m.title COLLATE NOCASE ASC
+						LIMIT ${limit}
+					`;
+					// Libsql return format might need adjustment or use db.all
+					rows = await db.all(searchSql);
+				} catch (err) {
+					console.warn('[search] FTS failed (table might be missing), falling back to LIKE:', err);
+					ftsFailed = true;
+				}
 			}
 
-			if (rows.length === 0) {
+			if (rows.length === 0 || ftsFailed) {
 				const likeTerm = `%${query.replace(/%/g, "%%")}%`;
 				const fallbackSql = sql`
 					SELECT *

@@ -4,6 +4,8 @@ import type { Movie } from './watchlistStore';
 export type HistoryEntry = Omit<Movie, 'addedAt'> & {
 	watchedAt: string;
 	mediaType?: string;
+	season?: number;
+	episode?: number;
 };
 
 type HistoryState = {
@@ -73,6 +75,8 @@ const sanitizeEntry = (candidate: unknown): HistoryEntry | null => {
 		is4K: payload.is4K === true,
 		isHD: typeof payload.isHD === 'boolean' ? payload.isHD : undefined,
 		media_type: typeof payload.media_type === 'string' ? payload.media_type : undefined,
+		season: typeof payload.season === 'number' ? payload.season : undefined,
+		episode: typeof payload.episode === 'number' ? payload.episode : undefined,
 		watchedAt
 	} satisfies HistoryEntry;
 };
@@ -146,6 +150,8 @@ const normalizeForHistory = (
 		is4K: movie.is4K === true,
 		isHD: typeof movie.isHD === 'boolean' ? movie.isHD : undefined,
 		media_type: typeof movie.media_type === 'string' ? (movie.media_type as string) : undefined,
+		season: typeof movie.season === 'number' ? movie.season : undefined,
+		episode: typeof movie.episode === 'number' ? movie.episode : undefined,
 		watchedAt: timestamp
 	} satisfies HistoryEntry;
 };

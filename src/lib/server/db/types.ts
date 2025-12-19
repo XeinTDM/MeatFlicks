@@ -38,6 +38,13 @@ export interface MovieSearchResult extends MovieRecord {
 	score: number;
 }
 
-export type MovieSummary = Omit<MovieRecord, 'numericId' | 'createdAt' | 'updatedAt'>;
+export type MovieSummary = Omit<MovieRecord, 'numericId' | 'createdAt' | 'updatedAt' | 'tmdbId' | 'durationMinutes' | 'collectionId' | 'genres' | 'is4K' | 'isHD'> & {
+	tmdbId?: number;
+	durationMinutes?: number | null;
+	collectionId?: number | null;
+	genres: GenreRecord[] | string[];
+	is4K?: boolean;
+	isHD?: boolean;
+};
 
 export type SqliteTransaction<T> = () => T;
