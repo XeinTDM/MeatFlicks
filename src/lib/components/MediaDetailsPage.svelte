@@ -97,6 +97,13 @@
 	let primarySource = $derived(currentStreaming.source);
 	let playbackUrl = $derived(primarySource?.embedUrl ?? primarySource?.streamUrl ?? null);
 	let displayPlayer = $derived(hasRequestedPlayback && Boolean(playbackUrl));
+
+	let isTheaterMode = $state(false);
+	let isAutoPlay = $state(true);
+	let showNextOverlay = $state(false);
+	let nextEpTimer: ReturnType<typeof setTimeout> | null = null;
+	let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
+
 	let primaryLabel = $derived(
 		primarySource
 			? (providerResolutions.find(
@@ -118,6 +125,22 @@
 			return mediaType === 'tv' ? 'Runtime varies' : 'N/A';
 		}
 		return `${movie.durationMinutes} min`;
+	});
+
+	let nextEpisodeLabel = $derived.by(() => {
+		if (!movie?.seasons || mediaType !== 'tv') return 'Next Episode';
+		const currentSeasonData = movie.seasons.find((s) => s.seasonNumber === selectedSeason);
+		if (!currentSeasonData) return 'Next Episode';
+
+		if (selectedEpisode < currentSeasonData.episodeCount) {
+			return `S${selectedSeason}:E${selectedEpisode + 1}`;
+		} else {
+			const nextSeason = movie.seasons.find((s) => s.seasonNumber === selectedSeason + 1);
+			if (nextSeason) {
+				return `S${nextSeason.seasonNumber}:E1`;
+			}
+		}
+		return 'Next Episode';
 	});
 
 	$effect(() => {
@@ -298,6 +321,73 @@
 		currentStreaming = { source: null, resolutions: [] };
 	}
 
+	function toggleTheaterMode() {
+		isTheaterMode = !isTheaterMode;
+	}
+
+	function goToNextEpisode() {
+		if (!movie?.seasons || mediaType !== 'tv') return;
+
+		const currentSeasonData = movie.seasons.find((s) => s.seasonNumber === selectedSeason);
+		if (!currentSeasonData) return;
+
+		if (selectedEpisode < currentSeasonData.episodeCount) {
+			handleEpisodeSelect(selectedEpisode + 1);
+		} else {
+			// Check next season
+			const nextSeason = movie.seasons.find((s) => s.seasonNumber === selectedSeason + 1);
+			if (nextSeason) {
+				selectedSeason = nextSeason.seasonNumber;
+				selectedEpisode = 1;
+				hasRequestedPlayback = false;
+				currentStreaming = { source: null, resolutions: [] };
+				// This needs to wait for reactive updates?
+				// Actually selectedProvider is state, so we can just request resolution
+				if (selectedProvider) {
+					requestProviderResolution(selectedProvider);
+				}
+			}
+		}
+	}
+
+	function cancelAutoPlay() {
+		if (autoPlayTimer) {
+			clearTimeout(autoPlayTimer);
+			autoPlayTimer = null;
+		}
+		showNextOverlay = false;
+	}
+
+	$effect(() => {
+		// Cleanup timers on changes
+		if (nextEpTimer) clearTimeout(nextEpTimer);
+		if (autoPlayTimer) clearTimeout(autoPlayTimer);
+		showNextOverlay = false;
+
+		if (displayPlayer && playbackUrl && movie?.durationMinutes && mediaType === 'tv') {
+			// Best-effort "nearing end" detection
+			const durationMs = movie.durationMinutes * 60 * 1000;
+			// Trigger overlay 30s before end
+			const triggerTime = Math.max(0, durationMs - 30000);
+
+			if (durationMs > 30000) {
+				nextEpTimer = setTimeout(() => {
+					showNextOverlay = true;
+					if (isAutoPlay) {
+						autoPlayTimer = setTimeout(() => {
+							goToNextEpisode();
+						}, 30000);
+					}
+				}, triggerTime);
+			}
+		}
+
+		return () => {
+			if (nextEpTimer) clearTimeout(nextEpTimer);
+			if (autoPlayTimer) clearTimeout(autoPlayTimer);
+		};
+	});
+
 	const notFoundHeading = $derived(mediaType === 'tv' ? 'Series Not Found' : 'Movie Not Found');
 	const notFoundDescription = $derived(
 		mediaType === 'tv'
@@ -332,21 +422,126 @@
 			</div>
 
 			{#if displayPlayer}
-				<div class="mb-8 aspect-video w-full overflow-hidden rounded-lg bg-black shadow-2xl">
+				<!-- Theater Mode Container -->
+				<div
+					class={isTheaterMode
+						? 'fixed inset-0 z-50 flex h-screen w-screen bg-black'
+						: 'relative mb-8 aspect-video w-full overflow-hidden rounded-lg bg-black shadow-2xl'}
+				>
+					{#if isTheaterMode}
+						<button
+							class="absolute top-6 right-6 z-50 rounded-full bg-black/50 p-3 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+							onclick={toggleTheaterMode}
+							aria-label="Exit Theater Mode"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path
+									d="M3 16h3a2 2 0 0 1 2 2v3"
+								/><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg
+							>
+						</button>
+					{/if}
+
 					{#if primarySource?.embedUrl}
 						<iframe
 							src={playbackUrl!}
 							title="Player"
-							class="h-full w-full"
-							frameborder="0"
+							class="h-full w-full border-none"
 							allowfullscreen
+							allow="autoplay; fullscreen"
 						></iframe>
 					{:else}
-						<div class="flex h-full items-center justify-center text-white">
+						<div class="flex h-full w-full items-center justify-center text-white">
 							<p>Stream not available for this provider.</p>
 						</div>
 					{/if}
+
+					<!-- Next Episode Overlay -->
+					{#if showNextOverlay && mediaType === 'tv'}
+						<div
+							class="overlay-enter absolute right-6 bottom-6 z-40 w-80 overflow-hidden rounded-xl border border-white/10 bg-black/80 p-5 text-white shadow-2xl backdrop-blur-md"
+						>
+							<div class="mb-4">
+								<h4 class="text-xs font-semibold tracking-wider text-white/60 uppercase">
+									Up Next
+								</h4>
+								<p class="mt-1 text-lg font-bold">{nextEpisodeLabel}</p>
+							</div>
+
+							<div class="flex items-center gap-3">
+								<Button
+									size="sm"
+									class="w-full bg-white text-black hover:bg-gray-200"
+									onclick={goToNextEpisode}
+								>
+									Play Now
+								</Button>
+								<Button
+									size="sm"
+									variant="outline"
+									class="w-full border-white/20 bg-transparent text-white hover:bg-white/10"
+									onclick={cancelAutoPlay}
+								>
+									Cancel
+								</Button>
+							</div>
+
+							{#if isAutoPlay}
+								<div class="absolute bottom-0 left-0 h-1 w-full bg-white/10">
+									<div class="animate-progress h-full origin-left bg-primary"></div>
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
+
+				<!-- Controls Bar (Non-Theater Mode) -->
+				{#if !isTheaterMode}
+					<div class="mb-6 flex items-center justify-end gap-6 text-sm text-muted-foreground">
+						{#if mediaType === 'tv'}
+							<label
+								class="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
+							>
+								<input
+									type="checkbox"
+									checked={isAutoPlay}
+									onchange={(e) => (isAutoPlay = e.currentTarget.checked)}
+									class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
+								/>
+								<span>Auto-play Next</span>
+							</label>
+						{/if}
+						<button
+							onclick={toggleTheaterMode}
+							class="flex items-center gap-2 transition-colors hover:text-foreground"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><rect width="20" height="14" x="2" y="3" rx="2" /><path d="M8 21h8" /><path
+									d="M12 17v4"
+								/></svg
+							>
+							Theater Mode
+						</button>
+					</div>
+				{/if}
 			{/if}
 
 			{#if providerResolutions.length}
@@ -591,3 +786,30 @@
 		</main>
 	</div>
 {/if}
+
+<style>
+	@keyframes progress {
+		from {
+			width: 100%;
+		}
+		to {
+			width: 0%;
+		}
+	}
+	.animate-progress {
+		animation: progress 30s linear forwards;
+	}
+	.overlay-enter {
+		animation: slideUp 0.5s ease-out forwards;
+	}
+	@keyframes slideUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+</style>
