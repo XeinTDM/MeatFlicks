@@ -1,6 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { libraryRepository } from '$lib/server';
 import { fromSlug, toSlug } from '$lib/utils';
+import { parseAllFromURL } from '$lib/utils/filterUrl';
+import type { MovieFilters, SortOptions } from '$lib/types/filters';
+import type { PaginationParams } from '$lib/types/pagination';
+import { DEFAULT_PAGE_SIZE } from '$lib/types/pagination';
 
 const CATEGORY_PRESETS: Record<string, { title: string; genres: string[] }> = {
 	movies: {
@@ -13,9 +17,24 @@ const CATEGORY_PRESETS: Record<string, { title: string; genres: string[] }> = {
 	}
 };
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url }) => {
 	const { slug } = params;
 
+	// Parse filters, sort, and pagination from URL
+	const { filters, sort, pagination } = parseAllFromURL(url.searchParams);
+
+	// Check if filters are active (if so, use new filter system)
+	const hasActiveFilters =
+		filters.yearFrom ||
+		filters.yearTo ||
+		filters.minRating !== undefined ||
+		filters.maxRating !== undefined ||
+		filters.runtimeMin !== undefined ||
+		filters.runtimeMax !== undefined ||
+		filters.language ||
+		(filters.genres && filters.genres.length > 0);
+
+	// Determine category/genre context
 	const preset = CATEGORY_PRESETS[slug];
 	let categoryTitle = preset?.title ?? '';
 	let genresToFetch = preset?.genres ?? [];
@@ -26,11 +45,30 @@ export const load: PageServerLoad = async ({ params }) => {
 		const match = genres.find((genre) => toSlug(genre.name) === slug);
 
 		if (!match) {
+			// If using filters, still try to return results
+			if (hasActiveFilters) {
+				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination);
+				const availableGenres = await libraryRepository.listGenres();
+				return {
+					categoryTitle: fromSlug(slug),
+					movies: result.items,
+					pagination: result.pagination,
+					filters,
+					sort,
+					hasContent: result.items.length > 0,
+					singleGenreMode: true,
+					availableGenres,
+					useFilters: true
+				};
+			}
+
 			return {
 				categoryTitle: fromSlug(slug),
 				genreData: [],
 				hasContent: false,
-				singleGenreMode: true
+				singleGenreMode: true,
+				availableGenres: await libraryRepository.listGenres(),
+				useFilters: false
 			};
 		}
 
@@ -39,6 +77,31 @@ export const load: PageServerLoad = async ({ params }) => {
 		singleGenreMode = true;
 	}
 
+	// If filters are active, use new filter system
+	if (hasActiveFilters) {
+		// Merge genre from slug into filters if it's a single genre page
+		const finalFilters: MovieFilters = { ...filters };
+		if (singleGenreMode && genresToFetch.length === 1) {
+			finalFilters.genres = [genresToFetch[0], ...(finalFilters.genres || [])];
+		}
+
+		const result = await libraryRepository.findMoviesWithFilters(finalFilters, sort, pagination);
+		const availableGenres = await libraryRepository.listGenres();
+
+		return {
+			categoryTitle,
+			movies: result.items,
+			pagination: result.pagination,
+			filters: finalFilters,
+			sort,
+			hasContent: result.items.length > 0,
+			singleGenreMode,
+			availableGenres,
+			useFilters: true
+		};
+	}
+
+	// Otherwise, use legacy genre-based approach
 	const genreData = await Promise.all(
 		genresToFetch.map(async (genreName) => ({
 			genre: genreName,
@@ -48,11 +111,17 @@ export const load: PageServerLoad = async ({ params }) => {
 	);
 
 	const hasContent = genreData.some((entry) => entry.movies.length > 0);
+	const availableGenres = await libraryRepository.listGenres();
 
 	return {
 		categoryTitle,
 		genreData,
 		hasContent,
-		singleGenreMode
+		singleGenreMode,
+		availableGenres,
+		useFilters: false,
+		filters: {} as MovieFilters,
+		sort: { field: 'popularity', order: 'desc' } as SortOptions,
+		pagination: { page: 1, pageSize: DEFAULT_PAGE_SIZE } as PaginationParams
 	};
 };

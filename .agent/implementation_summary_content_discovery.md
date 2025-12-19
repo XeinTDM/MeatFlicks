@@ -129,6 +129,28 @@ This document summarizes the implementation of advanced content discovery featur
 - [x] Retrieve recent searches
 - [x] Clear history functionality
 
+## Integration Status
+
+### ✅ Completed Components
+- All filter components are built and ready to use
+- Pagination component is complete
+- Backend repository methods are implemented
+- Database schema is defined (migration file exists)
+
+### ⚠️ Pending Integration
+The following components exist but are not yet integrated into the explore pages:
+- FilterPanel component
+- ActiveFilters component  
+- Pagination component
+- Filter/sort/pagination logic in page server load
+
+### ❌ Missing Components
+These components are mentioned in the plan but not yet created:
+- `SortDropdown.svelte` (sort options selector)
+- `InfiniteScroll.svelte` (alternative pagination)
+- `SearchHistory.svelte` (search history UI)
+- `/api/search/history/+server.ts` (search history API)
+
 ## Next Steps (To Complete Integration)
 
 ### 1. Database Migration ⚠️
@@ -136,67 +158,141 @@ This document summarizes the implementation of advanced content discovery featur
 
 ```powershell
 # Option 1: Run migration script
-npm run db:push
+bun run db:push
 
 # Option 2: If PowerShell execution policy blocks npm, use:
-npx drizzle-kit push
+bunx drizzle-kit push
 ```
 
-**Note**: There's currently a PowerShell execution policy issue preventing npm scripts from running. The user may need to:
+**Note**: If there's a PowerShell execution policy issue preventing scripts from running:
 - Run PowerShell as Administrator
 - Execute: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 - Then run the migration
 
-### 2. Update Explore Pages
+**Status**: Migration file exists at `drizzle/migrations/0003_add_search_history_and_filters.sql` but needs to be applied.
+
+### 2. Update Explore Pages ⚠️ **HIGH PRIORITY**
+**Current State**: Explore pages use basic genre-based queries, not the new filter system.
+
+**Required Changes**:
 Update `/explore/[slug]/+page.server.ts` to:
 - Parse URL search params for filters, sort, and pagination
-- Call `libraryRepository.findMoviesWithFilters()`
+- Call `libraryRepository.findMoviesWithFilters()` instead of `findGenreMovies()`
 - Return pagination metadata
 - Handle empty results
+- Return available genres for filter dropdown
 
-### 3. Update Explore Page UI
+**Example Integration**:
+```typescript
+// Parse URL params
+const filters = parseFiltersFromURL(url.searchParams);
+const sort = parseSortFromURL(url.searchParams);
+const pagination = parsePaginationFromURL(url.searchParams);
+
+// Use new filter method
+const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination);
+
+return {
+  movies: result.items,
+  pagination: result.pagination,
+  filters,
+  sort,
+  availableGenres: await libraryRepository.listGenres()
+};
+```
+
+### 3. Update Explore Page UI ⚠️ **HIGH PRIORITY**
+**Current State**: Explore page has basic search and sort, but no filter panel.
+
+**Required Changes**:
 Update `/explore/[slug]/+page.svelte` to:
 - Import and use `FilterPanel` component
-- Import and use `ActiveFilters` component
+- Import and use `ActiveFilters` component  
 - Import and use `Pagination` component
-- Handle filter changes and update URL
-- Handle sort changes
-- Handle page changes
-- Implement loading states
+- Create `SortDropdown` component or enhance existing sort selector
+- Handle filter changes and update URL search params
+- Handle sort changes and update URL
+- Handle page changes and update URL
+- Implement loading states with skeleton screens
+- Display empty state when no results
 
-### 4. Create Search History API
-Create `/api/search/history/+server.ts` with:
-- GET: Fetch recent searches
-- POST: Add new search
-- DELETE: Clear history
+**Layout Suggestion**:
+- Sidebar: FilterPanel (collapsible on mobile)
+- Main: ActiveFilters + SortDropdown + Results grid + Pagination
 
-### 5. Add Search History UI
-Create `SearchHistory.svelte` component:
-- Display recent searches
-- Click to apply search
+### 4. Create Search History API ❌ **MISSING**
+**Status**: Repository exists, but API endpoint is not created.
+
+**Required**: Create `/api/search/history/+server.ts` with:
+- GET: Fetch recent searches (requires authentication)
+- POST: Add new search (requires authentication)
+- DELETE: Clear history (requires authentication)
+
+**Implementation Notes**:
+- Use `validateSession()` from auth utilities
+- Return JSON responses
+- Handle errors gracefully
+- Rate limit POST requests to prevent spam
+
+### 5. Add Search History UI ❌ **MISSING**
+**Status**: Component does not exist yet.
+
+**Required**: Create `src/lib/components/search/SearchHistory.svelte`:
+- Display recent searches from API
+- Click to apply search (navigate to search page with query)
 - Delete individual searches
-- Integrate with global search
+- Clear all button
+- Empty state when no history
+- Integrate with global search component (show dropdown on focus)
 
-### 6. URL State Management
-Implement URL search params handling:
-- Serialize filters to URL
-- Parse filters from URL
-- Maintain state on browser back/forward
-- Share-able filter URLs
+**Integration Points**:
+- Update `src/lib/components/SearchBar.svelte` or similar
+- Show history dropdown when search input is focused
+- Save searches when user submits search
 
-### 7. Loading States
-Add loading indicators for:
-- Initial page load
-- Filter changes
-- Page changes
-- Search history loading
+### 6. URL State Management ⚠️ **REQUIRED FOR INTEGRATION**
+**Purpose**: Make filter state shareable and bookmarkable.
 
-### 8. Error Handling
-Implement error states for:
-- Failed filter queries
-- Network errors
-- Invalid filter combinations
-- Empty results
+**Required Implementation**:
+Create utility functions in `src/lib/utils/filterUrl.ts`:
+- `serializeFiltersToURL(filters: MovieFilters): URLSearchParams` - Convert filters to URL params
+- `parseFiltersFromURL(params: URLSearchParams): MovieFilters` - Parse URL params to filters
+- `serializeSortToURL(sort: SortOptions): URLSearchParams`
+- `parseSortFromURL(params: URLSearchParams): SortOptions`
+- `updateURLWithFilters(filters, sort, pagination)` - Update browser URL without reload
+
+**Integration**:
+- Use SvelteKit's `goto()` with `keepFocus: true` for smooth transitions
+- Maintain state on browser back/forward (automatic with SvelteKit)
+- Ensure share-able filter URLs work correctly
+
+### 7. Loading States ⚠️ **UX IMPROVEMENT**
+**Current State**: Basic loading, but could be enhanced.
+
+**Required**: Add loading indicators for:
+- Initial page load (skeleton screens for movie cards)
+- Filter changes (show loading overlay or spinner)
+- Page changes (pagination loading state)
+- Search history loading (skeleton list items)
+
+**Components Needed**:
+- `MovieCardSkeleton.svelte` - Loading placeholder for movie cards
+- Loading spinner component (may already exist)
+- Loading overlay for filter panel
+
+### 8. Error Handling ⚠️ **REQUIRED**
+**Current State**: Basic error handling exists, but needs enhancement for filters.
+
+**Required**: Implement error states for:
+- Failed filter queries (show error message, retry button)
+- Network errors (offline indicator, retry)
+- Invalid filter combinations (validation, helpful error messages)
+- Empty results (engaging empty state with suggestions)
+
+**Error States Needed**:
+- Empty results: "No movies found. Try adjusting your filters."
+- Network error: "Connection failed. Check your internet and try again."
+- Invalid filters: "Invalid filter combination. Please adjust your selection."
 
 ## Testing Checklist
 
@@ -288,24 +384,82 @@ All required dependencies are already installed:
 
 No additional packages needed!
 
-## Known Issues
+## Known Issues & Limitations
 
-1. **PowerShell Execution Policy**: npm scripts blocked on Windows
-   - **Workaround**: Use `npx` directly or update execution policy
+1. **PowerShell Execution Policy**: npm/bun scripts may be blocked on Windows
+   - **Workaround**: Use `bunx` directly or update execution policy
+   - **Solution**: Run PowerShell as Admin and set execution policy
 
 2. **Missing UI Components**: Some shadcn-ui components may need to be added
-   - `Slider`: For rating filter
-   - `ToggleGroup`: For genre mode selection
-   - Check if these exist in `src/lib/components/ui/`
+   - `Slider`: For rating filter (check `src/lib/components/ui/slider/`)
+   - `ToggleGroup`: For genre mode selection (check `src/lib/components/ui/toggle-group/`)
+   - Verify these exist before integration
+
+3. **Database Migration Not Applied**: Migration file exists but schema changes not in database
+   - **Impact**: Filter queries will fail until migration is run
+   - **Solution**: Run `bun run db:push` or `bunx drizzle-kit push`
+
+4. **Explore Pages Not Updated**: Current explore pages don't use new filter system
+   - **Impact**: Filters exist but aren't accessible to users
+   - **Solution**: Complete integration steps 2-3 above
+
+5. **No Search History UI**: Backend exists but no frontend component
+   - **Impact**: Search history is saved but not displayed
+   - **Solution**: Create SearchHistory component and integrate with search
 
 ## Estimated Completion Time
 
-- Database migration: 5 minutes
-- Update explore pages: 30-45 minutes
-- Search history API: 15-20 minutes
-- Testing and refinement: 30-45 minutes
+### Remaining Work Breakdown
 
-**Total**: ~2 hours to fully integrate
+1. **Database Migration**: 5 minutes
+   - Run migration command
+   - Verify schema changes
+
+2. **URL State Management Utilities**: 30-45 minutes
+   - Create filter URL serialization/parsing
+   - Test with various filter combinations
+
+3. **Update Explore Pages (Server)**: 30-45 minutes
+   - Update `+page.server.ts` to use filters
+   - Parse URL params
+   - Handle edge cases
+
+4. **Update Explore Pages (Client)**: 1-2 hours
+   - Integrate FilterPanel component
+   - Integrate ActiveFilters component
+   - Integrate Pagination component
+   - Create SortDropdown component
+   - Wire up URL state management
+   - Add loading states
+   - Add error handling
+
+5. **Search History API**: 20-30 minutes
+   - Create API endpoint
+   - Add authentication
+   - Test endpoints
+
+6. **Search History UI**: 45-60 minutes
+   - Create SearchHistory component
+   - Integrate with search bar
+   - Add delete functionality
+   - Style and polish
+
+7. **Testing & Refinement**: 1-2 hours
+   - Test all filter combinations
+   - Test pagination
+   - Test URL state
+   - Test search history
+   - Fix bugs
+   - Mobile responsiveness
+
+**Total Estimated Time**: 4-6 hours for complete integration
+
+### Quick Win (Minimum Viable Integration)
+If you want to get filters working quickly:
+- Skip search history (can add later)
+- Skip infinite scroll (use pagination only)
+- Focus on explore page integration
+- **Time**: ~2-3 hours
 
 ## Documentation
 

@@ -1,8 +1,16 @@
 <script lang="ts">
-	import { Search as SearchIcon, X, Loader2, Play } from '@lucide/svelte';
+	import { Search as SearchIcon, X, Loader2, Play, Clock } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
+	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
+	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
+
+	interface SearchHistoryItem {
+		id: number;
+		query: string;
+		searchedAt: number;
+	}
 
 	let query = $state('');
 	let results = $state<LibraryMovie[]>([]);
@@ -10,6 +18,9 @@
 	let isFocused = $state(false);
 	let searchTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
 	let containerRef = $state<HTMLElement | null>(null);
+	let searchHistory = $state<SearchHistoryItem[]>([]);
+	let isLoadingHistory = $state(false);
+	let showHistory = $derived(isFocused && !query.trim() && searchHistory.length > 0);
 
 	async function fetchResults(q: string) {
 		if (!q.trim()) {
@@ -29,6 +40,74 @@
 			isLoading = false;
 		}
 	}
+
+	async function fetchSearchHistory() {
+		isLoadingHistory = true;
+		try {
+			const res = await fetch('/api/search/history');
+			if (res.ok) {
+				const data = await res.json();
+				searchHistory = data.searches || [];
+			}
+		} catch (error) {
+			// Silently fail - search history is optional
+			console.error('[global-search] error fetching history', error);
+		} finally {
+			isLoadingHistory = false;
+		}
+	}
+
+	async function saveSearch(query: string) {
+		if (!query.trim()) return;
+		try {
+			await fetch('/api/search/history', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ query: query.trim() })
+			});
+			// Refresh history after saving
+			await fetchSearchHistory();
+		} catch (error) {
+			// Silently fail - saving history is optional
+			console.error('[global-search] error saving history', error);
+		}
+	}
+
+	async function deleteSearch(id: number) {
+		try {
+			await fetch('/api/search/history', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ searchId: id })
+			});
+			// Remove from local state
+			searchHistory = searchHistory.filter((s) => s.id !== id);
+		} catch (error) {
+			console.error('[global-search] error deleting history', error);
+		}
+	}
+
+	async function clearAllHistory() {
+		try {
+			await fetch('/api/search/history', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' }
+			});
+			searchHistory = [];
+		} catch (error) {
+			console.error('[global-search] error clearing history', error);
+		}
+	}
+
+	function handleHistorySelect(historyQuery: string) {
+		query = historyQuery;
+		fetchResults(historyQuery);
+	}
+
+	onMount(() => {
+		// Fetch history on mount
+		fetchSearchHistory();
+	});
 
 	function handleInput(e: Event) {
 		const target = e.target as HTMLInputElement;
@@ -60,8 +139,9 @@
 		isFocused = false;
 	}
 
-	function handleGlobalSearch() {
+	async function handleGlobalSearch() {
 		if (query.trim()) {
+			await saveSearch(query);
 			goto(`/search?q=${encodeURIComponent(query)}`);
 			isFocused = false;
 		}
@@ -95,7 +175,12 @@
 			class="flex-1 border-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
 			value={query}
 			oninput={handleInput}
-			onfocus={() => (isFocused = true)}
+			onfocus={() => {
+				isFocused = true;
+				if (!query.trim() && searchHistory.length === 0) {
+					fetchSearchHistory();
+				}
+			}}
 			onkeydown={(e) => e.key === 'Enter' && handleGlobalSearch()}
 		/>
 		{#if query}
@@ -109,16 +194,31 @@
 		{/if}
 	</div>
 
-	{#if isFocused && (results.length > 0 || isLoading)}
+	{#if isFocused && (showHistory || results.length > 0 || isLoading)}
 		<div
 			class="absolute top-full right-0 left-0 z-[100] mt-3 rounded-2xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
 			transition:slide={{ duration: 200 }}
 		>
-			{#if isLoading}
+			{#if showHistory}
+				<!-- Show search history when input is focused and empty -->
+				<div class="p-2">
+					<div class="mb-2 flex items-center gap-2 px-2 text-xs font-semibold text-muted-foreground">
+						<Clock class="size-3" />
+						Recent Searches
+					</div>
+					<SearchHistory
+						searches={searchHistory}
+						onSearchSelect={handleHistorySelect}
+						onDelete={deleteSearch}
+						onClearAll={clearAllHistory}
+						maxItems={5}
+					/>
+				</div>
+			{:else if isLoading}
 				<div class="flex items-center justify-center p-8">
 					<Loader2 class="size-6 animate-spin text-primary" />
 				</div>
-			{:else}
+			{:else if results.length > 0}
 				<ul class="space-y-1">
 					{#each results.slice(0, 5) as movie}
 						<li>
