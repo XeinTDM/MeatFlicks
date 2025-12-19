@@ -75,17 +75,57 @@ export const cache = sqliteTable(
     (table) => [index('idx_cache_expiresAt').on(table.expiresAt)]
 );
 
+
+export const users = sqliteTable('users', {
+    id: text('id').primaryKey(),
+    username: text('username').notNull().unique(),
+    passwordHash: text('password_hash').notNull()
+});
+
+export const sessions = sqliteTable('sessions', {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+        .notNull()
+        .references(() => users.id),
+    expiresAt: integer('expires_at').notNull()
+});
+
 export const watchlist = sqliteTable(
     'watchlist',
     {
-        id: text('id').primaryKey(),
-        movieData: text('movieData').notNull(),
-        addedAt: integer('addedAt')
+        userId: text('user_id')
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        movieId: text('movie_id').notNull(),
+        movieData: text('movie_data').notNull(), // JSON string of the movie data
+        addedAt: integer('added_at')
             .notNull()
             .$defaultFn(() => Date.now())
     },
-    (table) => [index('idx_watchlist_addedAt').on(table.addedAt)]
+    (table) => [
+        primaryKey({ columns: [table.userId, table.movieId] }),
+        index('idx_watchlist_user').on(table.userId),
+        index('idx_watchlist_addedAt').on(table.addedAt)
+    ]
 );
+
+export const watchHistory = sqliteTable(
+    'watch_history',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: text('user_id')
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        movieId: text('movie_id').notNull(),
+        movieData: text('movie_data').notNull(), // JSON string of history entry
+        watchedAt: integer('watched_at').notNull()
+    },
+    (table) => [
+        index('idx_history_user').on(table.userId),
+        index('idx_history_watchedAt').on(table.watchedAt)
+    ]
+);
+
 
 export const collectionsRelations = relations(collections, ({ many }) => ({
     movies: many(movies)
