@@ -69,7 +69,19 @@
 
 	const movie = $derived(data.movie ?? null);
 	const mediaType = $derived((data.mediaType ?? 'movie') as MediaType);
+	const canonicalPath = $derived(data.canonicalPath as string | undefined);
 
+	const ogImage = $derived(
+		movie?.backdropPath
+			? movie.backdropPath.startsWith('http')
+				? movie.backdropPath
+				: `https://image.tmdb.org/t/p/w1280${movie.backdropPath}`
+			: movie?.posterPath
+				? movie.posterPath.startsWith('http')
+					? movie.posterPath
+					: `https://image.tmdb.org/t/p/w780${movie.posterPath}`
+				: null
+	);
 	const initialStreaming: StreamingState = data.streaming
 		? {
 				source: data.streaming.source ?? null,
@@ -396,6 +408,38 @@
 	);
 </script>
 
+<svelte:head>
+	{#if movie}
+		<title>{movie.title} | MeatFlicks</title>
+		<meta name="description" content={movie.overview} />
+
+		<meta property="og:type" content={mediaType === 'tv' ? 'video.tv_show' : 'video.movie'} />
+		<meta
+			property="og:url"
+			content={canonicalPath ? `https://meatflicks.com${canonicalPath}` : ''}
+		/>
+		<meta property="og:title" content={movie.title} />
+		<meta property="og:description" content={movie.overview} />
+		{#if ogImage}
+			<meta property="og:image" content={ogImage} />
+		{/if}
+
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta
+			property="twitter:url"
+			content={canonicalPath ? `https://meatflicks.com${canonicalPath}` : ''}
+		/>
+		<meta name="twitter:title" content={movie.title} />
+		<meta name="twitter:description" content={movie.overview} />
+		{#if ogImage}
+			<meta name="twitter:image" content={ogImage} />
+		{/if}
+	{:else}
+		<title>Media Not Found | MeatFlicks</title>
+		<meta name="robots" content="noindex" />
+	{/if}
+</svelte:head>
+
 {#if !movie}
 	<div class="flex min-h-screen flex-col items-center justify-center text-foreground">
 		<h1 class="text-4xl font-bold">{notFoundHeading}</h1>
@@ -422,7 +466,6 @@
 			</div>
 
 			{#if displayPlayer}
-				<!-- Theater Mode Container -->
 				<div
 					class={isTheaterMode
 						? 'fixed inset-0 z-50 flex h-screen w-screen bg-black'
@@ -465,7 +508,6 @@
 						</div>
 					{/if}
 
-					<!-- Next Episode Overlay -->
 					{#if showNextOverlay && mediaType === 'tv'}
 						<div
 							class="overlay-enter absolute right-6 bottom-6 z-40 w-80 overflow-hidden rounded-xl border border-white/10 bg-black/80 p-5 text-white shadow-2xl backdrop-blur-md"
@@ -504,7 +546,6 @@
 					{/if}
 				</div>
 
-				<!-- Controls Bar (Non-Theater Mode) -->
 				{#if !isTheaterMode}
 					<div class="mb-6 flex items-center justify-end gap-6 text-sm text-muted-foreground">
 						{#if mediaType === 'tv'}
