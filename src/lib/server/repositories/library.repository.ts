@@ -1,8 +1,11 @@
 import { db } from "$lib/server/db";
 import { movies, collections, genres, moviesGenres } from "$lib/server/db/schema";
-import { eq, and, isNotNull, desc, asc, sql } from "drizzle-orm";
+import { eq, and, isNotNull, desc, asc, sql, gte, lte, inArray, or } from "drizzle-orm";
 import type { CollectionRecord, GenreRecord, MovieRow, MovieSummary } from "$lib/server/db";
 import { mapRowsToSummaries } from "$lib/server/db/movie-select";
+import type { MovieFilters, SortOptions } from "$lib/types/filters";
+import type { PaginatedResult, PaginationParams } from "$lib/types/pagination";
+import { calculatePagination, calculateOffset } from "$lib/types/pagination";
 import {
 	CACHE_TTL_LONG_SECONDS,
 	CACHE_TTL_MEDIUM_SECONDS,
@@ -201,6 +204,225 @@ export const libraryRepository = {
 		} catch (error) {
 			console.error("Error fetching movies for genre " + genreName + ":", error);
 			throw new Error("Failed to fetch movies for genre " + genreName);
+		}
+	},
+
+	/**
+	 * Find movies with advanced filters, sorting, and pagination
+	 */
+	async findMoviesWithFilters(
+		filters: MovieFilters,
+		sort: SortOptions,
+		pagination: PaginationParams
+	): Promise<PaginatedResult<MovieSummary>> {
+		try {
+			const offset = calculateOffset(pagination.page, pagination.pageSize);
+			const conditions: any[] = [];
+
+			// Year filters
+			if (filters.yearFrom) {
+				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
+			}
+			if (filters.yearTo) {
+				conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
+			}
+
+			// Rating filters
+			if (filters.minRating !== undefined) {
+				conditions.push(gte(movies.rating, filters.minRating));
+			}
+			if (filters.maxRating !== undefined) {
+				conditions.push(lte(movies.rating, filters.maxRating));
+			}
+
+			// Runtime filters
+			if (filters.runtimeMin !== undefined) {
+				conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
+			}
+			if (filters.runtimeMax !== undefined) {
+				conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
+			}
+
+			// Language filter
+			if (filters.language) {
+				conditions.push(eq(movies.language, filters.language));
+			}
+
+			// Build base query
+			let query = db.select({ movies }).from(movies);
+
+			// Handle genre filtering
+			if (filters.genres && filters.genres.length > 0) {
+				const genreMode = filters.genreMode || 'OR';
+
+				if (genreMode === 'AND') {
+					// For AND mode, we need movies that have ALL specified genres
+					// This requires a more complex query with subqueries
+					for (const genreName of filters.genres) {
+						query = query.innerJoin(
+							moviesGenres,
+							and(
+								eq(moviesGenres.movieId, movies.id),
+								eq(moviesGenres.genreId,
+									sql`(SELECT id FROM ${genres} WHERE name = ${genreName} LIMIT 1)`
+								)
+							)
+						) as any;
+					}
+				} else {
+					// For OR mode, movies can have ANY of the specified genres
+					query = query
+						.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
+						.innerJoin(genres, eq(genres.id, moviesGenres.genreId)) as any;
+
+					conditions.push(inArray(genres.name, filters.genres));
+				}
+			}
+
+			// Apply all conditions
+			if (conditions.length > 0) {
+				query = query.where(and(...conditions)) as any;
+			}
+
+			// Apply sorting
+			const orderByClause = this.buildOrderByClause(sort);
+			query = query.orderBy(...orderByClause) as any;
+
+			// Get total count for pagination (before limit/offset)
+			const totalItems = await this.countMoviesWithFilters(filters);
+
+			// Apply pagination
+			query = query.limit(pagination.pageSize).offset(offset) as any;
+
+			// Execute query
+			const rows = await query;
+			const movieRows = rows.map((r: any) => r.movies);
+			const items = await mapRowsToSummaries(movieRows as MovieRow[]);
+
+			// Calculate pagination metadata
+			const paginationMetadata = calculatePagination(
+				pagination.page,
+				pagination.pageSize,
+				totalItems
+			);
+
+			return {
+				items,
+				pagination: paginationMetadata
+			};
+		} catch (error) {
+			console.error("Error finding movies with filters:", error);
+			throw new Error("Failed to find movies with filters");
+		}
+	},
+
+	/**
+	 * Count movies matching filters (for pagination)
+	 */
+	async countMoviesWithFilters(filters: MovieFilters): Promise<number> {
+		try {
+			const conditions: any[] = [];
+
+			// Year filters
+			if (filters.yearFrom) {
+				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
+			}
+			if (filters.yearTo) {
+				conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
+			}
+
+			// Rating filters
+			if (filters.minRating !== undefined) {
+				conditions.push(gte(movies.rating, filters.minRating));
+			}
+			if (filters.maxRating !== undefined) {
+				conditions.push(lte(movies.rating, filters.maxRating));
+			}
+
+			// Runtime filters
+			if (filters.runtimeMin !== undefined) {
+				conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
+			}
+			if (filters.runtimeMax !== undefined) {
+				conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
+			}
+
+			// Language filter
+			if (filters.language) {
+				conditions.push(eq(movies.language, filters.language));
+			}
+
+			// Build count query
+			let countQuery = db.select({ count: sql<number>`count(DISTINCT ${movies.id})` }).from(movies);
+
+			// Handle genre filtering
+			if (filters.genres && filters.genres.length > 0) {
+				const genreMode = filters.genreMode || 'OR';
+
+				if (genreMode === 'OR') {
+					countQuery = countQuery
+						.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
+						.innerJoin(genres, eq(genres.id, moviesGenres.genreId)) as any;
+
+					conditions.push(inArray(genres.name, filters.genres));
+				}
+				// For AND mode, counting is more complex - we'll use a simpler approach
+			}
+
+			// Apply conditions
+			if (conditions.length > 0) {
+				countQuery = countQuery.where(and(...conditions)) as any;
+			}
+
+			const result = await countQuery;
+			return result[0]?.count || 0;
+		} catch (error) {
+			console.error("Error counting movies with filters:", error);
+			return 0;
+		}
+	},
+
+	/**
+	 * Build ORDER BY clause based on sort options
+	 */
+	buildOrderByClause(sort: SortOptions): any[] {
+		const orderFn = sort.order === 'asc' ? asc : desc;
+
+		switch (sort.field) {
+			case 'popularity':
+				return [
+					orderFn(movies.popularity),
+					desc(movies.rating),
+					asc(movies.title)
+				];
+			case 'rating':
+				return [
+					orderFn(movies.rating),
+					desc(movies.releaseDate),
+					asc(movies.title)
+				];
+			case 'releaseDate':
+				return [
+					orderFn(movies.releaseDate),
+					desc(movies.rating),
+					asc(movies.title)
+				];
+			case 'title':
+				return [
+					orderFn(movies.title)
+				];
+			case 'runtime':
+				return [
+					orderFn(movies.durationMinutes),
+					desc(movies.rating),
+					asc(movies.title)
+				];
+			default:
+				return [
+					desc(movies.rating),
+					desc(movies.releaseDate),
+					asc(movies.title)
+				];
 		}
 	}
 };

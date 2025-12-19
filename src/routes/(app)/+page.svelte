@@ -4,6 +4,7 @@
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
+	import { SEOHead } from '$lib/components/seo';
 
 	let { data }: { data: PageData } = $props();
 
@@ -79,6 +80,22 @@
 			.catch(() => undefined);
 	});
 </script>
+
+<SEOHead
+	title="MeatFlicks - Your Ultimate Free Streaming Platform"
+	description="Discover and stream your favorite movies and TV shows for free on MeatFlicks. Watch trending content, explore collections, and enjoy unlimited entertainment."
+	canonical="/"
+	ogType="website"
+	keywords={[
+		'free movies',
+		'free TV shows',
+		'streaming',
+		'watch online',
+		'movies online',
+		'TV series',
+		'entertainment'
+	]}
+/>
 
 <div class="min-h-screen text-foreground">
 	<div class="mx-auto w-full py-2 pr-2 pl-0 sm:pr-2 sm:pl-0 lg:pr-2 lg:pl-0">

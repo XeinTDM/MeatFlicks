@@ -2,7 +2,7 @@ import { env as privateEnv } from '$env/dynamic/private';
 import { z } from 'zod';
 
 const serverSchema = z.object({
-	TMDB_API_KEY: z.string().min(1, 'TMDB_API_KEY is required to fetch TMDB metadata.'),
+	TMDB_API_KEY: z.string().min(1, 'TMDB_API_KEY is required'),
 	TMDB_IMAGE_BASE_URL: z.string().url().default('https://image.tmdb.org/t/p/'),
 	TMDB_POSTER_SIZE: z.string().min(1).default('w500'),
 	TMDB_BACKDROP_SIZE: z.string().min(1).default('original'),

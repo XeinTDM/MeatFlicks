@@ -5,6 +5,7 @@
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MovieScrollContainer } from '$lib/components';
 	import type { LibraryMovie } from '$lib/types/library';
+	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
 
 	type MediaType = 'movie' | 'tv';
 
@@ -406,39 +407,43 @@
 			? 'The TV show you are looking for does not exist.'
 			: 'The movie you are looking for does not exist.'
 	);
+
+	const breadcrumbItems = $derived.by(() => {
+		if (!movie) return [];
+		const items = [
+			{
+				label: mediaType === 'tv' ? 'TV Shows' : 'Movies',
+				href: `/explore/${mediaType === 'tv' ? 'tv-shows' : 'movies'}`
+			},
+			{ label: movie.title, href: `/${mediaType}/${movie.id}` }
+		];
+		return items;
+	});
 </script>
 
-<svelte:head>
-	{#if movie}
-		<title>{movie.title} | MeatFlicks</title>
-		<meta name="description" content={movie.overview} />
-
-		<meta property="og:type" content={mediaType === 'tv' ? 'video.tv_show' : 'video.movie'} />
-		<meta
-			property="og:url"
-			content={canonicalPath ? `https://meatflicks.com${canonicalPath}` : ''}
-		/>
-		<meta property="og:title" content={movie.title} />
-		<meta property="og:description" content={movie.overview} />
-		{#if ogImage}
-			<meta property="og:image" content={ogImage} />
-		{/if}
-
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta
-			property="twitter:url"
-			content={canonicalPath ? `https://meatflicks.com${canonicalPath}` : ''}
-		/>
-		<meta name="twitter:title" content={movie.title} />
-		<meta name="twitter:description" content={movie.overview} />
-		{#if ogImage}
-			<meta name="twitter:image" content={ogImage} />
-		{/if}
-	{:else}
-		<title>Media Not Found | MeatFlicks</title>
-		<meta name="robots" content="noindex" />
-	{/if}
-</svelte:head>
+{#if movie}
+	<SEOHead
+		title={movie.title}
+		description={movie.overview ||
+			`Watch ${movie.title} on MeatFlicks - Free streaming of movies and TV shows`}
+		canonical={canonicalPath}
+		ogType={mediaType === 'tv' ? 'video.tv_show' : 'video.movie'}
+		ogImage={ogImage ?? undefined}
+		ogImageAlt={`${movie.title} poster`}
+		twitterCard="summary_large_image"
+		keywords={[
+			movie.title,
+			...(movie.genres?.map((g) => g.name) || []),
+			mediaType === 'tv' ? 'TV show' : 'movie',
+			'watch online',
+			'free streaming'
+		]}
+		publishedTime={movie.releaseDate || undefined}
+	/>
+	<StructuredData media={movie} {mediaType} canonicalUrl={canonicalPath} />
+{:else}
+	<SEOHead title={notFoundHeading} description={notFoundDescription} noindex={true} />
+{/if}
 
 {#if !movie}
 	<div class="flex min-h-screen flex-col items-center justify-center text-foreground">
@@ -448,6 +453,7 @@
 {:else}
 	<div class="min-h-screen bg-background text-foreground">
 		<main class="container mx-auto p-4">
+			<Breadcrumbs items={breadcrumbItems} />
 			<div class="relative mb-8 h-96 w-full">
 				{#if movie.backdropPath}
 					<img

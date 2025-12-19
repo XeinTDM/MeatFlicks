@@ -28,6 +28,8 @@ export const movies = sqliteTable(
         durationMinutes: integer('durationMinutes'),
         is4K: integer('is4K').notNull().default(0),
         isHD: integer('isHD').notNull().default(0),
+        language: text('language'),
+        popularity: real('popularity'),
         collectionId: integer('collectionId').references(() => collections.id, { onDelete: 'set null' }),
         createdAt: integer('createdAt')
             .notNull()
@@ -39,7 +41,11 @@ export const movies = sqliteTable(
     (table) => [
         index('idx_movies_tmdbId').on(table.tmdbId),
         index('idx_movies_collectionId').on(table.collectionId),
-        index('idx_movies_rating').on(table.rating)
+        index('idx_movies_rating').on(table.rating),
+        index('idx_movies_language').on(table.language),
+        index('idx_movies_popularity').on(table.popularity),
+        index('idx_movies_releaseDate').on(table.releaseDate),
+        index('idx_movies_durationMinutes').on(table.durationMinutes)
     ]
 );
 
@@ -125,6 +131,26 @@ export const watchHistory = sqliteTable(
         index('idx_history_watchedAt').on(table.watchedAt)
     ]
 );
+
+export const searchHistory = sqliteTable(
+    'search_history',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: text('user_id')
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        query: text('query').notNull(),
+        filters: text('filters'), // JSON string of applied filters
+        searchedAt: integer('searched_at')
+            .notNull()
+            .$defaultFn(() => Date.now())
+    },
+    (table) => [
+        index('idx_search_history_user').on(table.userId),
+        index('idx_search_history_searched_at').on(table.searchedAt)
+    ]
+);
+
 
 
 export const collectionsRelations = relations(collections, ({ many }) => ({
