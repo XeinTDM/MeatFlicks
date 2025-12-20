@@ -1,30 +1,24 @@
-import { lucia } from '$lib/server/auth';
-import type { Handle } from '@sveltejs/kit';
+import { validateApiKeys } from '$lib/server';
+import { logger } from '$lib/server/logger';
 
-export const handle: Handle = async ({ event, resolve }) => {
-	const sessionId = event.cookies.get(lucia.sessionCookieName);
-	if (!sessionId) {
-		event.locals.user = null;
-		event.locals.session = null;
-		return resolve(event);
+declare global {
+	var __envValidated: boolean;
+}
+
+export const handle = async ({ event, resolve }: { event: any; resolve: any }) => {
+	if (!globalThis.__envValidated) {
+		try {
+			validateApiKeys();
+			globalThis.__envValidated = true;
+			logger.info('Environment validation completed successfully');
+		} catch (error) {
+			logger.error({ error }, 'Environment validation failed');
+			if (process.env.NODE_ENV === 'production') {
+				return new Response('Server configuration error', { status: 500 });
+			}
+			logger.warn('Running with invalid API keys in development mode');
+		}
 	}
 
-	const { session, user } = await lucia.validateSession(sessionId);
-	if (session && session.fresh) {
-		const sessionCookie = lucia.createSessionCookie(session.id);
-		event.cookies.set(sessionCookie.name, sessionCookie.value, {
-			path: '.',
-			...sessionCookie.attributes
-		});
-	}
-	if (!session) {
-		const sessionCookie = lucia.createBlankSessionCookie();
-		event.cookies.set(sessionCookie.name, sessionCookie.value, {
-			path: '.',
-			...sessionCookie.attributes
-		});
-	}
-	event.locals.user = user;
-	event.locals.session = session;
 	return resolve(event);
 };

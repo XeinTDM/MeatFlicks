@@ -16,7 +16,9 @@ import {
 	lookupTmdbIdByImdbId
 } from '$lib/server/services/tmdb.service';
 import { randomUUID } from 'node:crypto';
-import { errorHandler, NotFoundError, ValidationError } from '$lib/server';
+import { errorHandler, NotFoundError, ValidationError, getEnv } from '$lib/server';
+import { z } from 'zod';
+import { validatePathParams, validateQueryParams, movieIdentifierSchema, queryModeSchema } from '$lib/server/validation';
 
 const clampTtl = (value: number): number => {
 	const min = 300;
@@ -28,7 +30,7 @@ const clampTtl = (value: number): number => {
 };
 
 const MOVIE_CACHE_TTL_SECONDS = clampTtl(
-	Number.parseInt(process.env.CACHE_TTL_MOVIE ?? '', 10) || CACHE_TTL_LONG_SECONDS
+	Number.parseInt(getEnv('CACHE_TTL_MOVIE', CACHE_TTL_LONG_SECONDS.toString()) ?? '', 10) || CACHE_TTL_LONG_SECONDS
 );
 
 type MovieLookup = { kind: 'id'; value: string } | { kind: 'tmdb'; value: number };
@@ -105,7 +107,7 @@ async function resolveMovieByIdentifier(identifier: string, queryMode: 'id' | 't
 		case 'tmdb': {
 			const tmdbId = Number.parseInt(identifier, 10);
 			if (!Number.isFinite(tmdbId)) {
-				throw new Error('Invalid TMDB id provided.');
+				throw new ValidationError('Invalid TMDB id provided.');
 			}
 
 			const movie = await fetchMovieWithCache(
@@ -279,13 +281,20 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 }
 
 export const GET: RequestHandler = async ({ params, url }) => {
-	const movieIdentifier = params.id;
-	const queryModeParam = url.searchParams.get('by');
-	const queryMode = queryModeParam === 'tmdb' || queryModeParam === 'imdb' ? queryModeParam : 'id';
+	// Validate path parameters
+	const pathParams = validatePathParams(
+		movieIdentifierSchema,
+		{ id: params.id ?? '' }
+	);
 
-	if (!movieIdentifier) {
-		throw new ValidationError('Movie identifier is required.');
-	}
+	// Validate query parameters
+	const queryParams = validateQueryParams(
+		z.object({ by: queryModeSchema.optional() }),
+		url.searchParams
+	);
+
+	const movieIdentifier = pathParams.id;
+	const queryMode = (queryParams as { by?: 'id' | 'tmdb' | 'imdb' }).by ?? 'id';
 
 	try {
 		const { movie, tmdbId } = await resolveMovieByIdentifier(movieIdentifier, queryMode);
