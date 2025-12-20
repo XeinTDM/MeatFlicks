@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import MovieCard from '$lib/components/MovieCard.svelte';
 	import SearchHeader from '$lib/components/SearchHeader.svelte';
-	import SearchFilters from '$lib/components/SearchFilters.svelte';
+	import AdvancedSearchFilters from '$lib/components/search/AdvancedSearchFilters.svelte';
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import type { LibraryMovie } from '$lib/types/library';
@@ -38,6 +38,8 @@
 	let lastSearchedTerm = $state('');
 	let searchHistoryItems = $state<Array<{ id: number; query: string; searchedAt: number }>>([]);
 	let showHistory = $derived(!lastSearchedTerm && searchHistoryItems.length > 0);
+	let selectedActors = $state<any[]>([]);
+	let selectedDirectors = $state<any[]>([]);
 
 	async function performSearch(rawTerm: string) {
 		const trimmed = rawTerm.trim();
@@ -111,6 +113,44 @@
 		sortBy = 'relevance';
 		qualityFilter = 'any';
 		onlyWithOverview = false;
+		selectedActors = [];
+		selectedDirectors = [];
+	}
+
+	async function searchByPeople() {
+		if (selectedActors.length === 0 && selectedDirectors.length === 0) {
+			return;
+		}
+
+		loading = true;
+		error = null;
+
+		try {
+			// Build person IDs and roles for the API call
+			const actorIds = selectedActors.map((a: any) => a.id);
+			const directorIds = selectedDirectors.map((d: any) => d.id);
+			const allPersonIds = [...actorIds, ...directorIds];
+			const roles = [];
+			
+			if (actorIds.length > 0) roles.push('actor');
+			if (directorIds.length > 0) roles.push('director');
+
+			const searchParams = new URLSearchParams({
+				people: allPersonIds.join(','),
+				roles: roles.join(',')
+			});
+
+			const res = await fetch(`/api/search/movies-by-people?${searchParams.toString()}`);
+			
+			if (!res.ok) throw new Error('Failed to fetch movies by people');
+
+			const data: LibraryMovie[] = await res.json();
+			movies = data;
+		} catch (err: unknown) {
+			error = err instanceof Error ? err.message : 'Unable to fetch movies by people.';
+		} finally {
+			loading = false;
+		}
 	}
 
 	async function loadSearchHistory() {
@@ -179,7 +219,11 @@
 	});
 
 	const hasActiveFilters = $derived(
-		qualityFilter !== 'any' || onlyWithOverview || sortBy !== 'relevance'
+		qualityFilter !== 'any' || 
+		onlyWithOverview || 
+		sortBy !== 'relevance' ||
+		selectedActors.length > 0 ||
+		selectedDirectors.length > 0
 	);
 
 	const resultsSummary = $derived(() => {
@@ -218,7 +262,7 @@
 				/>
 			{/if}
 
-			<SearchFilters
+			<AdvancedSearchFilters
 				{sortBy}
 				{qualityFilter}
 				{onlyWithOverview}
@@ -227,6 +271,18 @@
 				onQualityChange={(q: QualityFilter) => (qualityFilter = q)}
 				onOverviewToggle={(enabled: boolean) => (onlyWithOverview = enabled)}
 				onResetFilters={resetFilters}
+				onActorsChange={(actors: any[]) => {
+					selectedActors = actors;
+					if (selectedActors.length > 0 || selectedDirectors.length > 0) {
+						void searchByPeople();
+					}
+				}}
+				onDirectorsChange={(directors: any[]) => {
+					selectedDirectors = directors;
+					if (selectedActors.length > 0 || selectedDirectors.length > 0) {
+						void searchByPeople();
+					}
+				}}
 			/>
 
 			{#if true}

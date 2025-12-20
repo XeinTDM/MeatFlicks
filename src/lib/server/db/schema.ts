@@ -184,6 +184,61 @@ export const playbackProgress = sqliteTable(
 	]
 );
 
+export const people = sqliteTable(
+	'people',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		tmdbId: integer('tmdbId').notNull().unique(),
+		name: text('name').notNull(),
+		biography: text('biography'),
+		birthday: text('birthday'), // ISO date string
+		deathday: text('deathday'), // ISO date string
+		placeOfBirth: text('placeOfBirth'),
+		profilePath: text('profilePath'),
+		popularity: real('popularity'),
+		knownForDepartment: text('knownForDepartment'), // 'Acting', 'Directing', etc.
+		createdAt: integer('createdAt')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updatedAt')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		index('idx_people_tmdbId').on(table.tmdbId),
+		index('idx_people_name').on(table.name),
+		index('idx_people_popularity').on(table.popularity),
+		index('idx_people_knownForDepartment').on(table.knownForDepartment)
+	]
+);
+
+export const moviePeople = sqliteTable(
+	'movie_people',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		movieId: text('movieId')
+			.notNull()
+			.references(() => movies.id, { onDelete: 'cascade' }),
+		personId: integer('personId')
+			.notNull()
+			.references(() => people.id, { onDelete: 'cascade' }),
+		role: text('role').notNull(), // 'actor', 'director', 'writer', 'producer', etc.
+		character: text('character'), // For actors
+		job: text('job'), // For crew (e.g., 'Director', 'Screenplay')
+		order: integer('order'), // For cast ordering
+		createdAt: integer('createdAt')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.movieId, table.personId, table.role] }),
+		index('idx_movie_people_movie').on(table.movieId),
+		index('idx_movie_people_person').on(table.personId),
+		index('idx_movie_people_role').on(table.role),
+		index('idx_movie_people_order').on(table.order)
+	]
+);
+
 export const collectionsRelations = relations(collections, ({ many }) => ({
 	movies: many(movies)
 }));
@@ -193,7 +248,8 @@ export const moviesRelations = relations(movies, ({ one, many }) => ({
 		fields: [movies.collectionId],
 		references: [collections.id]
 	}),
-	moviesGenres: many(moviesGenres)
+	moviesGenres: many(moviesGenres),
+	moviePeople: many(moviePeople)
 }));
 
 export const genresRelations = relations(genres, ({ many }) => ({
@@ -208,5 +264,20 @@ export const moviesGenresRelations = relations(moviesGenres, ({ one }) => ({
 	genre: one(genres, {
 		fields: [moviesGenres.genreId],
 		references: [genres.id]
+	})
+}));
+
+export const peopleRelations = relations(people, ({ many }) => ({
+	moviePeople: many(moviePeople)
+}));
+
+export const moviePeopleRelations = relations(moviePeople, ({ one }) => ({
+	movie: one(movies, {
+		fields: [moviePeople.movieId],
+		references: [movies.id]
+	}),
+	person: one(people, {
+		fields: [moviePeople.personId],
+		references: [people.id]
 	})
 }));
