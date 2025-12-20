@@ -20,4 +20,3 @@ export const GET: RequestHandler = async ({ url }) => {
 		return json({ error: 'Failed to fetch recently added movies' }, { status: 500 });
 	}
 };
-

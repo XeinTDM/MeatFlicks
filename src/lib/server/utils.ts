@@ -77,4 +77,3 @@ export async function updateLastRefreshTime() {
 		logger.error({ error }, 'Failed to update refresh timestamp');
 	}
 }
-

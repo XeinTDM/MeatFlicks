@@ -126,9 +126,9 @@
 							</Badge>
 						{/if}
 					</div>
-					{#if (movie as any).season && (movie as any).episode}
+					{#if movie.season && movie.episode}
 						<div class="mt-1 text-xs font-medium text-primary">
-							S{(movie as any).season} E{(movie as any).episode}
+							S{movie.season} E{movie.episode}
 						</div>
 					{/if}
 					<p class="h-10 overflow-hidden text-sm leading-relaxed text-muted-foreground">

@@ -1,6 +1,6 @@
-import Keyv from "keyv";
-import { KeyvSqlite } from "@keyv/sqlite";
-import { LRUCache } from "lru-cache";
+import Keyv from 'keyv';
+import { KeyvSqlite } from '@keyv/sqlite';
+import { LRUCache } from 'lru-cache';
 import { logger } from './logger';
 import { env } from '$lib/config/env';
 
@@ -12,12 +12,12 @@ const store = new KeyvSqlite({ uri: `sqlite://${env.SQLITE_DB_PATH}`, table: 'ca
 
 const lruStore = new LRUCache<string, any>({
 	max: env.CACHE_MEMORY_MAX_ITEMS,
-	ttl: CACHE_TTL_MEDIUM_SECONDS * 1000,
+	ttl: CACHE_TTL_MEDIUM_SECONDS * 1000
 });
 
 const cache = new Keyv({
 	store,
-	namespace: 'meatflicks',
+	namespace: 'meatflicks'
 });
 
 cache.on('error', (err) => logger.error({ err }, 'Keyv Connection Error'));
@@ -26,15 +26,15 @@ export function buildCacheKey(
 	...segments: Array<string | number | boolean | null | undefined>
 ): string {
 	return segments
-		.filter((segment) => segment !== undefined && segment !== null && segment !== "")
+		.filter((segment) => segment !== undefined && segment !== null && segment !== '')
 		.map((segment) =>
-			typeof segment === "string"
-				? segment.trim().replace(/\s+/g, "-").toLowerCase()
-				: typeof segment === "boolean"
+			typeof segment === 'string'
+				? segment.trim().replace(/\s+/g, '-').toLowerCase()
+				: typeof segment === 'boolean'
 					? Number(segment).toString()
 					: String(segment)
 		)
-		.join(":");
+		.join(':');
 }
 
 export async function getCachedValue<T>(key: string): Promise<T | undefined> {
@@ -100,7 +100,7 @@ export async function withCache<T>(
  */
 export async function invalidateCachePattern(pattern: string): Promise<number> {
 	let invalidated = 0;
-	
+
 	try {
 		// Convert pattern to regex
 		// Escape special regex characters except * and :
@@ -108,9 +108,9 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 		const escapedPattern = pattern
 			.replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
 			.replace(/\*/g, '.*'); // Replace * with .*
-		
+
 		const regex = new RegExp(`^meatflicks:${escapedPattern}$`);
-		
+
 		// Clear matching keys from LRU cache
 		const lruKeys = Array.from(lruStore.keys());
 		for (const key of lruKeys) {
@@ -119,21 +119,21 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 				invalidated++;
 			}
 		}
-		
+
 		// For SQLite cache, try to access KeyvSqlite's internal database
 		// KeyvSqlite uses better-sqlite3 internally
 		try {
-			const sqliteStore = (store as any);
+			const sqliteStore = store as any;
 			const db = sqliteStore.db || sqliteStore.client;
-			
+
 			if (db) {
 				// Convert pattern to SQL LIKE pattern
 				// Keyv stores keys with namespace prefix: "meatflicks:key"
 				const sqlPattern = `meatflicks:${pattern.replace(/\*/g, '%')}`;
-				
+
 				// Query matching keys from SQLite
 				let rows: Array<{ key: string }> = [];
-				
+
 				if (typeof db.prepare === 'function') {
 					// better-sqlite3 style
 					const stmt = db.prepare('SELECT key FROM cache_v2 WHERE key LIKE ?');
@@ -143,12 +143,12 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 					const result = await db.query('SELECT key FROM cache_v2 WHERE key LIKE ?', [sqlPattern]);
 					rows = Array.isArray(result) ? result : result.rows || [];
 				}
-				
+
 				for (const row of rows) {
 					const fullKey = row.key;
 					// Remove namespace prefix for deletion
 					const keyWithoutNamespace = fullKey.replace(/^meatflicks:/, '');
-					
+
 					if (regex.test(fullKey)) {
 						await cache.delete(keyWithoutNamespace);
 						invalidated++;
@@ -158,15 +158,18 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 		} catch (dbError) {
 			// If database access fails, log warning but continue
 			// LRU cache clearing is still effective for immediate performance
-			logger.warn({ err: dbError, pattern }, 'Failed to query SQLite cache, only cleared LRU cache');
+			logger.warn(
+				{ err: dbError, pattern },
+				'Failed to query SQLite cache, only cleared LRU cache'
+			);
 		}
-		
+
 		logger.info({ pattern, invalidated }, 'Cache pattern invalidation completed');
 	} catch (error) {
 		logger.error({ err: error, pattern }, 'Error invalidating cache pattern');
 		throw error;
 	}
-	
+
 	return invalidated;
 }
 
@@ -185,21 +188,24 @@ export async function invalidateCachePrefix(prefix: string): Promise<number> {
  * @param mediaType - Optional media type filter ('movie' or 'tv')
  * @returns Number of keys invalidated
  */
-export async function invalidateTmdbId(tmdbId: number, mediaType?: 'movie' | 'tv'): Promise<number> {
+export async function invalidateTmdbId(
+	tmdbId: number,
+	mediaType?: 'movie' | 'tv'
+): Promise<number> {
 	const patterns: string[] = [];
-	
+
 	if (mediaType) {
 		patterns.push(`tmdb:${mediaType}:${tmdbId}:*`);
 	} else {
 		patterns.push(`tmdb:movie:${tmdbId}:*`);
 		patterns.push(`tmdb:tv:${tmdbId}:*`);
 	}
-	
+
 	let totalInvalidated = 0;
 	for (const pattern of patterns) {
 		totalInvalidated += await invalidateCachePattern(pattern);
 	}
-	
+
 	return totalInvalidated;
 }
 
@@ -218,7 +224,7 @@ export async function invalidateStreamingSource(
 	episode?: number
 ): Promise<number> {
 	let pattern = `streaming:${mediaType}:${tmdbId}`;
-	
+
 	if (season !== undefined) {
 		pattern += `:${season}`;
 		if (episode !== undefined) {
@@ -228,7 +234,6 @@ export async function invalidateStreamingSource(
 	} else {
 		pattern += '*';
 	}
-	
+
 	return invalidateCachePattern(pattern);
 }
-

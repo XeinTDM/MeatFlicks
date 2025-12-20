@@ -38,7 +38,11 @@
 </script>
 
 <div class="flex items-center gap-2">
-	<Select type="single" value={sort.field} onSelectedChange={(value) => value && handleFieldChange(value)}>
+	<Select
+		type="single"
+		value={sort.field}
+		onSelectedChange={(value) => value && handleFieldChange(value)}
+	>
 		<SelectTrigger class="w-[140px] cursor-pointer" aria-label="Sort by">
 			<span class="flex items-center gap-2" data-slot="select-value">
 				<ArrowUpDown class="size-4 text-muted-foreground" />
@@ -55,7 +59,7 @@
 	<button
 		type="button"
 		onclick={toggleOrder}
-		class="flex size-9 items-center justify-center rounded-md border border-input bg-background text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+		class="flex size-9 items-center justify-center rounded-md border border-input bg-background text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
 		aria-label={sort.order === 'asc' ? 'Sort ascending' : 'Sort descending'}
 		title={sort.order === 'asc' ? 'Sort ascending' : 'Sort descending'}
 	>
@@ -82,4 +86,3 @@
 		{/if}
 	</button>
 </div>
-

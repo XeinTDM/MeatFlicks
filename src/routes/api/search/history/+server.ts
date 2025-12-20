@@ -42,7 +42,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Invalid filters format' }, { status: 400 });
 		}
 
-		await searchHistoryRepository.addSearch(user.id, query.trim(), filters as MovieFilters | undefined);
+		await searchHistoryRepository.addSearch(
+			user.id,
+			query.trim(),
+			filters as MovieFilters | undefined
+		);
 		return json({ success: true });
 	} catch (error) {
 		console.error('Error adding search to history:', error);
@@ -79,4 +83,3 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Failed to delete search history' }, { status: 500 });
 	}
 };
-

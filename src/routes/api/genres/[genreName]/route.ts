@@ -39,4 +39,3 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		return json({ error: 'Failed to fetch movies for genre ' + genreName }, { status: 500 });
 	}
 };
-

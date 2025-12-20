@@ -1,5 +1,10 @@
 import { env } from '$lib/config/env';
-import { withCache, buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, CACHE_TTL_LONG_SECONDS } from '$lib/server/cache';
+import {
+	withCache,
+	buildCacheKey,
+	CACHE_TTL_MEDIUM_SECONDS,
+	CACHE_TTL_LONG_SECONDS
+} from '$lib/server/cache';
 import type { LibraryMovie } from '$lib/types/library';
 import { tmdbRateLimiter } from '$lib/server/rate-limiter';
 import { ApiError, toNumber } from '$lib/server/utils';
@@ -120,7 +125,10 @@ const api = ofetch.create({
 	retry: 3,
 	retryDelay: 1000,
 	onResponseError({ response }) {
-		throw new ApiError(`TMDB responded with status ${response.status}: ${response._data?.status_message || response.statusText}`, response.status);
+		throw new ApiError(
+			`TMDB responded with status ${response.status}: ${response._data?.status_message || response.statusText}`,
+			response.status
+		);
 	}
 });
 
@@ -160,14 +168,16 @@ const fetchMovieListIds = async (
 	const totalPages = Math.ceil(limit / TMDB_PAGE_SIZE);
 
 	for (let page = 1; page <= totalPages; page++) {
-		const payload = await tmdbRateLimiter.schedule(rateLimitKey, () => api(path, {
-			query: {
-				language: 'en-US',
-				include_adult: 'false',
-				page,
-				...params
-			}
-		}));
+		const payload = await tmdbRateLimiter.schedule(rateLimitKey, () =>
+			api(path, {
+				query: {
+					language: 'en-US',
+					include_adult: 'false',
+					page,
+					...params
+				}
+			})
+		);
 
 		const results = payload.results;
 		if (!Array.isArray(results)) break;
@@ -189,15 +199,18 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
 		try {
-			const rawData = await tmdbRateLimiter.schedule('tmdb-tv-details', () => api(`/tv/${tmdbId}`, {
-				query: { append_to_response: 'credits,videos,external_ids' }
-			}));
+			const rawData = await tmdbRateLimiter.schedule('tmdb-tv-details', () =>
+				api(`/tv/${tmdbId}`, {
+					query: { append_to_response: 'credits,videos,external_ids' }
+				})
+			);
 
 			const data = TmdbTvSchema.parse(rawData);
 
-			const trailer = data.videos?.results.find(v =>
-				v.site.toLowerCase() === 'youtube' &&
-				(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
+			const trailer = data.videos?.results.find(
+				(v) =>
+					v.site.toLowerCase() === 'youtube' &&
+					(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
 			);
 
 			return {
@@ -217,8 +230,8 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 				seasonCount: data.number_of_seasons || null,
 				episodeCount: data.number_of_episodes || null,
 				seasons: (data.seasons || [])
-					.filter(s => s.season_number > 0) // Usually skip season 0 (specials) unless requested
-					.map(s => ({
+					.filter((s) => s.season_number > 0) // Usually skip season 0 (specials) unless requested
+					.map((s) => ({
 						id: s.id,
 						name: s.name,
 						overview: s.overview || null,
@@ -227,7 +240,7 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 						episodeCount: s.episode_count || 0,
 						airDate: s.air_date || null
 					})),
-				productionCompanies: (data.production_companies || []).map(c => ({
+				productionCompanies: (data.production_companies || []).map((c) => ({
 					id: c.id,
 					name: c.name,
 					logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
@@ -243,13 +256,17 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 	});
 }
 
-
-export async function fetchTmdbTvSeason(tmdbId: number, seasonNumber: number): Promise<TmdbTvSeason | null> {
+export async function fetchTmdbTvSeason(
+	tmdbId: number,
+	seasonNumber: number
+): Promise<TmdbTvSeason | null> {
 	const cacheKey = buildCacheKey('tmdb', 'tv', tmdbId, 'season', seasonNumber);
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
 		try {
-			const rawData = await tmdbRateLimiter.schedule('tmdb-tv-season', () => api(`/tv/${tmdbId}/season/${seasonNumber}`));
+			const rawData = await tmdbRateLimiter.schedule('tmdb-tv-season', () =>
+				api(`/tv/${tmdbId}/season/${seasonNumber}`)
+			);
 			const data = TmdbTvSeasonSchema.parse(rawData);
 
 			return {
@@ -260,7 +277,7 @@ export async function fetchTmdbTvSeason(tmdbId: number, seasonNumber: number): P
 				seasonNumber: data.season_number,
 				episodeCount: data.episode_count || 0,
 				airDate: data.air_date || null,
-				episodes: (data.episodes || []).map(e => ({
+				episodes: (data.episodes || []).map((e) => ({
 					id: e.id,
 					name: e.name,
 					overview: e.overview || null,
@@ -280,21 +297,23 @@ export async function fetchTmdbTvSeason(tmdbId: number, seasonNumber: number): P
 	});
 }
 
-
 export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
 	const cacheKey = buildCacheKey('tmdb', 'movie', tmdbId);
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
 		try {
-			const rawData = await tmdbRateLimiter.schedule('tmdb-movie-details', () => api(`/movie/${tmdbId}`, {
-				query: { append_to_response: 'credits,videos' }
-			}));
+			const rawData = await tmdbRateLimiter.schedule('tmdb-movie-details', () =>
+				api(`/movie/${tmdbId}`, {
+					query: { append_to_response: 'credits,videos' }
+				})
+			);
 
 			const data = TmdbMovieSchema.parse(rawData);
 
-			const trailer = data.videos?.results.find(v =>
-				v.site.toLowerCase() === 'youtube' &&
-				(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
+			const trailer = data.videos?.results.find(
+				(v) =>
+					v.site.toLowerCase() === 'youtube' &&
+					(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
 			);
 
 			return {
@@ -311,12 +330,12 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 				backdropPath: buildImageUrl(data.backdrop_path, env.TMDB_BACKDROP_SIZE),
 				rating: data.vote_average || null,
 				genres: data.genres || [],
-				productionCompanies: (data.production_companies || []).map(c => ({
+				productionCompanies: (data.production_companies || []).map((c) => ({
 					id: c.id,
 					name: c.name,
 					logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
 				})),
-				productionCountries: (data.production_countries || []).map(c => ({
+				productionCountries: (data.production_countries || []).map((c) => ({
 					iso: c.iso_3166_1,
 					name: c.name
 				}))
@@ -334,12 +353,14 @@ export async function fetchTrendingMovieIds(limit = 20): Promise<number[]> {
 	const cacheKey = buildCacheKey('tmdb', 'trending', limit);
 
 	return withCache(cacheKey, LIST_TTL, async () => {
-		const rawData = await tmdbRateLimiter.schedule('tmdb-trending', () => api('/trending/movie/week', {
-			query: { language: 'en-US' }
-		}));
+		const rawData = await tmdbRateLimiter.schedule('tmdb-trending', () =>
+			api('/trending/movie/week', {
+				query: { language: 'en-US' }
+			})
+		);
 
 		const data = TmdbTrendingResponseSchema.parse(rawData);
-		return data.results.slice(0, limit).map(r => r.id);
+		return data.results.slice(0, limit).map((r) => r.id);
 	});
 }
 
@@ -365,7 +386,7 @@ export async function discoverMovieIds(options: DiscoverMovieOptions = {}): Prom
 
 	const params = {
 		with_genres: genreId,
-		'sort_by': sortBy,
+		sort_by: sortBy,
 		'vote_average.gte': minVoteAverage,
 		'vote_count.gte': minVoteCount,
 		language,
@@ -404,9 +425,11 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
 	const cacheKey = buildCacheKey('tmdb', 'lookup', normalized);
 
 	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
-		const rawData = await tmdbRateLimiter.schedule('tmdb-imdb-lookup', () => api(`/find/${normalized}`, {
-			query: { external_source: 'imdb_id' }
-		}));
+		const rawData = await tmdbRateLimiter.schedule('tmdb-imdb-lookup', () =>
+			api(`/find/${normalized}`, {
+				query: { external_source: 'imdb_id' }
+			})
+		);
 
 		const data = TmdbFindResponseSchema.parse(rawData);
 		return data.movie_results[0]?.id || data.tv_results[0]?.id || null;
@@ -420,11 +443,11 @@ export async function lookupTmdbIdByImdbId(imdbId: string): Promise<number | nul
  */
 export async function invalidateTmdbCaches(pattern?: string): Promise<number> {
 	const { invalidateCachePattern, invalidateCachePrefix } = await import('$lib/server/cache');
-	
+
 	if (pattern) {
 		return invalidateCachePattern(pattern);
 	}
-	
+
 	// Default: invalidate all TMDB caches
 	return invalidateCachePrefix('tmdb:');
 }
@@ -435,7 +458,10 @@ export async function invalidateTmdbCaches(pattern?: string): Promise<number> {
  * @param mediaType - Optional media type filter
  * @returns Number of cache entries invalidated
  */
-export async function invalidateTmdbId(tmdbId: number, mediaType?: 'movie' | 'tv'): Promise<number> {
+export async function invalidateTmdbId(
+	tmdbId: number,
+	mediaType?: 'movie' | 'tv'
+): Promise<number> {
 	const { invalidateTmdbId: invalidateById } = await import('$lib/server/cache');
 	return invalidateById(tmdbId, mediaType);
 }
@@ -500,24 +526,32 @@ export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPers
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
 		try {
-			const rawData = await tmdbRateLimiter.schedule('tmdb-person-details', () => api(`/person/${personId}`, {
-				query: { append_to_response: 'combined_credits,images' }
-			}));
+			const rawData = await tmdbRateLimiter.schedule('tmdb-person-details', () =>
+				api(`/person/${personId}`, {
+					query: { append_to_response: 'combined_credits,images' }
+				})
+			);
 
 			const data = TmdbPersonSchema.parse(rawData);
 
 			const credits = [
-				...(data.combined_credits?.cast || []).map(c => ({ ...c, job: 'Actor' })),
+				...(data.combined_credits?.cast || []).map((c) => ({ ...c, job: 'Actor' })),
 				...(data.combined_credits?.crew || [])
 			]
-				.filter(c => 'vote_average' in c ? (c.vote_average && c.vote_average > 0) : true) // Filter out noise from cast, keep crew
+				.filter((c) => ('vote_average' in c ? c.vote_average && c.vote_average > 0 : true)) // Filter out noise from cast, keep crew
 				.sort((a, b) => {
 					//Sort by popularity/votes or date? Let's sort by date descending safely
-					const dateA = ('release_date' in a ? a.release_date : '') || ('first_air_date' in a ? a.first_air_date : '') || '';
-					const dateB = ('release_date' in b ? b.release_date : '') || ('first_air_date' in b ? b.first_air_date : '') || '';
+					const dateA =
+						('release_date' in a ? a.release_date : '') ||
+						('first_air_date' in a ? a.first_air_date : '') ||
+						'';
+					const dateB =
+						('release_date' in b ? b.release_date : '') ||
+						('first_air_date' in b ? b.first_air_date : '') ||
+						'';
 					return dateB.localeCompare(dateA);
 				})
-				.map(c => ({
+				.map((c) => ({
 					id: c.id,
 					title: c.title || c.name || 'Untitled',
 					character: 'character' in c ? c.character : undefined,
@@ -525,7 +559,11 @@ export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPers
 					department: 'department' in c ? c.department : undefined,
 					posterPath: buildImageUrl(c.poster_path, env.TMDB_POSTER_SIZE),
 					mediaType: (c.media_type as 'movie' | 'tv') || 'movie',
-					year: (('release_date' in c ? c.release_date : '') || ('first_air_date' in c ? c.first_air_date : '') || '').substring(0, 4)
+					year: (
+						('release_date' in c ? c.release_date : '') ||
+						('first_air_date' in c ? c.first_air_date : '') ||
+						''
+					).substring(0, 4)
 				}));
 
 			return {
@@ -537,7 +575,9 @@ export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPers
 				placeOfBirth: data.place_of_birth || null,
 				profilePath: buildImageUrl(data.profile_path, env.TMDB_POSTER_SIZE),
 				knownFor: credits,
-				images: (data.images?.profiles || []).map(i => buildImageUrl(i.file_path, env.TMDB_POSTER_SIZE)).filter((s): s is string => s !== null)
+				images: (data.images?.profiles || [])
+					.map((i) => buildImageUrl(i.file_path, env.TMDB_POSTER_SIZE))
+					.filter((s): s is string => s !== null)
 			};
 		} catch (error) {
 			if (error instanceof ApiError && error.statusCode === 404) {
@@ -547,4 +587,3 @@ export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPers
 		}
 	});
 }
-

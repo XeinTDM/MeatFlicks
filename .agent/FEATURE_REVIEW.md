@@ -8,6 +8,7 @@
 ## ✅ **EXISTING FEATURES** (What You Already Have)
 
 ### Core Functionality
+
 - ✅ User authentication (login/signup/logout with Lucia)
 - ✅ Movie & TV show browsing
 - ✅ Search functionality
@@ -29,6 +30,7 @@
 - ✅ SEO basics (meta tags, Open Graph)
 
 ### Technical Infrastructure
+
 - ✅ SvelteKit framework
 - ✅ Drizzle ORM with SQLite
 - ✅ Rate limiting
@@ -42,6 +44,7 @@
 ## 🚨 **CRITICAL MISSING FEATURES**
 
 ### 1. **SEO & Discoverability** ⚠️ HIGH PRIORITY
+
 - ❌ **Structured data (JSON-LD)** for movies/TV shows
 - ❌ **Dynamic sitemap generation** (current sitemap is static)
 - ❌ **Canonical URLs** not set in all pages
@@ -54,6 +57,7 @@
 **Impact:** Poor search engine visibility, reduced organic traffic
 
 ### 2. **PWA (Progressive Web App) Features** ⚠️ HIGH PRIORITY
+
 - ⚠️ **Manifest.json** created but not linked in app.html
 - ❌ **Service Worker** for offline support
 - ❌ **Install prompt** for mobile users
@@ -64,6 +68,7 @@
 **Impact:** No mobile app-like experience, no offline access
 
 ### 3. **User Experience Enhancements**
+
 - ❌ **Continue Watching** row (resume playback)
 - ❌ **Recently Added** content section
 - ❌ **Trending This Week** section
@@ -79,6 +84,7 @@
 - ❌ **Video quality selector**
 
 ### 4. **Content Discovery**
+
 - ❌ **Advanced filters** (year, rating, runtime, language)
 - ❌ **Sort options** (popularity, rating, release date, alphabetical)
 - ❌ **Multi-genre filtering**
@@ -90,6 +96,7 @@
 - ❌ **Recently searched** history
 
 ### 5. **Social & Community Features**
+
 - ❌ **User profiles** (public/private)
 - ❌ **Follow other users**
 - ❌ **Share watchlists**
@@ -100,6 +107,7 @@
 - ❌ **Watch parties** (synchronized viewing)
 
 ### 6. **Content Management**
+
 - ❌ **Multiple watchlists** (e.g., "To Watch", "Favorites", custom lists)
 - ❌ **Watchlist folders/categories**
 - ❌ **Notes on titles** in watchlist
@@ -109,6 +117,7 @@
 - ❌ **Import from other platforms** (IMDb, Trakt, etc.)
 
 ### 7. **Video Player Features**
+
 - ❌ **Skip intro/outro** buttons
 - ❌ **Recap/previously on** feature
 - ❌ **Chapters/timestamps**
@@ -120,6 +129,7 @@
 - ❌ **Watch together** feature
 
 ### 8. **Analytics & Tracking**
+
 - ❌ **User analytics** (viewing patterns)
 - ❌ **Popular content** tracking
 - ❌ **Watch time** statistics
@@ -128,6 +138,7 @@
 - ❌ **Year in review** feature
 
 ### 9. **Accessibility**
+
 - ❌ **Screen reader** optimization
 - ❌ **High contrast mode**
 - ❌ **Font size adjustment**
@@ -137,6 +148,7 @@
 - ❌ **Focus indicators** enhancement
 
 ### 10. **Performance & Optimization**
+
 - ❌ **Image lazy loading** optimization
 - ❌ **CDN integration** for images
 - ❌ **Video preloading** strategy
@@ -149,23 +161,24 @@
 
 ## 📊 **FEATURE COMPARISON WITH COMPETITORS**
 
-| Feature | MeatFlicks | Netflix | Hulu | Disney+ | Priority |
-|---------|-----------|---------|------|---------|----------|
-| User Profiles | ❌ | ✅ | ✅ | ✅ | HIGH |
-| Continue Watching | ❌ | ✅ | ✅ | ✅ | HIGH |
-| Download Offline | ❌ | ✅ | ✅ | ✅ | MEDIUM |
-| Multiple Lists | ❌ | ✅ | ✅ | ✅ | MEDIUM |
-| Skip Intro | ❌ | ✅ | ✅ | ✅ | HIGH |
-| Parental Controls | ❌ | ✅ | ✅ | ✅ | LOW |
-| 4K/HDR Support | ⚠️ | ✅ | ✅ | ✅ | MEDIUM |
-| Chromecast | ❌ | ✅ | ✅ | ✅ | MEDIUM |
-| Personalization | ⚠️ | ✅ | ✅ | ✅ | HIGH |
+| Feature           | MeatFlicks | Netflix | Hulu | Disney+ | Priority |
+| ----------------- | ---------- | ------- | ---- | ------- | -------- |
+| User Profiles     | ❌         | ✅      | ✅   | ✅      | HIGH     |
+| Continue Watching | ❌         | ✅      | ✅   | ✅      | HIGH     |
+| Download Offline  | ❌         | ✅      | ✅   | ✅      | MEDIUM   |
+| Multiple Lists    | ❌         | ✅      | ✅   | ✅      | MEDIUM   |
+| Skip Intro        | ❌         | ✅      | ✅   | ✅      | HIGH     |
+| Parental Controls | ❌         | ✅      | ✅   | ✅      | LOW      |
+| 4K/HDR Support    | ⚠️         | ✅      | ✅   | ✅      | MEDIUM   |
+| Chromecast        | ❌         | ✅      | ✅   | ✅      | MEDIUM   |
+| Personalization   | ⚠️         | ✅      | ✅   | ✅      | HIGH     |
 
 ---
 
 ## 🎯 **RECOMMENDED IMPLEMENTATION PRIORITY**
 
 ### **Phase 1: Critical UX Improvements** (Week 1-2)
+
 1. **Continue Watching** row with resume playback
 2. **PWA setup** (link manifest, add service worker)
 3. **SEO enhancements** (JSON-LD, dynamic sitemap)
@@ -173,6 +186,7 @@
 5. **Sort options** for browse pages
 
 ### **Phase 2: Content Discovery** (Week 3-4)
+
 1. **Recently Added** section
 2. **Top Rated** section
 3. **Trending This Week** section
@@ -181,6 +195,7 @@
 6. **Better person pages** (actor/director filmography)
 
 ### **Phase 3: Video Player Enhancements** (Week 5-6)
+
 1. **Skip intro/outro** detection
 2. **Playback speed** control
 3. **Subtitle support**
@@ -189,6 +204,7 @@
 6. **Quality selector**
 
 ### **Phase 4: Social & Engagement** (Week 7-8)
+
 1. **User ratings** system
 2. **Reviews/comments** functionality
 3. **Share to social media**
@@ -196,6 +212,7 @@
 5. **Activity tracking** dashboard
 
 ### **Phase 5: Advanced Features** (Week 9-10)
+
 1. **User profiles** (avatars, preferences)
 2. **Chromecast/AirPlay** support
 3. **Email notifications**
@@ -207,28 +224,33 @@
 ## 🔧 **QUICK WINS** (Can Implement Today)
 
 ### 1. Link PWA Manifest
+
 ```html
 <!-- Add to src/app.html -->
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#e11d48">
-<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#e11d48" />
+<link rel="apple-touch-icon" href="/favicon.png" />
 ```
 
 ### 2. Add Structured Data
+
 Create a component for JSON-LD schema markup on media pages.
 
 ### 3. Implement Continue Watching
+
 - Track playback position in database
 - Create "Continue Watching" row on homepage
 - Show progress bar on movie cards
 
 ### 4. Add Keyboard Shortcuts
+
 - Space: Play/Pause
 - F: Fullscreen
 - M: Mute
 - Arrow keys: Seek forward/backward
 
 ### 5. Improve Error Pages
+
 - Custom 404 page with search
 - Custom 500 page
 - Network error handling
@@ -238,41 +260,49 @@ Create a component for JSON-LD schema markup on media pages.
 ## 📝 **SPECIFIC CODE IMPROVEMENTS NEEDED**
 
 ### 1. **Database Schema Extensions**
+
 ```typescript
 // Add to schema.ts
 export const playbackProgress = sqliteTable('playback_progress', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: text('user_id').notNull().references(() => users.id),
-  mediaId: text('media_id').notNull(),
-  mediaType: text('media_type').notNull(), // 'movie' | 'tv'
-  progress: integer('progress').notNull(), // seconds
-  duration: integer('duration').notNull(), // total seconds
-  seasonNumber: integer('season_number'),
-  episodeNumber: integer('episode_number'),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id),
+	mediaId: text('media_id').notNull(),
+	mediaType: text('media_type').notNull(), // 'movie' | 'tv'
+	progress: integer('progress').notNull(), // seconds
+	duration: integer('duration').notNull(), // total seconds
+	seasonNumber: integer('season_number'),
+	episodeNumber: integer('episode_number'),
+	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
 export const userRatings = sqliteTable('user_ratings', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: text('user_id').notNull().references(() => users.id),
-  mediaId: text('media_id').notNull(),
-  mediaType: text('media_type').notNull(),
-  rating: integer('rating').notNull(), // 1-5 or 1-10
-  review: text('review'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id),
+	mediaId: text('media_id').notNull(),
+	mediaType: text('media_type').notNull(),
+	rating: integer('rating').notNull(), // 1-5 or 1-10
+	review: text('review'),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 
 export const userLists = sqliteTable('user_lists', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: text('user_id').notNull().references(() => users.id),
-  name: text('name').notNull(),
-  description: text('description'),
-  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id),
+	name: text('name').notNull(),
+	description: text('description'),
+	isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 ```
 
 ### 2. **Missing API Endpoints**
+
 - `/api/playback/progress` - Save/retrieve playback position
 - `/api/ratings` - User ratings CRUD
 - `/api/lists` - Custom list management
@@ -282,6 +312,7 @@ export const userLists = sqliteTable('user_lists', {
 - `/api/person/[id]/credits` - Full filmography
 
 ### 3. **Component Enhancements**
+
 - `ContinueWatchingRow.svelte` - Resume playback section
 - `VideoPlayerControls.svelte` - Enhanced player controls
 - `RatingWidget.svelte` - Star rating component
@@ -295,6 +326,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 🌐 **SEO IMPLEMENTATION CHECKLIST**
 
 ### Immediate Actions:
+
 - [ ] Add JSON-LD structured data to movie/TV pages
 - [ ] Create dynamic sitemap with actual content
 - [ ] Add canonical URLs to all pages
@@ -307,6 +339,7 @@ export const userLists = sqliteTable('user_lists', {
 - [ ] Implement proper 404 handling with suggestions
 
 ### Content Strategy:
+
 - [ ] Create blog/news section for SEO content
 - [ ] Add FAQ pages
 - [ ] Create genre landing pages
@@ -318,6 +351,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 🎨 **UI/UX IMPROVEMENTS**
 
 ### Missing UI Elements:
+
 1. **Loading states** - Better skeleton screens
 2. **Empty states** - Engaging empty watchlist/history pages
 3. **Error boundaries** - Graceful error handling
@@ -330,6 +364,7 @@ export const userLists = sqliteTable('user_lists', {
 10. **Changelog** - What's new section
 
 ### Accessibility Gaps:
+
 - [ ] Add skip to content link
 - [ ] Improve focus management in modals
 - [ ] Add ARIA live regions for dynamic content
@@ -343,6 +378,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 📱 **MOBILE EXPERIENCE**
 
 ### Missing Mobile Features:
+
 - ❌ Pull-to-refresh on lists
 - ❌ Swipe gestures for navigation
 - ❌ Mobile-optimized video controls
@@ -357,6 +393,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 🔐 **SECURITY & PRIVACY**
 
 ### Missing Features:
+
 - ❌ Two-factor authentication (2FA)
 - ❌ Privacy policy page
 - ❌ Terms of service page
@@ -373,6 +410,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 📈 **ANALYTICS & MONITORING**
 
 ### Missing Tracking:
+
 - ❌ Google Analytics / Plausible integration
 - ❌ Error tracking (Sentry)
 - ❌ Performance monitoring
@@ -387,6 +425,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 🚀 **DEPLOYMENT & INFRASTRUCTURE**
 
 ### Missing DevOps:
+
 - ❌ CI/CD pipeline
 - ❌ Automated testing
 - ❌ Staging environment
@@ -418,6 +457,7 @@ export const userLists = sqliteTable('user_lists', {
 ## 📊 **METRICS TO TRACK**
 
 Once features are implemented, track:
+
 - Daily/Monthly Active Users (DAU/MAU)
 - Watch time per user
 - Completion rates
@@ -435,7 +475,8 @@ Once features are implemented, track:
 
 **Current State:** MeatFlicks has a solid foundation with core streaming functionality, authentication, and basic content discovery.
 
-**Missing Critical Features:** 
+**Missing Critical Features:**
+
 - Continue Watching (resume playback)
 - Advanced filtering and sorting
 - PWA capabilities
@@ -444,6 +485,7 @@ Once features are implemented, track:
 - User engagement features (ratings, reviews)
 
 **Recommended Next Steps:**
+
 1. Implement Continue Watching (highest user value)
 2. Complete PWA setup (mobile experience)
 3. Add SEO enhancements (discoverability)
@@ -454,4 +496,4 @@ Once features are implemented, track:
 
 ---
 
-*This review was generated on 2025-12-19. Prioritize based on your user feedback and analytics.*
+_This review was generated on 2025-12-19. Prioritize based on your user feedback and analytics._

@@ -1,4 +1,4 @@
-import type { GenreRecord, MovieRecord, MovieRow } from "./types";
+import type { GenreRecord, MovieRecord, MovieRow } from './types';
 
 type Nullable<T> = T | null | undefined;
 

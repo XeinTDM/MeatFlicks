@@ -82,7 +82,7 @@
 				<button
 					type="button"
 					onclick={() => handleSearchClick(search.query)}
-					class="group flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					class="group flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 					aria-label={`Search for ${search.query}`}
 				>
 					<div class="flex min-w-0 flex-1 items-center gap-2">
@@ -116,4 +116,3 @@
 		<p class="text-sm text-muted-foreground">No recent searches</p>
 	</div>
 {/if}
-

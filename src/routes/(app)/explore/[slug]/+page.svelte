@@ -30,7 +30,9 @@
 	const movies = $derived(Array.isArray(data.movies) ? data.movies : []);
 	const pagination = $derived(data.pagination);
 	const filters = $derived((data.filters as MovieFilters) || ({} as MovieFilters));
-	const sort = $derived((data.sort as SortOptions) || ({ field: 'popularity', order: 'desc' } as SortOptions));
+	const sort = $derived(
+		(data.sort as SortOptions) || ({ field: 'popularity', order: 'desc' } as SortOptions)
+	);
 	const availableGenres = $derived(
 		Array.isArray(data.availableGenres)
 			? data.availableGenres.map((g: { id: number; name: string }) => ({ id: g.id, name: g.name }))
@@ -38,7 +40,9 @@
 	);
 
 	const hasContent = $derived(
-		useFilters ? Boolean(data.hasContent && movies.length > 0) : Boolean(data.hasContent && genreData.length > 0)
+		useFilters
+			? Boolean(data.hasContent && movies.length > 0)
+			: Boolean(data.hasContent && genreData.length > 0)
 	);
 	const singleGenreMode = $derived(Boolean(data.singleGenreMode));
 	const primaryGenre = $derived(genreData[0]);
@@ -251,7 +255,7 @@
 								<!-- Pagination -->
 								{#if pagination && pagination.totalPages > 1}
 									<div class="flex justify-center pt-6">
-										<Pagination pagination={pagination} onPageChange={handlePageChange} />
+										<Pagination {pagination} onPageChange={handlePageChange} />
 									</div>
 								{/if}
 							{:else}

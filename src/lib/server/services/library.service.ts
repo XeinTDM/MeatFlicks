@@ -31,7 +31,9 @@ const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
 });
 
 const tmdbDetailsToLibraryMovie = (details: TmdbMovieDetails): LibraryMovie => ({
-	id: details.tmdbId ? String(details.tmdbId) : `tmdb-fallback-${Math.random().toString(36).slice(2)}`,
+	id: details.tmdbId
+		? String(details.tmdbId)
+		: `tmdb-fallback-${Math.random().toString(36).slice(2)}`,
 	tmdbId: details.tmdbId,
 	title: details.title ?? 'Untitled',
 	overview: details.overview ?? null,
@@ -60,7 +62,9 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 		const detailsList = await Promise.all(
 			ids.map(async (id) => {
 				try {
-					const details = await tmdbRateLimiter.schedule('tmdb-bulk-fallback', () => fetchTmdbMovieDetails(id));
+					const details = await tmdbRateLimiter.schedule('tmdb-bulk-fallback', () =>
+						fetchTmdbMovieDetails(id)
+					);
 					return details.found ? details : null;
 				} catch (error) {
 					logger.warn({ id, error }, '[library][fallback] failed to fetch TMDB details');
@@ -100,18 +104,22 @@ const buildExtrasMap = async (
 
 	const extrasMap = new Map<number, { imdbId: string | null; trailerUrl: string | null }>();
 
-	await Promise.all(uniqueIds.map(async (tmdbId) => {
-		try {
-			const extras = await tmdbRateLimiter.schedule('tmdb-home-extras', () => fetchTmdbMovieExtras(tmdbId));
-			extrasMap.set(tmdbId, {
-				imdbId: extras.imdbId ?? null,
-				trailerUrl: extras.trailerUrl ?? null
-			});
-		} catch (error) {
-			logger.error({ tmdbId, error }, '[library][tmdb] Failed to fetch metadata');
-			extrasMap.set(tmdbId, { imdbId: null, trailerUrl: null });
-		}
-	}));
+	await Promise.all(
+		uniqueIds.map(async (tmdbId) => {
+			try {
+				const extras = await tmdbRateLimiter.schedule('tmdb-home-extras', () =>
+					fetchTmdbMovieExtras(tmdbId)
+				);
+				extrasMap.set(tmdbId, {
+					imdbId: extras.imdbId ?? null,
+					trailerUrl: extras.trailerUrl ?? null
+				});
+			} catch (error) {
+				logger.error({ tmdbId, error }, '[library][tmdb] Failed to fetch metadata');
+				extrasMap.set(tmdbId, { imdbId: null, trailerUrl: null });
+			}
+		})
+	);
 
 	return extrasMap;
 };
@@ -120,9 +128,9 @@ const attachIdentifiers = (
 	movie: LibraryMovie,
 	extrasMap: Map<number, { imdbId: string | null; trailerUrl: string | null }>
 ): LibraryMovie => {
-	const extras = movie.tmdbId ? extrasMap.get(movie.tmdbId) ?? null : null;
+	const extras = movie.tmdbId ? (extrasMap.get(movie.tmdbId) ?? null) : null;
 	const imdbId = extras?.imdbId ?? null;
-	const trailerUrl = extras?.trailerUrl ?? (movie.trailerUrl ?? null);
+	const trailerUrl = extras?.trailerUrl ?? movie.trailerUrl ?? null;
 	const canonicalPath = imdbId ? '/movie/' + imdbId : '/movie/' + (movie.tmdbId ?? movie.id);
 
 	return {
@@ -234,5 +242,3 @@ export const libraryService = {
 	fetchHomeLibrary,
 	invalidateHomeLibraryCache
 };
-
-

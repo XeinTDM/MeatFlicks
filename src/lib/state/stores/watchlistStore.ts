@@ -21,6 +21,9 @@ export type Movie = {
 	durationMinutes?: number | null;
 	collectionId?: number | null;
 	addedAt: string;
+	// TV show specific fields
+	season?: number | null;
+	episode?: number | null;
 };
 
 type WatchlistCandidate = LibraryMovie | Movie | (Partial<Movie> & Record<string, unknown>);
@@ -105,6 +108,8 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
 		canonicalPath: buildCanonicalPath(payload, id),
 		durationMinutes: typeof payload.durationMinutes === 'number' ? payload.durationMinutes : null,
 		collectionId: typeof payload.collectionId === 'number' ? payload.collectionId : null,
+		season: typeof payload.season === 'number' ? payload.season : null,
+		episode: typeof payload.episode === 'number' ? payload.episode : null,
 		addedAt
 	} satisfies Movie;
 };
@@ -246,7 +251,7 @@ function createWatchlistStore() {
 			if (!response.ok) throw new Error('Failed to sync with server');
 
 			// Notify success only if it was a new addition (simple check against previous state)
-			const wasAlreadyIn = previousState.some(i => i.id === sanitized.id);
+			const wasAlreadyIn = previousState.some((i) => i.id === sanitized.id);
 			if (!wasAlreadyIn) {
 				notifications.movieAdded({
 					title: sanitized.title,
@@ -274,7 +279,7 @@ function createWatchlistStore() {
 		}
 
 		const previousState = get(store).watchlist;
-		const movieTitle = previousState.find(m => m.id === movieId)?.title ?? 'Movie';
+		const movieTitle = previousState.find((m) => m.id === movieId)?.title ?? 'Movie';
 
 		// Optimistic update
 		store.update((state) => {

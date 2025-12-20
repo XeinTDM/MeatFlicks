@@ -145,9 +145,7 @@
 
 	const safeInterval = $derived.by(() => {
 		const numeric = Number(autoPlayIntervalMs);
-		return Number.isFinite(numeric) && numeric >= MIN_INTERVAL_MS
-			? numeric
-			: DEFAULT_INTERVAL_MS;
+		return Number.isFinite(numeric) && numeric >= MIN_INTERVAL_MS ? numeric : DEFAULT_INTERVAL_MS;
 	});
 
 	const mediaTypeLabel = $derived(getMediaTypeLabel(activeMovie?.media_type));
@@ -159,7 +157,7 @@
 	});
 
 	const detailsHref = $derived(
-		activeMovie?.id ? activeMovie.canonicalPath ?? `/movie/${activeMovie.id}` : '#'
+		activeMovie?.id ? (activeMovie.canonicalPath ?? `/movie/${activeMovie.id}`) : '#'
 	);
 
 	const isInWatchlist = $derived(activeMovie ? watchlist.isInWatchlist(activeMovie.id) : false);
@@ -331,7 +329,7 @@
 
 {#if hasSlides && activeMovie}
 	<Card
-		class="relative min-h-[60vh] overflow-hidden border-0 bg-black bg-cover bg-center bg-no-repeat p-0 rounded-b-0 md:min-h-[65vh] lg:min-h-[70vh]"
+		class="rounded-b-0 relative min-h-[60vh] overflow-hidden border-0 bg-black bg-cover bg-center bg-no-repeat p-0 md:min-h-[65vh] lg:min-h-[70vh]"
 		style={trailerEmbedUrl ? undefined : backgroundStyle}
 		role="region"
 		aria-label="Featured content spotlight"
@@ -339,7 +337,7 @@
 	>
 		<div bind:this={heroElement} class="contents">
 			{#if trailerEmbedUrl}
-				<div class="absolute inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+				<div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
 					<iframe
 						title={`Trailer for ${activeMovie.title}`}
 						src={trailerEmbedUrl}
@@ -405,7 +403,7 @@
 							{:else}
 								<RefreshCcw class="size-4" />
 							{/if}
-							<span class="hidden text-xs font-semibold uppercase tracking-wide sm:inline">
+							<span class="hidden text-xs font-semibold tracking-wide uppercase sm:inline">
 								Refresh
 							</span>
 						</Button>

@@ -63,24 +63,27 @@ type GlobalWithDb = typeof globalThis & {
 
 const globalRef = globalThis as GlobalWithDb;
 
-export const client: Client = globalRef.__meatflicksClient ?? (() => {
-	const url = resolveDatabasePath();
-	ensureDirectory(url);
-	const c = createClient({ url });
-	globalRef.__meatflicksClient = c;
+export const client: Client =
+	globalRef.__meatflicksClient ??
+	(() => {
+		const url = resolveDatabasePath();
+		ensureDirectory(url);
+		const c = createClient({ url });
+		globalRef.__meatflicksClient = c;
 
-	runInitSql(c).catch((err) => logger.error({ err }, 'Failed to initialize database extensions'));
+		runInitSql(c).catch((err) => logger.error({ err }, 'Failed to initialize database extensions'));
 
-	return c;
-})();
+		return c;
+	})();
 
-export const db = (globalRef.__meatflicksDb as LibSQLDatabase<typeof schema>) ?? (() => {
-	const d = drizzle(client, { schema });
-	globalRef.__meatflicksDb = d;
-	return d;
-})();
+export const db =
+	(globalRef.__meatflicksDb as LibSQLDatabase<typeof schema>) ??
+	(() => {
+		const d = drizzle(client, { schema });
+		globalRef.__meatflicksDb = d;
+		return d;
+	})();
 
 export const sqlite = client;
 
 export default db;
-

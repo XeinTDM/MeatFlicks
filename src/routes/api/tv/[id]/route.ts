@@ -42,7 +42,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		}
 
 		const cacheKey = buildCacheKey('tv', tmdbId);
-		const details = await withCache<TmdbTvDetails>(cacheKey, CACHE_TTL_LONG_SECONDS, () => fetchTmdbTvDetails(tmdbId!));
+		const details = await withCache<TmdbTvDetails>(cacheKey, CACHE_TTL_LONG_SECONDS, () =>
+			fetchTmdbTvDetails(tmdbId!)
+		);
 
 		if (!details.found || !details.name) {
 			return json({ message: 'TV show not found' }, { status: 404 });

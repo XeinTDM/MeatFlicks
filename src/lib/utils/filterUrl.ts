@@ -72,7 +72,10 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters
 	// Genre filters
 	const genres = searchParams.get('genres');
 	if (genres) {
-		filters.genres = genres.split(',').filter(Boolean).map((g) => g.trim());
+		filters.genres = genres
+			.split(',')
+			.filter(Boolean)
+			.map((g) => g.trim());
 	}
 
 	const genreMode = searchParams.get('genreMode');
@@ -136,7 +139,13 @@ export function parseSortFromURL(searchParams: URLSearchParams): SortOptions {
 	const field = searchParams.get('sort') || 'popularity';
 	const order = searchParams.get('order') || 'desc';
 
-	const validFields: SortOptions['field'][] = ['popularity', 'rating', 'releaseDate', 'title', 'runtime'];
+	const validFields: SortOptions['field'][] = [
+		'popularity',
+		'rating',
+		'releaseDate',
+		'title',
+		'runtime'
+	];
 	const validOrder: SortOptions['order'][] = ['asc', 'desc'];
 
 	return {
@@ -235,4 +244,3 @@ export function parseAllFromURL(searchParams: URLSearchParams): {
 		pagination: parsePaginationFromURL(searchParams)
 	};
 }
-

@@ -17,6 +17,9 @@ export type LibraryMovie = MovieSummary & {
 	imdbId?: string | null;
 	canonicalPath?: string;
 	addedAt?: string;
+	// TV show specific fields
+	season?: number | null;
+	episode?: number | null;
 };
 
 export type LibraryCollection = CollectionRecord & {

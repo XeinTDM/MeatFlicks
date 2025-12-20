@@ -49,10 +49,8 @@ const clientResult = clientSchema.safeParse({
 	PUBLIC_TMDB_API_KEY: privateEnv.PUBLIC_TMDB_API_KEY ?? serverEnv.TMDB_API_KEY,
 	PUBLIC_TMDB_IMAGE_BASE_URL:
 		privateEnv.PUBLIC_TMDB_IMAGE_BASE_URL ?? serverEnv.TMDB_IMAGE_BASE_URL,
-	PUBLIC_TMDB_POSTER_SIZE:
-		privateEnv.PUBLIC_TMDB_POSTER_SIZE ?? serverEnv.TMDB_POSTER_SIZE,
-	PUBLIC_TMDB_BACKDROP_SIZE:
-		privateEnv.PUBLIC_TMDB_BACKDROP_SIZE ?? serverEnv.TMDB_BACKDROP_SIZE
+	PUBLIC_TMDB_POSTER_SIZE: privateEnv.PUBLIC_TMDB_POSTER_SIZE ?? serverEnv.TMDB_POSTER_SIZE,
+	PUBLIC_TMDB_BACKDROP_SIZE: privateEnv.PUBLIC_TMDB_BACKDROP_SIZE ?? serverEnv.TMDB_BACKDROP_SIZE
 });
 
 if (!clientResult.success) {
@@ -64,4 +62,3 @@ export const env = {
 	...serverEnv,
 	...clientResult.data
 };
-

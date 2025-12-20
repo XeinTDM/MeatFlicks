@@ -1,13 +1,8 @@
-import { db } from "./client";
-import { movies, moviesGenres, genres } from "./schema";
-import { eq, inArray, asc } from "drizzle-orm";
-import { mapMovieRows } from "./mappers";
-import type {
-	GenreRecord,
-	MovieRecord,
-	MovieRow,
-	MovieSummary
-} from "./types";
+import { db } from './client';
+import { movies, moviesGenres, genres } from './schema';
+import { eq, inArray, asc } from 'drizzle-orm';
+import { mapMovieRows } from './mappers';
+import type { GenreRecord, MovieRecord, MovieRow, MovieSummary } from './types';
 
 export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, GenreRecord[]>> => {
 	const lookup = new Map<string, GenreRecord[]>();
@@ -16,11 +11,12 @@ export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, G
 		return lookup;
 	}
 
-	const rows = await db.select({
-		movieId: moviesGenres.movieId,
-		id: genres.id,
-		name: genres.name
-	})
+	const rows = await db
+		.select({
+			movieId: moviesGenres.movieId,
+			id: genres.id,
+			name: genres.name
+		})
 		.from(moviesGenres)
 		.innerJoin(genres, eq(genres.id, moviesGenres.genreId))
 		.where(inArray(moviesGenres.movieId, ids))
@@ -56,7 +52,7 @@ export const mapRowsToSummaries = async (rows: MovieRow[]): Promise<MovieSummary
 	return records.map(toMovieSummary);
 };
 
-// These constants are kept for backward compatibility if needed, 
+// These constants are kept for backward compatibility if needed,
 // but Drizzle query builder is preferred.
-export const MOVIE_COLUMNS = "*";
-export const MOVIE_ORDER_BY = ""; 
+export const MOVIE_COLUMNS = '*';
+export const MOVIE_ORDER_BY = '';

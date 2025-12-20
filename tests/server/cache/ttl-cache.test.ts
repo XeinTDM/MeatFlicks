@@ -23,7 +23,7 @@ describe('withCache', () => {
 
 		let calls = 0;
 		const factory = async () => {
-			await new Promise(r => setTimeout(r, 50));
+			await new Promise((r) => setTimeout(r, 50));
 			calls += 1;
 			return 'result';
 		};

@@ -7,7 +7,7 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 - Server-rendered Svelte 5 experience with Tailwind CSS v4 styling and responsive design.
 - Library ingestion backed by SQLite + TMDB enrichment (cast, trailers, artwork).
 - Streaming resolver that queries Vidlink, Vidsrc, TwoEmbed, and EmbedSu, with provider prioritisation and diagnostics.
-- OAuth authentication with GitHub and Google via @auth/sveltekit/NextAuth and JWT sessions.
+- Authentication with GitHub and Google OAuth via Lucia and JWT sessions.
 - Personal watchlist controls persisted alongside the catalog in SQLite and exposed through `/api/watchlist`.
 - Global search endpoint (`/api/search`) with debounced UI, category/collection browsing, and light/dark theme toggle.
 
@@ -17,8 +17,8 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 - Tailwind CSS v4 with utility-first design
 - Bun for runtime, dependency management, and scripts
 - SQLite (better-sqlite3) with FTS5 full-text search
-- @auth/sveltekit (NextAuth) for OAuth flows
-- Zod validation for configuration, Font Awesome icons, Axios for outbound requests, Vitest/Playwright for testing
+- Lucia for authentication with OAuth flows
+- Zod validation for configuration, Lucide icons, Ofetch for outbound requests, Vitest/Playwright for testing
 
 ## Prerequisites
 
@@ -50,17 +50,17 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 
 ### Core backend
 
-| Variable              | Description                                                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `SQLITE_DB_PATH`      | Optional absolute/relative path for the SQLite database file (defaults to `data/meatflicks.db`).      |
-| `TMDB_API_KEY`        | Server-side TMDB API key for enriching movie records.                                                   |
-| `TMDB_IMAGE_BASE_URL` | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`).                                              |
-| `TMDB_POSTER_SIZE`    | Poster size path segment (e.g. `w500`).                                                                 |
-| `TMDB_BACKDROP_SIZE`  | Backdrop size path segment (e.g. `original`).                                                           |
-| `AUTH_SECRET`         | Secret used by NextAuth JWT sessions.                                                                   |
-| `NEXTAUTH_SECRET`     | Duplicate of `AUTH_SECRET` required by runtime config validation.                                       |
-| `GITHUB_ID` / `GITHUB_SECRET` | OAuth client credentials for GitHub sign-in.                                                            |
-| `GOOGLE_ID` / `GOOGLE_SECRET` | OAuth client credentials for Google sign-in (optional but supported).                                   |
+| Variable                      | Description                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `SQLITE_DB_PATH`              | Optional absolute/relative path for the SQLite database file (defaults to `data/meatflicks.db`). |
+| `TMDB_API_KEY`                | Server-side TMDB API key for enriching movie records.                                            |
+| `TMDB_IMAGE_BASE_URL`         | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`).                                       |
+| `TMDB_POSTER_SIZE`            | Poster size path segment (e.g. `w500`).                                                          |
+| `TMDB_BACKDROP_SIZE`          | Backdrop size path segment (e.g. `original`).                                                    |
+| `AUTH_SECRET`                 | Secret used by NextAuth JWT sessions.                                                            |
+| `NEXTAUTH_SECRET`             | Duplicate of `AUTH_SECRET` required by runtime config validation.                                |
+| `GITHUB_ID` / `GITHUB_SECRET` | OAuth client credentials for GitHub sign-in.                                                     |
+| `GOOGLE_ID` / `GOOGLE_SECRET` | OAuth client credentials for Google sign-in (optional but supported).                            |
 
 ### Client-facing
 
@@ -84,14 +84,14 @@ Keep secrets out of version control and rotate credentials regularly.
 
 ## Commands
 
-| Command                   | Description                                                       |
-| ------------------------- | ----------------------------------------------------------------- |
-| `bun dev`                 | Start the SvelteKit development server.                           |
-| `bun run build`           | Create a production build.                                        |
-| `bun preview`             | Preview the production build locally.                             |
-| `bun run lint`            | Run Prettier check and ESLint.                                    |
-| `bun run check`           | Run SvelteKit sync and type-checking (svelte-check + TypeScript). |
-| `bun test`                | Execute Vitest unit tests (`--run` configured in package).        |
+| Command         | Description                                                       |
+| --------------- | ----------------------------------------------------------------- |
+| `bun dev`       | Start the SvelteKit development server.                           |
+| `bun run build` | Create a production build.                                        |
+| `bun preview`   | Preview the production build locally.                             |
+| `bun run lint`  | Run Prettier check and ESLint.                                    |
+| `bun run check` | Run SvelteKit sync and type-checking (svelte-check + TypeScript). |
+| `bun test`      | Execute Vitest unit tests (`--run` configured in package).        |
 
 ## Project Structure
 
@@ -147,5 +147,3 @@ Streaming resolution calls multiple unofficial providers (Vidlink, Vidsrc, TwoEm
 ## License
 
 This project is distributed under the [MIT License](LICENSE).
-
-

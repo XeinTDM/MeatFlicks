@@ -72,11 +72,11 @@ export async function resolveStreaming(
  */
 export async function invalidateStreamingCache(pattern?: string): Promise<number> {
 	const { invalidateCachePattern, invalidateCachePrefix } = await import('$lib/server/cache');
-	
+
 	if (pattern) {
 		return invalidateCachePattern(pattern);
 	}
-	
+
 	// Default: invalidate all streaming caches
 	return invalidateCachePrefix('streaming:');
 }

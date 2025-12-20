@@ -21,7 +21,7 @@ export class RateLimiter {
 				reservoir: this.config.maxRequests,
 				reservoirRefreshInterval: this.config.windowMs,
 				reservoirRefreshAmount: this.config.maxRequests,
-				maxConcurrent: 5,
+				maxConcurrent: 5
 			});
 			this.limiters.set(key, limiter);
 
@@ -51,7 +51,7 @@ export class RateLimiter {
 		return this.getLimiter(key).schedule(fn);
 	}
 
-	cleanup(): void { }
+	cleanup(): void {}
 }
 
 export const tmdbRateLimiter = new RateLimiter({

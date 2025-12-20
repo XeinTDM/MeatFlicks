@@ -1,11 +1,13 @@
 # Advanced Content Discovery Implementation Plan
 
 ## Overview
+
 Implement advanced content discovery features to enhance user experience and content findability on MeatFlicks.
 
 ## Features to Implement
 
 ### 1. Advanced Filtering System
+
 - **Year Range Filter**: Filter by release year (from-to)
 - **Rating Filter**: Filter by minimum rating (0-10)
 - **Runtime Filter**: Filter by duration (short/medium/long or custom range)
@@ -13,6 +15,7 @@ Implement advanced content discovery features to enhance user experience and con
 - **Multi-Genre Filter**: Select multiple genres (AND/OR logic)
 
 ### 2. Sorting Options
+
 - **Popularity**: Sort by view count/trending score
 - **Rating**: Sort by highest/lowest rating
 - **Release Date**: Sort by newest/oldest
@@ -20,16 +23,19 @@ Implement advanced content discovery features to enhance user experience and con
 - **Runtime**: Sort by duration
 
 ### 3. Pagination & Infinite Scroll
+
 - **Pagination**: Page-based navigation with page numbers
 - **Infinite Scroll**: Load more content as user scrolls
 - **Hybrid**: Initial pagination with "Load More" button
 
 ### 4. Recently Searched History
+
 - **Local Storage**: Store recent searches (client-side)
 - **Database**: Store search history per user (server-side)
 - **Quick Access**: Show recent searches in search dropdown
 
 ### 5. Enhanced Browse Pages
+
 - **Filter Panel**: Collapsible sidebar with all filters
 - **Active Filters**: Display active filters as removable chips
 - **Results Count**: Show total results matching filters
@@ -57,17 +63,20 @@ CREATE INDEX idx_search_history_searched_at ON search_history(searched_at);
 ### Schema Updates
 
 Add new fields to movies table:
+
 - `language` TEXT (original language code)
 - `popularity` REAL (popularity score from TMDB)
 
 ## Implementation Steps
 
 ### Step 1: Database Schema Updates
+
 1. Create migration for search_history table
 2. Add language and popularity columns to movies table
 3. Update seed data to include new fields
 
 ### Step 2: Backend - Repository Layer
+
 1. Extend `libraryRepository` with advanced query methods:
    - `findMoviesWithFilters(filters, sort, pagination)`
    - `countMoviesWithFilters(filters)`
@@ -77,6 +86,7 @@ Add new fields to movies table:
    - `clearSearchHistory(userId)`
 
 ### Step 3: Backend - API Routes
+
 1. Update `/explore/[slug]/+page.server.ts`:
    - Accept URL search params for filters
    - Apply filters to database queries
@@ -87,6 +97,7 @@ Add new fields to movies table:
    - DELETE: Clear history
 
 ### Step 4: Frontend - Filter Components
+
 1. Create `FilterPanel.svelte`:
    - Year range slider
    - Rating slider
@@ -102,6 +113,7 @@ Add new fields to movies table:
    - Current sort indicator
 
 ### Step 5: Frontend - Pagination
+
 1. Create `Pagination.svelte`:
    - Page numbers
    - Previous/Next buttons
@@ -112,6 +124,7 @@ Add new fields to movies table:
    - Loading state
 
 ### Step 6: Frontend - Search History
+
 1. Create `SearchHistory.svelte`:
    - Recent searches list
    - Click to apply search
@@ -121,6 +134,7 @@ Add new fields to movies table:
    - Save searches on submit
 
 ### Step 7: Integration
+
 1. Update explore pages to use new filter system
 2. Add URL state management (search params)
 3. Implement loading states
@@ -174,40 +188,40 @@ src/
 ```typescript
 // filters.ts
 export interface MovieFilters {
-  yearFrom?: number;
-  yearTo?: number;
-  minRating?: number;
-  maxRating?: number;
-  runtimeMin?: number;
-  runtimeMax?: number;
-  language?: string;
-  genres?: string[]; // genre IDs or names
-  genreMode?: 'AND' | 'OR'; // How to combine genres
+	yearFrom?: number;
+	yearTo?: number;
+	minRating?: number;
+	maxRating?: number;
+	runtimeMin?: number;
+	runtimeMax?: number;
+	language?: string;
+	genres?: string[]; // genre IDs or names
+	genreMode?: 'AND' | 'OR'; // How to combine genres
 }
 
 export interface SortOptions {
-  field: 'popularity' | 'rating' | 'releaseDate' | 'title' | 'runtime';
-  order: 'asc' | 'desc';
+	field: 'popularity' | 'rating' | 'releaseDate' | 'title' | 'runtime';
+	order: 'asc' | 'desc';
 }
 
 // pagination.ts
 export interface PaginationParams {
-  page: number;
-  pageSize: number;
+	page: number;
+	pageSize: number;
 }
 
 export interface PaginationMetadata {
-  currentPage: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
+	currentPage: number;
+	pageSize: number;
+	totalItems: number;
+	totalPages: number;
+	hasNextPage: boolean;
+	hasPreviousPage: boolean;
 }
 
 export interface PaginatedResult<T> {
-  items: T[];
-  pagination: PaginationMetadata;
+	items: T[];
+	pagination: PaginationMetadata;
 }
 ```
 
@@ -260,6 +274,7 @@ export interface PaginatedResult<T> {
 ## Implementation Status
 
 ### ✅ Completed (Backend & Components)
+
 - [x] Database schema updates (migration created)
 - [x] Search history table and repository
 - [x] `findMoviesWithFilters()` method in library repository
@@ -271,12 +286,14 @@ export interface PaginatedResult<T> {
 - [x] Type definitions (filters.ts, pagination.ts)
 
 ### ⚠️ Partially Completed
+
 - [x] Search history repository (backend complete)
 - [ ] Search history API endpoint (`/api/search/history/+server.ts`)
 - [ ] Search history UI component (`SearchHistory.svelte`)
 - [ ] Integration with global search component
 
 ### ❌ Not Yet Implemented
+
 - [ ] Explore page integration (filters not connected to explore pages)
 - [ ] URL search params parsing in `+page.server.ts`
 - [ ] SortDropdown component (mentioned in plan but not created)
@@ -296,34 +313,38 @@ import type { MovieFilters, SortOptions } from '$lib/types/filters';
 import type { PaginationParams } from '$lib/types/pagination';
 
 export const load: PageServerLoad = async ({ url, params }) => {
-  // Parse filters from URL
-  const filters: MovieFilters = {
-    yearFrom: url.searchParams.get('yearFrom') ? Number(url.searchParams.get('yearFrom')) : undefined,
-    yearTo: url.searchParams.get('yearTo') ? Number(url.searchParams.get('yearTo')) : undefined,
-    minRating: url.searchParams.get('minRating') ? Number(url.searchParams.get('minRating')) : undefined,
-    genres: url.searchParams.get('genres')?.split(',').filter(Boolean),
-    genreMode: (url.searchParams.get('genreMode') as 'AND' | 'OR') || 'OR',
-    // ... other filters
-  };
+	// Parse filters from URL
+	const filters: MovieFilters = {
+		yearFrom: url.searchParams.get('yearFrom')
+			? Number(url.searchParams.get('yearFrom'))
+			: undefined,
+		yearTo: url.searchParams.get('yearTo') ? Number(url.searchParams.get('yearTo')) : undefined,
+		minRating: url.searchParams.get('minRating')
+			? Number(url.searchParams.get('minRating'))
+			: undefined,
+		genres: url.searchParams.get('genres')?.split(',').filter(Boolean),
+		genreMode: (url.searchParams.get('genreMode') as 'AND' | 'OR') || 'OR'
+		// ... other filters
+	};
 
-  const sort: SortOptions = {
-    field: (url.searchParams.get('sort') as any) || 'popularity',
-    order: (url.searchParams.get('order') as 'asc' | 'desc') || 'desc'
-  };
+	const sort: SortOptions = {
+		field: (url.searchParams.get('sort') as any) || 'popularity',
+		order: (url.searchParams.get('order') as 'asc' | 'desc') || 'desc'
+	};
 
-  const pagination: PaginationParams = {
-    page: Number(url.searchParams.get('page')) || 1,
-    pageSize: Number(url.searchParams.get('pageSize')) || 20
-  };
+	const pagination: PaginationParams = {
+		page: Number(url.searchParams.get('page')) || 1,
+		pageSize: Number(url.searchParams.get('pageSize')) || 20
+	};
 
-  const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination);
+	const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination);
 
-  return {
-    movies: result.items,
-    pagination: result.pagination,
-    filters,
-    sort
-  };
+	return {
+		movies: result.items,
+		pagination: result.pagination,
+		filters,
+		sort
+	};
 };
 ```
 
@@ -337,34 +358,34 @@ import { searchHistoryRepository } from '$lib/server/repositories/search-history
 import { validateSession } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ locals }) => {
-  const session = await validateSession(locals);
-  if (!session) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
+	const session = await validateSession(locals);
+	if (!session) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
 
-  const searches = await searchHistoryRepository.getRecentSearches(session.userId, 10);
-  return json({ searches });
+	const searches = await searchHistoryRepository.getRecentSearches(session.userId, 10);
+	return json({ searches });
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = await validateSession(locals);
-  if (!session) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
+	const session = await validateSession(locals);
+	if (!session) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
 
-  const { query, filters } = await request.json();
-  await searchHistoryRepository.addSearch(session.userId, query, filters);
-  return json({ success: true });
+	const { query, filters } = await request.json();
+	await searchHistoryRepository.addSearch(session.userId, query, filters);
+	return json({ success: true });
 };
 
 export const DELETE: RequestHandler = async ({ locals }) => {
-  const session = await validateSession(locals);
-  if (!session) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
+	const session = await validateSession(locals);
+	if (!session) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
 
-  await searchHistoryRepository.clearHistory(session.userId);
-  return json({ success: true });
+	await searchHistoryRepository.clearHistory(session.userId);
+	return json({ success: true });
 };
 ```
 

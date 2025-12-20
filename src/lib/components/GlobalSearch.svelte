@@ -202,7 +202,9 @@
 			{#if showHistory}
 				<!-- Show search history when input is focused and empty -->
 				<div class="p-2">
-					<div class="mb-2 flex items-center gap-2 px-2 text-xs font-semibold text-muted-foreground">
+					<div
+						class="mb-2 flex items-center gap-2 px-2 text-xs font-semibold text-muted-foreground"
+					>
 						<Clock class="size-3" />
 						Recent Searches
 					</div>

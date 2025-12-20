@@ -25,7 +25,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const result = saveProgressSchema.safeParse(body);
 
 		if (!result.success) {
-			return json({ error: 'Invalid request data', details: result.error.format() }, { status: 400 });
+			return json(
+				{ error: 'Invalid request data', details: result.error.format() },
+				{ status: 400 }
+			);
 		}
 
 		await playbackProgressRepository.saveProgress(

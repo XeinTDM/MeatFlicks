@@ -100,7 +100,9 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
 				continue;
 			}
 
-			const details = await tmdbRateLimiter.schedule(`ingest-${label}`, () => fetchTmdbMovieDetails(tmdbId));
+			const details = await tmdbRateLimiter.schedule(`ingest-${label}`, () =>
+				fetchTmdbMovieDetails(tmdbId)
+			);
 			if (!details.found) {
 				continue;
 			}
@@ -228,11 +230,9 @@ export const ensureHomeLibraryPrimed = async (
 				logger.error({ task, error }, '[home-library] Refresh task failed');
 			}
 		}
-	})()
-		.finally(() => {
-			refreshPromise = null;
-		});
+	})().finally(() => {
+		refreshPromise = null;
+	});
 
 	return refreshPromise;
 };
-

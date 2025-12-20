@@ -1,23 +1,21 @@
-import { json, type RequestHandler } from "@sveltejs/kit";
-import { db } from "$lib/server/db";
-import { movies, genres, moviesGenres } from "$lib/server/db/schema";
-import { eq, sql, inArray } from "drizzle-orm";
-import type { GenreRecord, MovieRecord, MovieRow } from "$lib/server/db";
-import {
-	mapRowsToRecords
-} from "$lib/server/db/movie-select";
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { db } from '$lib/server/db';
+import { movies, genres, moviesGenres } from '$lib/server/db/schema';
+import { eq, sql, inArray } from 'drizzle-orm';
+import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
+import { mapRowsToRecords } from '$lib/server/db/movie-select';
 import {
 	CACHE_TTL_LONG_SECONDS,
 	buildCacheKey,
 	setCachedValue,
 	withCache
-} from "$lib/server/cache";
+} from '$lib/server/cache';
 import {
 	fetchTmdbMovieDetails,
 	fetchTmdbMovieExtras,
 	lookupTmdbIdByImdbId
-} from "$lib/server/services/tmdb.service";
-import { randomUUID } from "node:crypto";
+} from '$lib/server/services/tmdb.service';
+import { randomUUID } from 'node:crypto';
 
 const clampTtl = (value: number): number => {
 	const min = 300;
@@ -29,14 +27,14 @@ const clampTtl = (value: number): number => {
 };
 
 const MOVIE_CACHE_TTL_SECONDS = clampTtl(
-	Number.parseInt(process.env.CACHE_TTL_MOVIE ?? "", 10) || CACHE_TTL_LONG_SECONDS
+	Number.parseInt(process.env.CACHE_TTL_MOVIE ?? '', 10) || CACHE_TTL_LONG_SECONDS
 );
 
-type MovieLookup = { kind: "id"; value: string } | { kind: "tmdb"; value: number };
+type MovieLookup = { kind: 'id'; value: string } | { kind: 'tmdb'; value: number };
 
 const loadMovie = async (lookup: MovieLookup): Promise<MovieRecord | null> => {
 	let rows: any[] = [];
-	if (lookup.kind === "id") {
+	if (lookup.kind === 'id') {
 		rows = await db.select().from(movies).where(eq(movies.id, lookup.value)).limit(1);
 	} else {
 		rows = await db.select().from(movies).where(eq(movies.tmdbId, lookup.value)).limit(1);
@@ -58,11 +56,11 @@ async function cacheMovieVariants(
 	const keys = new Set<string>();
 
 	if (movie.id) {
-		keys.add(buildCacheKey("movie", "id", movie.id));
+		keys.add(buildCacheKey('movie', 'id', movie.id));
 	}
 
 	if (isValidTmdbId(movie.tmdbId)) {
-		keys.add(buildCacheKey("movie", "tmdb", movie.tmdbId));
+		keys.add(buildCacheKey('movie', 'tmdb', movie.tmdbId));
 	}
 
 	for (const key of additionalKeys) {
@@ -101,44 +99,44 @@ async function fetchMovieWithCache(
 	});
 }
 
-async function resolveMovieByIdentifier(identifier: string, queryMode: "id" | "tmdb" | "imdb") {
+async function resolveMovieByIdentifier(identifier: string, queryMode: 'id' | 'tmdb' | 'imdb') {
 	switch (queryMode) {
-		case "tmdb": {
+		case 'tmdb': {
 			const tmdbId = Number.parseInt(identifier, 10);
 			if (!Number.isFinite(tmdbId)) {
-				throw new Error("Invalid TMDB id provided.");
+				throw new Error('Invalid TMDB id provided.');
 			}
 
 			const movie = await fetchMovieWithCache(
-				buildCacheKey("movie", "tmdb", tmdbId),
-				{ kind: "tmdb", value: tmdbId },
-				(record) => [buildCacheKey("movie", "id", record.id)]
+				buildCacheKey('movie', 'tmdb', tmdbId),
+				{ kind: 'tmdb', value: tmdbId },
+				(record) => [buildCacheKey('movie', 'id', record.id)]
 			);
 
 			return { movie, tmdbId } as const;
 		}
-		case "imdb": {
+		case 'imdb': {
 			const tmdbId = await lookupTmdbIdByImdbId(identifier);
 			if (!tmdbId) {
 				return { movie: null, tmdbId: null } as const;
 			}
 
 			const movie = await fetchMovieWithCache(
-				buildCacheKey("movie", "tmdb", tmdbId),
-				{ kind: "tmdb", value: tmdbId },
-				(record) => [buildCacheKey("movie", "id", record.id)]
+				buildCacheKey('movie', 'tmdb', tmdbId),
+				{ kind: 'tmdb', value: tmdbId },
+				(record) => [buildCacheKey('movie', 'id', record.id)]
 			);
 
 			return { movie, tmdbId } as const;
 		}
-		case "id":
+		case 'id':
 		default: {
-			const cacheKey = buildCacheKey("movie", "id", identifier);
+			const cacheKey = buildCacheKey('movie', 'id', identifier);
 			const movie = await fetchMovieWithCache(
 				cacheKey,
-				{ kind: "id", value: identifier },
+				{ kind: 'id', value: identifier },
 				(record) =>
-					isValidTmdbId(record.tmdbId) ? [buildCacheKey("movie", "tmdb", record.tmdbId)] : []
+					isValidTmdbId(record.tmdbId) ? [buildCacheKey('movie', 'tmdb', record.tmdbId)] : []
 			);
 
 			return { movie, tmdbId: movie?.tmdbId ?? null } as const;
@@ -175,7 +173,11 @@ async function upsertMovieWithGenres(payload: {
 			genreIds.push(result[0].id);
 		}
 
-		const existingResults = await tx.select().from(movies).where(eq(movies.tmdbId, payload.tmdbId)).limit(1);
+		const existingResults = await tx
+			.select()
+			.from(movies)
+			.where(eq(movies.tmdbId, payload.tmdbId))
+			.limit(1);
 		const existingRow = existingResults[0];
 		const movieId = existingRow?.id ?? randomUUID();
 
@@ -216,7 +218,7 @@ async function upsertMovieWithGenres(payload: {
 }
 
 const isValidTmdbId = (value: unknown): value is number => {
-	return typeof value === "number" && Number.isFinite(value) && value > 0;
+	return typeof value === 'number' && Number.isFinite(value) && value > 0;
 };
 
 type MovieWithDetails = MovieRecord & {
@@ -242,14 +244,14 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 	const genreNames = Array.from(
 		new Set(
 			details.genres
-				.map((genre) => (typeof genre.name === "string" ? genre.name.trim() : ""))
+				.map((genre) => (typeof genre.name === 'string' ? genre.name.trim() : ''))
 				.filter(Boolean)
 		)
 	);
 
 	const movie = await upsertMovieWithGenres({
 		tmdbId,
-		title: details.title ?? "Untitled",
+		title: details.title ?? 'Untitled',
 		overview: details.overview ?? null,
 		posterPath: details.posterPath ?? null,
 		backdropPath: details.backdropPath ?? null,
@@ -277,18 +279,18 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const movieIdentifier = params.id;
-	const queryModeParam = url.searchParams.get("by");
-	const queryMode = queryModeParam === "tmdb" || queryModeParam === "imdb" ? queryModeParam : "id";
+	const queryModeParam = url.searchParams.get('by');
+	const queryMode = queryModeParam === 'tmdb' || queryModeParam === 'imdb' ? queryModeParam : 'id';
 
 	if (!movieIdentifier) {
-		return json({ error: "Movie identifier is required." }, { status: 400 });
+		return json({ error: 'Movie identifier is required.' }, { status: 400 });
 	}
 
 	try {
 		const { movie, tmdbId } = await resolveMovieByIdentifier(movieIdentifier, queryMode);
 		const effectiveTmdbId = isValidTmdbId(tmdbId)
 			? tmdbId
-			: queryMode === "tmdb"
+			: queryMode === 'tmdb'
 				? Number.parseInt(movieIdentifier, 10)
 				: null;
 
@@ -298,7 +300,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 				: null;
 
 			if (!fallbackMovie) {
-				return json({ message: "Movie not found" }, { status: 404 });
+				return json({ message: 'Movie not found' }, { status: 404 });
 			}
 
 			return json(fallbackMovie);
@@ -319,9 +321,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 		return json(payload);
 	} catch (error) {
-		console.error("Error fetching movie with identifier " + movieIdentifier + ":", error);
+		console.error('Error fetching movie with identifier ' + movieIdentifier + ':', error);
 		return json(
-			{ error: "Failed to fetch movie with identifier " + movieIdentifier },
+			{ error: 'Failed to fetch movie with identifier ' + movieIdentifier },
 			{ status: 500 }
 		);
 	}
