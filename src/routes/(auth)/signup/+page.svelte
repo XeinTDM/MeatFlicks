@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Button } from '$lib/components/ui/button';
 
-	let { form } = $props();
+	let { data, form } = $props();
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-background p-4">
@@ -31,6 +31,10 @@
 
 			{#if form?.message}
 				<p class="text-sm font-medium text-destructive">{form.message}</p>
+			{/if}
+
+			{#if data?.csrfToken}
+				<input type="hidden" name="csrf_token" value={data.csrfToken} />
 			{/if}
 
 			<Button type="submit" class="w-full">Sign Up</Button>

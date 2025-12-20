@@ -12,7 +12,14 @@ const store = new KeyvSqlite({ uri: `sqlite://${env.SQLITE_DB_PATH}`, table: 'ca
 
 const lruStore = new LRUCache<string, any>({
 	max: env.CACHE_MEMORY_MAX_ITEMS,
-	ttl: CACHE_TTL_MEDIUM_SECONDS * 1000
+	ttl: CACHE_TTL_MEDIUM_SECONDS * 1000,
+	dispose: (value, key, reason) => {
+		if (reason === 'expire') {
+			cache.delete(key).catch(() => {
+				// Silent failure is acceptable
+			});
+		}
+	}
 });
 
 const cache = new Keyv({
@@ -21,6 +28,63 @@ const cache = new Keyv({
 });
 
 cache.on('error', (err) => logger.error({ err }, 'Keyv Connection Error'));
+
+setInterval(async () => {
+	try {
+		let lruCleaned = 0;
+		for (const key of lruStore.keys()) {
+			const item = lruStore.peek(key);
+			if (item) {
+				lruStore.delete(key);
+				lruCleaned++;
+			}
+		}
+
+		let sqliteCleaned = 0;
+		try {
+			const sqliteStore = store as any;
+			const db = sqliteStore.db || sqliteStore.client;
+
+			if (db && typeof db.prepare === 'function') {
+				const currentTime = Date.now();
+				const stmt = db.prepare('SELECT key FROM cache_v2 WHERE expire IS NOT NULL AND expire < ?');
+				const expiredKeys = stmt.all(currentTime) as Array<{ key: string }>;
+
+				for (const { key } of expiredKeys) {
+					try {
+						await cache.delete(key);
+						sqliteCleaned++;
+					} catch (deleteError) {
+						logger.warn({ err: deleteError, key }, 'Failed to delete expired cache entry');
+					}
+				}
+			} else if (db && typeof db.query === 'function') {
+				const currentTime = Date.now();
+				const result = await db.query('SELECT key FROM cache_v2 WHERE expire IS NOT NULL AND expire < ?', [currentTime]);
+				const expiredKeys = Array.isArray(result) ? result : result.rows || [];
+
+				for (const row of expiredKeys) {
+					try {
+						await cache.delete(row.key);
+						sqliteCleaned++;
+					} catch (deleteError) {
+						logger.warn({ err: deleteError, key: row.key }, 'Failed to delete expired cache entry');
+					}
+				}
+			}
+		} catch (dbError) {
+			logger.warn({ err: dbError }, 'Failed to clean up SQLite cache');
+		}
+
+		logger.info({
+			lruCleaned,
+			sqliteCleaned,
+			lruSize: lruStore.size
+		}, 'Cache cleanup completed');
+	} catch (error) {
+		logger.error({ err: error }, 'Cache cleanup failed');
+	}
+}, 3600000);
 
 export function buildCacheKey(
 	...segments: Array<string | number | boolean | null | undefined>
