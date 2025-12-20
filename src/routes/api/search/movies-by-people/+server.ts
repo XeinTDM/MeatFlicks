@@ -4,9 +4,11 @@ import { movies, moviePeople, people } from '$lib/server/db/schema';
 import { sql, eq, inArray, and, or, desc, asc } from 'drizzle-orm';
 import { buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, withCache } from '$lib/server/cache';
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
 import type { LibraryMovie } from '$lib/types/library';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import type { MovieRow } from '$lib/server/db';
+import { validateQueryParams, movieByPeopleSchema } from '$lib/server/validation';
 
 const DEFAULT_LIMIT = 50;
 
@@ -51,28 +53,31 @@ const parseRoles = (value: string | null): string[] => {
 };
 
 export const GET: RequestHandler = async ({ url }) => {
-	const peopleParam = url.searchParams.get('people');
-	const rolesParam = url.searchParams.get('roles');
-
-	if (!peopleParam) {
-		return json({ error: 'Query parameter "people" is required' }, { status: 400 });
-	}
-
-	const personIds = parsePersonIds(peopleParam);
-	const roles = parseRoles(rolesParam);
-	const limit = parseLimit(url.searchParams.get('limit'));
-
-	if (personIds.length === 0) {
-		return json({ error: 'Valid person IDs are required' }, { status: 400 });
-	}
-
-	// Create a hash for caching
-	const hash = createHash('sha1')
-		.update(`${personIds.join(',')}:${roles.join(',')}:${limit}`)
-		.digest('hex');
-	const cacheKey = buildCacheKey('search', 'movies-by-people', hash);
-
 	try {
+		// Validate query parameters using the schema
+		const queryParams = validateQueryParams(
+			z.object({
+				people: movieByPeopleSchema.shape.people,
+				roles: z.string().optional(),
+				limit: z.coerce.number().int().positive().max(50).default(50)
+			}),
+			url.searchParams
+		);
+
+		const personIds = parsePersonIds(queryParams.people);
+		const roles = parseRoles(queryParams.roles ?? '');
+		const limit = queryParams.limit;
+
+		if (personIds.length === 0) {
+			return json({ error: 'Valid person IDs are required' }, { status: 400 });
+		}
+
+		// Create a hash for caching
+		const hash = createHash('sha1')
+			.update(`${personIds.join(',')}:${roles.join(',')}:${limit}`)
+			.digest('hex');
+		const cacheKey = buildCacheKey('search', 'movies-by-people', hash);
+
 		const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 			return await searchMoviesByPeople(personIds, roles, limit);
 		});

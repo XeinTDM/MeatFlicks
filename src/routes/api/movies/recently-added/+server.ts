@@ -1,22 +1,30 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { libraryRepository } from '$lib/server';
+import { z } from 'zod';
+import { validateQueryParams } from '$lib/server/validation';
+import { errorHandler } from '$lib/server';
+
+const recentlyAddedQueryParamsSchema = z.object({
+	limit: z.coerce.number().int().positive().max(100).default(20),
+	offset: z.coerce.number().int().min(0).default(0)
+});
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		const limit = parseInt(url.searchParams.get('limit') || '20', 10);
-		const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+		// Validate query parameters
+		const queryParams = validateQueryParams(recentlyAddedQueryParamsSchema, url.searchParams);
 
 		// Fetch recently added movies (by releaseDate descending)
 		const movies = await libraryRepository.findMoviesWithFilters(
 			{},
 			{ field: 'releaseDate', order: 'desc' },
-			{ page: Math.floor(offset / limit) + 1, pageSize: limit }
+			{ page: Math.floor(queryParams.offset / queryParams.limit) + 1, pageSize: queryParams.limit }
 		);
 
 		return json({ movies: movies.items, total: movies.pagination.totalItems });
 	} catch (error) {
-		console.error('Error fetching recently added movies:', error);
-		return json({ error: 'Failed to fetch recently added movies' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };

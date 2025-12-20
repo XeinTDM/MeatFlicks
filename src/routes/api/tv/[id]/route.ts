@@ -2,31 +2,29 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { buildCacheKey, CACHE_TTL_LONG_SECONDS, withCache } from '$lib/server/cache';
 import { fetchTmdbTvDetails, lookupTmdbIdByImdbId } from '$lib/server/services/tmdb.service';
 import type { TmdbTvDetails } from '$lib/server/services/tmdb.service';
+import { z } from 'zod';
+import { validatePathParams, validateQueryParams, queryModeSchema } from '$lib/server/validation';
+import { errorHandler } from '$lib/server';
 
-const detectQueryMode = (identifier: string): 'tmdb' | 'imdb' => {
-	if (/^tt\d{7,}$/i.test(identifier)) {
-		return 'imdb';
-	}
+const tvIdentifierSchema = z.object({
+	id: z.string().min(1, 'TV identifier is required')
+});
 
-	return 'tmdb';
-};
-
-const parseNumericId = (value: string): number | null => {
-	const parsed = Number.parseInt(value, 10);
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
+const tvQueryParamsSchema = z.object({
+	by: queryModeSchema.optional()
+});
 
 export const GET: RequestHandler = async ({ params, url }) => {
-	const { id: identifier } = params;
-
-	if (!identifier) {
-		return json({ error: 'TV identifier is required.' }, { status: 400 });
-	}
-
-	const queryModeParam = url.searchParams.get('by');
-	const queryMode = queryModeParam === 'imdb' ? 'imdb' : detectQueryMode(identifier);
-
 	try {
+		// Validate path parameters
+		const pathParams = validatePathParams(tvIdentifierSchema, params);
+
+		// Validate query parameters
+		const queryParams = validateQueryParams(tvQueryParamsSchema, url.searchParams);
+
+		const identifier = pathParams.id;
+		const queryMode = queryParams.by ?? (identifier.startsWith('tt') ? 'imdb' : 'tmdb');
+
 		let tmdbId: number | null = null;
 
 		if (queryMode === 'imdb') {
@@ -35,10 +33,11 @@ export const GET: RequestHandler = async ({ params, url }) => {
 				return json({ message: 'TV show not found' }, { status: 404 });
 			}
 		} else {
-			tmdbId = parseNumericId(identifier);
-			if (!tmdbId) {
+			const parsed = Number.parseInt(identifier, 10);
+			if (!Number.isFinite(parsed) || parsed <= 0) {
 				return json({ error: 'A valid TMDB id is required.' }, { status: 400 });
 			}
+			tmdbId = parsed;
 		}
 
 		const cacheKey = buildCacheKey('tv', tmdbId);
@@ -74,7 +73,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			media_type: 'tv'
 		});
 	} catch (error) {
-		console.error('Error fetching TV show:', error);
-		return json({ error: 'Failed to fetch TV show' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };

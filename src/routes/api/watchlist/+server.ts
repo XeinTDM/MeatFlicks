@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { watchlistRepository } from '$lib/server/repositories/watchlist.repository';
 import { z } from 'zod';
 import { errorHandler, UnauthorizedError, ValidationError } from '$lib/server';
+import { validateRequestBody, watchlistItemSchema } from '$lib/server/validation';
 
 const movieSchema = z.object({
 	id: z.string(),
@@ -43,15 +44,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 
 		const body = await request.json();
-		const result = z.object({ movie: movieSchema }).safeParse(body);
+		const validatedBody = validateRequestBody(
+			z.object({ movie: movieSchema }),
+			body
+		);
 
-		if (!result.success) {
-			throw new ValidationError('Invalid movie data', {
-				issues: result.error.format()
-			});
-		}
-
-		await watchlistRepository.addToWatchlist(user.id, result.data.movie);
+		await watchlistRepository.addToWatchlist(user.id, validatedBody.movie);
 		return json({ success: true });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);
@@ -69,18 +67,24 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		}
 
 		const body = await request.json();
-		const { movieId, clearAll } = body;
+		const validatedBody = validateRequestBody(
+			z.object({
+				movieId: z.string().optional(),
+				clearAll: z.boolean().optional()
+			}),
+			body
+		);
 
-		if (clearAll) {
+		if (validatedBody.clearAll) {
 			await watchlistRepository.clearWatchlist(user.id);
 			return json({ success: true });
 		}
 
-		if (!movieId) {
+		if (!validatedBody.movieId) {
 			throw new ValidationError('Movie ID is required');
 		}
 
-		await watchlistRepository.removeFromWatchlist(user.id, movieId);
+		await watchlistRepository.removeFromWatchlist(user.id, validatedBody.movieId);
 		return json({ success: true });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);
@@ -98,15 +102,12 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		}
 
 		const body = await request.json();
-		const result = z.object({ movies: z.array(movieSchema) }).safeParse(body);
+		const validatedBody = validateRequestBody(
+			z.object({ movies: z.array(movieSchema) }),
+			body
+		);
 
-		if (!result.success) {
-			throw new ValidationError('Invalid movies data', {
-				issues: result.error.format()
-			});
-		}
-
-		await watchlistRepository.replaceWatchlist(user.id, result.data.movies);
+		await watchlistRepository.replaceWatchlist(user.id, validatedBody.movies);
 		return json({ success: true });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);

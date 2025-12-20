@@ -1,26 +1,38 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { tvShowRepository } from '$lib/server/repositories/tv-show.repository';
+import { z } from 'zod';
+import { validatePathParams, validateQueryParams, tmdbIdSchema } from '$lib/server/validation';
+import { errorHandler } from '$lib/server';
+
+const tvStatusPathParamsSchema = z.object({
+	tmdbId: tmdbIdSchema
+});
+
+const tvStatusQueryParamsSchema = z.object({
+	includeDetails: z.enum(['true', 'false']).transform(val => val === 'true').optional()
+});
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
-	const user = locals.user;
-	if (!user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
-	const tmdbId = Number(params.tmdbId);
-	if (!tmdbId || Number.isNaN(tmdbId)) {
-		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
-	}
-
 	try {
-		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+		const user = locals.user;
+		if (!user) {
+			throw new Error('Unauthorized');
+		}
+
+		// Validate path parameters
+		const pathParams = validatePathParams(tvStatusPathParamsSchema, params);
+
+		// Validate query parameters
+		const queryParams = validateQueryParams(tvStatusQueryParamsSchema, url.searchParams);
+
+		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
 		if (!tvShow) {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
 
 		const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
 
-		const includeDetails = url.searchParams.get('includeDetails') === 'true';
+		const includeDetails = queryParams.includeDetails ?? false;
 		if (includeDetails) {
 			const seasons = await tvShowRepository.getSeasonsByTVShowId(tvShow.id);
 			const seasonsWithStatus = await Promise.all(
@@ -59,34 +71,33 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			watchStatus
 		});
 	} catch (error) {
-		console.error('[API][tv][status][GET] Error:', error);
-		return json({ error: 'Internal server error' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
+import { validateRequestBody } from '$lib/server/validation';
+
+const tvStatusUpdateSchema = z.object({
+	status: z.enum(['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch']),
+	rating: z.coerce.number().int().min(1).max(10).optional(),
+	notes: z.string().optional()
+});
+
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const user = locals.user;
-	if (!user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
-	const tmdbId = Number(params.tmdbId);
-	if (!tmdbId || Number.isNaN(tmdbId)) {
-		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
-	}
-
 	try {
-		const body = await request.json();
-		const { status, rating, notes } = body;
-
-		if (
-			!status ||
-			!['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'].includes(status)
-		) {
-			return json({ error: 'Invalid status' }, { status: 400 });
+		const user = locals.user;
+		if (!user) {
+			throw new Error('Unauthorized');
 		}
 
-		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+		// Validate path parameters
+		const pathParams = validatePathParams(tvStatusPathParamsSchema, params);
+
+		// Validate request body
+		const body = validateRequestBody(tvStatusUpdateSchema, await request.json());
+
+		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
 		if (!tvShow) {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
@@ -94,9 +105,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		const watchStatus = await tvShowRepository.setTVShowStatus(
 			user.id,
 			tvShow.id,
-			status,
-			rating ? Number(rating) : undefined,
-			notes
+			body.status,
+			body.rating,
+			body.notes
 		);
 
 		return json({
@@ -104,38 +115,35 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			watchStatus
 		});
 	} catch (error) {
-		console.error('[API][tv][status][POST] Error:', error);
-		return json({ error: 'Internal server error' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	const user = locals.user;
-	if (!user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
-	const tmdbId = Number(params.tmdbId);
-	if (!tmdbId || Number.isNaN(tmdbId)) {
-		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
-	}
-
 	try {
-		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+		const user = locals.user;
+		if (!user) {
+			throw new Error('Unauthorized');
+		}
+
+		// Validate path parameters
+		const pathParams = validatePathParams(tvStatusPathParamsSchema, params);
+
+		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
 		if (!tvShow) {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
 
-		const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
-		if (watchStatus) {
-		}
+		// Remove the watch status for this TV show by setting it to 'dropped'
+		await tvShowRepository.setTVShowStatus(user.id, tvShow.id, 'dropped');
 
 		return json({
 			success: true,
 			message: 'TV show removed from your list'
 		});
 	} catch (error) {
-		console.error('[API][tv][status][DELETE] Error:', error);
-		return json({ error: 'Internal server error' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };

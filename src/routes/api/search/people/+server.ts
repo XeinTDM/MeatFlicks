@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { fetchTmdbPersonDetails } from '$lib/server/services/tmdb.service';
 import { buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, withCache } from '$lib/server/cache';
 import { createHash } from 'node:crypto';
+import { validateQueryParams, searchPeopleSchema } from '$lib/server/validation';
 
 const DEFAULT_LIMIT = 10;
 
@@ -47,23 +48,14 @@ export interface PersonSearchResult {
 }
 
 export const GET: RequestHandler = async ({ url }) => {
-	const searchParam = url.searchParams.get('q');
-
-	if (!searchParam) {
-		return json({ error: 'Query parameter "q" is required' }, { status: 400 });
-	}
-
-	const query = normalizeQuery(searchParam);
-
-	if (query.length === 0) {
-		return json({ error: 'Query parameter "q" cannot be empty' }, { status: 400 });
-	}
-
-	const limit = parseLimit(url.searchParams.get('limit'));
-	const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
-	const cacheKey = buildCacheKey('search', 'people', hash, limit);
-
 	try {
+		const queryParams = validateQueryParams(searchPeopleSchema, url.searchParams);
+
+		const query = normalizeQuery(queryParams.query);
+		const limit = queryParams.limit;
+		const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
+		const cacheKey = buildCacheKey('search', 'people', hash, limit);
+
 		const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 			const tmdbResults = await searchTmdbPeople(query, limit);
 			return tmdbResults;

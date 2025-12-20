@@ -30,8 +30,8 @@ export const watchlistUpdateSchema = z.object({
 export const playbackProgressSchema = z.object({
 	mediaId: z.string().min(1, 'Media ID is required'),
 	mediaType: z.enum(['movie', 'tv', 'episode']),
-	position: z.number().nonnegative().max(99999, 'Position too large'),
-	duration: z.number().positive().max(99999, 'Duration too large'),
+	position: z.number().min(0).max(99999, { message: 'Position too large' }),
+	duration: z.number().positive().max(99999, { message: 'Duration too large' }),
 	timestamp: z.number().positive().default(() => Date.now()),
 });
 
@@ -45,6 +45,49 @@ export const apiRequestSchema = z.object({
 	path: z.string().min(1, 'Path is required'),
 	query: z.record(z.string()).optional(),
 	body: z.any().optional(),
+});
+
+export const tvIdentifierSchema = z.object({
+	id: z.string().min(1, 'TV identifier is required'),
+	tmdbId: tmdbIdSchema.optional(),
+});
+
+export const tvStatusSchema = z.object({
+	tmdbId: tmdbIdSchema,
+	userId: z.string().min(1, 'User ID is required'),
+	status: z.enum(['watching', 'completed', 'planned', 'dropped', 'on_hold']),
+	episodeProgress: z.coerce.number().int().min(0).optional(),
+	score: z.coerce.number().int().min(1).max(10).optional(),
+});
+
+export const episodeProgressSchema = z.object({
+	tmdbId: tmdbIdSchema,
+	seasonNumber: z.coerce.number().int().positive(),
+	episodeNumber: z.coerce.number().int().positive(),
+	userId: z.string().min(1, 'User ID is required'),
+	position: z.coerce.number().min(0).max(99999),
+	duration: z.coerce.number().positive().max(99999),
+});
+
+export const streamingRequestSchema = z.object({
+	url: z.string().url(),
+	quality: z.string().optional(),
+	subtitles: z.boolean().optional(),
+});
+
+export const searchPeopleSchema = z.object({
+	query: searchQuerySchema,
+	limit: z.coerce.number().int().positive().max(50).default(10),
+});
+
+export const movieByPeopleSchema = z.object({
+	people: z.string().min(1, 'People parameter is required'),
+	limit: z.coerce.number().int().positive().max(50).default(20),
+});
+
+export const searchHistoryItemSchema = z.object({
+	id: z.string().min(1, 'History item ID is required'),
+	userId: z.string().min(1, 'User ID is required'),
 });
 
 /**

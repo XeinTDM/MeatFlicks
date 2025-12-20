@@ -1,41 +1,41 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { libraryRepository } from '$lib/server';
+import { z } from 'zod';
+import { validatePathParams, validateQueryParams } from '$lib/server/validation';
+import { errorHandler } from '$lib/server';
 
 const DEFAULT_LIMIT = 50;
 
-const parseNumberParam = (value: string | null): number | undefined => {
-	if (!value) {
-		return undefined;
-	}
+const genrePathParamsSchema = z.object({
+	genreName: z.string().min(1, 'Genre is required')
+});
 
-	const parsed = Number.parseInt(value, 10);
-	if (!Number.isFinite(parsed) || parsed < 0) {
-		return undefined;
-	}
-
-	return parsed;
-};
+const genreQueryParamsSchema = z.object({
+	limit: z.coerce.number().int().positive().max(100).default(DEFAULT_LIMIT).optional(),
+	offset: z.coerce.number().int().min(0).default(0).optional()
+});
 
 export const GET: RequestHandler = async ({ params, url }) => {
-	const { genreName } = params;
-
-	if (!genreName) {
-		return json({ error: 'Genre is required' }, { status: 400 });
-	}
-
-	const limit = parseNumberParam(url.searchParams.get('limit')) ?? DEFAULT_LIMIT;
-	const offset = parseNumberParam(url.searchParams.get('offset')) ?? 0;
-
 	try {
-		const movies = await libraryRepository.findGenreMovies(genreName, limit, offset);
+		// Validate path parameters
+		const pathParams = validatePathParams(genrePathParamsSchema, params);
+
+		// Validate query parameters
+		const queryParams = validateQueryParams(genreQueryParamsSchema, url.searchParams);
+
+		const movies = await libraryRepository.findGenreMovies(
+			pathParams.genreName,
+			queryParams.limit,
+			queryParams.offset
+		);
 
 		if (movies.length === 0) {
-			return json({ message: 'No movies found for genre: ' + genreName }, { status: 404 });
+			return json({ message: 'No movies found for genre: ' + pathParams.genreName }, { status: 404 });
 		}
 
 		return json(movies);
 	} catch (error) {
-		console.error('Error fetching movies for genre ' + genreName + ':', error);
-		return json({ error: 'Failed to fetch movies for genre ' + genreName }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };

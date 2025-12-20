@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { playbackProgressRepository } from '$lib/server/repositories/playback-progress.repository';
 import { z } from 'zod';
+import { validateRequestBody, validateQueryParams, playbackProgressSchema } from '$lib/server/validation';
 
 const saveProgressSchema = z.object({
 	mediaId: z.string(),
@@ -20,32 +21,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	try {
-		const body = await request.json();
-		const result = saveProgressSchema.safeParse(body);
+		try {
+			const body = await request.json();
+			const validatedBody = validateRequestBody(saveProgressSchema, body);
 
-		if (!result.success) {
-			return json(
-				{ error: 'Invalid request data', details: result.error.format() },
-				{ status: 400 }
+			await playbackProgressRepository.saveProgress(
+				user.id,
+				validatedBody.mediaId,
+				validatedBody.mediaType,
+				validatedBody.progress,
+				validatedBody.duration,
+				validatedBody.seasonNumber,
+				validatedBody.episodeNumber
 			);
+
+			return json({ success: true });
+		} catch (error) {
+			console.error('Error saving playback progress:', error);
+			return json({ error: 'Failed to save playback progress' }, { status: 500 });
 		}
-
-		await playbackProgressRepository.saveProgress(
-			user.id,
-			result.data.mediaId,
-			result.data.mediaType,
-			result.data.progress,
-			result.data.duration,
-			result.data.seasonNumber,
-			result.data.episodeNumber
-		);
-
-		return json({ success: true });
-	} catch (error) {
-		console.error('Error saving playback progress:', error);
-		return json({ error: 'Failed to save playback progress' }, { status: 500 });
-	}
 };
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -56,32 +50,37 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	try {
-		const mediaId = url.searchParams.get('mediaId');
-		const mediaType = url.searchParams.get('mediaType') as 'movie' | 'tv' | null;
-		const seasonNumber = url.searchParams.get('seasonNumber');
-		const episodeNumber = url.searchParams.get('episodeNumber');
-
-		if (mediaId && mediaType) {
-			// Get specific progress
-			const progress = await playbackProgressRepository.getProgress(
-				user.id,
-				mediaId,
-				mediaType,
-				seasonNumber ? parseInt(seasonNumber, 10) : undefined,
-				episodeNumber ? parseInt(episodeNumber, 10) : undefined
+		try {
+			const queryParams = validateQueryParams(
+				z.object({
+					mediaId: z.string().optional(),
+					mediaType: z.enum(['movie', 'tv']).optional(),
+					seasonNumber: z.coerce.number().int().positive().optional(),
+					episodeNumber: z.coerce.number().int().positive().optional()
+				}),
+				url.searchParams
 			);
 
-			return json({ progress });
-		} else {
-			// Get continue watching list
-			const continueWatching = await playbackProgressRepository.getContinueWatching(user.id);
-			return json({ continueWatching });
+			if (queryParams.mediaId && queryParams.mediaType) {
+				// Get specific progress
+				const progress = await playbackProgressRepository.getProgress(
+					user.id,
+					queryParams.mediaId,
+					queryParams.mediaType,
+					queryParams.seasonNumber,
+					queryParams.episodeNumber
+				);
+
+				return json({ progress });
+			} else {
+				// Get continue watching list
+				const continueWatching = await playbackProgressRepository.getContinueWatching(user.id);
+				return json({ continueWatching });
+			}
+		} catch (error) {
+			console.error('Error fetching playback progress:', error);
+			return json({ error: 'Failed to fetch playback progress' }, { status: 500 });
 		}
-	} catch (error) {
-		console.error('Error fetching playback progress:', error);
-		return json({ error: 'Failed to fetch playback progress' }, { status: 500 });
-	}
 };
 
 export const DELETE: RequestHandler = async ({ request, locals }) => {
@@ -92,25 +91,29 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	try {
-		const body = await request.json();
-		const { mediaId, mediaType, seasonNumber, episodeNumber } = body;
+		try {
+			const body = await request.json();
+			const validatedBody = validateRequestBody(
+				z.object({
+					mediaId: z.string(),
+					mediaType: z.enum(['movie', 'tv']),
+					seasonNumber: z.number().int().positive().optional(),
+					episodeNumber: z.number().int().positive().optional()
+				}),
+				body
+			);
 
-		if (!mediaId || !mediaType) {
-			return json({ error: 'mediaId and mediaType are required' }, { status: 400 });
+			await playbackProgressRepository.deleteProgress(
+				user.id,
+				validatedBody.mediaId,
+				validatedBody.mediaType,
+				validatedBody.seasonNumber,
+				validatedBody.episodeNumber
+			);
+
+			return json({ success: true });
+		} catch (error) {
+			console.error('Error deleting playback progress:', error);
+			return json({ error: 'Failed to delete playback progress' }, { status: 500 });
 		}
-
-		await playbackProgressRepository.deleteProgress(
-			user.id,
-			mediaId,
-			mediaType,
-			seasonNumber,
-			episodeNumber
-		);
-
-		return json({ success: true });
-	} catch (error) {
-		console.error('Error deleting playback progress:', error);
-		return json({ error: 'Failed to delete playback progress' }, { status: 500 });
-	}
 };

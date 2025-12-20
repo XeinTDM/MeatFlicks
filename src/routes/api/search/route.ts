@@ -6,6 +6,9 @@ import type { MovieRow } from '$lib/server/db';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import { buildCacheKey, CACHE_TTL_SHORT_SECONDS, withCache } from '$lib/server/cache';
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
+import { validateQueryParams, searchQuerySchema } from '$lib/server/validation';
+import { errorHandler } from '$lib/server';
 
 const DEFAULT_LIMIT = 100;
 
@@ -38,24 +41,21 @@ const sanitizeForFts = (term: string): string => {
 	return cleaned.map((token) => `${token}*`).join(' ');
 };
 
+const searchQueryParamsSchema = z.object({
+	q: searchQuerySchema,
+	limit: z.coerce.number().int().positive().max(100).default(DEFAULT_LIMIT).optional()
+});
+
 export const GET: RequestHandler = async ({ url }) => {
-	const searchParam = url.searchParams.get('q');
-
-	if (!searchParam) {
-		return json({ error: 'Query parameter "q" is required' }, { status: 400 });
-	}
-
-	const query = normalizeQuery(searchParam);
-
-	if (query.length === 0) {
-		return json({ error: 'Query parameter "q" cannot be empty' }, { status: 400 });
-	}
-
-	const limit = parseLimit(url.searchParams.get('limit'));
-	const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
-	const cacheKey = buildCacheKey('search', 'movies', hash, limit);
-
 	try {
+		// Validate query parameters using centralized validation
+		const queryParams = validateQueryParams(searchQueryParamsSchema, url.searchParams);
+
+		const query = normalizeQuery(queryParams.q);
+		const limit = queryParams.limit ?? DEFAULT_LIMIT;
+		const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
+		const cacheKey = buildCacheKey('search', 'movies', hash, limit);
+
 		const results = await withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
 			const ftsQuery = sanitizeForFts(query);
 			let rows: any[] = [];
@@ -107,7 +107,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		return json(results);
 	} catch (error) {
-		console.error('Error searching movies:', error);
-		return json({ error: 'Internal Server Error' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
