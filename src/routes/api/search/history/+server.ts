@@ -2,6 +2,9 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { searchHistoryRepository } from '$lib/server/repositories/search-history.repository';
 import type { MovieFilters } from '$lib/types/filters';
+import { z } from 'zod';
+import { validateRequestBody, searchHistorySchema } from '$lib/server/validation';
+import { errorHandler } from '$lib/server';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	const session = locals.session;
@@ -30,26 +33,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	try {
+		// Validate request body using centralized validation
 		const body = await request.json();
-		const { query, filters } = body;
-
-		if (!query || typeof query !== 'string' || !query.trim()) {
-			return json({ error: 'Query is required' }, { status: 400 });
-		}
-
-		if (filters && typeof filters !== 'object') {
-			return json({ error: 'Invalid filters format' }, { status: 400 });
-		}
+		const validatedBody = validateRequestBody(
+			z.object({
+				query: z.string().min(1, 'Search query is required').max(200, 'Search query too long'),
+				filters: z.any().optional()
+			}),
+			body
+		);
 
 		await searchHistoryRepository.addSearch(
 			user.id,
-			query.trim(),
-			filters as MovieFilters | undefined
+			validatedBody.query.trim(),
+			validatedBody.filters as MovieFilters | undefined
 		);
 		return json({ success: true });
 	} catch (error) {
-		console.error('Error adding search to history:', error);
-		return json({ error: 'Failed to save search history' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
@@ -62,21 +64,24 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 	}
 
 	try {
+		// Validate request body using centralized validation
 		const body = await request.json().catch(() => ({}));
-		const { id } = body;
+		const validatedBody = validateRequestBody(
+			z.object({
+				id: z.number().positive().optional()
+			}),
+			body
+		);
 
-		if (id !== undefined) {
-			if (typeof id !== 'number') {
-				return json({ error: 'Invalid search ID' }, { status: 400 });
-			}
-			await searchHistoryRepository.deleteSearch(user.id, id);
+		if (validatedBody.id !== undefined) {
+			await searchHistoryRepository.deleteSearch(user.id, validatedBody.id);
 		} else {
 			await searchHistoryRepository.clearHistory(user.id);
 		}
 
 		return json({ success: true });
 	} catch (error) {
-		console.error('Error deleting search history:', error);
-		return json({ error: 'Failed to delete search history' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
