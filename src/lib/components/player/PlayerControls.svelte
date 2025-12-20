@@ -8,7 +8,7 @@
 		qualities?: VideoQuality[];
 		subtitles?: SubtitleTrack[];
 		selectedQuality?: string;
-		selectedSubtitle?: string;
+		selectedSubtitle?: string | undefined;
 		onQualityChange?: (quality: VideoQuality) => void;
 		onSubtitleChange?: (subtitle: SubtitleTrack | null) => void;
 		disabled?: boolean;

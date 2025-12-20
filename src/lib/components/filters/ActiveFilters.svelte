@@ -19,7 +19,9 @@
 		value: string;
 	}
 
-	let activeFilterChips = $derived<FilterChip[]>(() => {
+	let activeFilterChips: FilterChip[] = [];
+
+	$effect(() => {
 		const chips: FilterChip[] = [];
 
 		// Year range

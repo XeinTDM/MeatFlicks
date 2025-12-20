@@ -112,7 +112,7 @@ export const watchlist = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		movieId: text('movie_id').notNull(),
-		movieData: text('movie_data').notNull(), // JSON string of the movie data
+		movieData: text('movie_data').notNull(),
 		addedAt: integer('added_at')
 			.notNull()
 			.$defaultFn(() => Date.now())
@@ -281,3 +281,254 @@ export const moviePeopleRelations = relations(moviePeople, ({ one }) => ({
 		references: [people.id]
 	})
 }));
+
+// TV Show Tables for Enhanced Episode Tracking
+
+export const tvShows = sqliteTable(
+	'tv_shows',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		tmdbId: integer('tmdb_id').notNull().unique(),
+		imdbId: text('imdb_id'),
+		title: text('title').notNull(),
+		overview: text('overview'),
+		posterPath: text('poster_path'),
+		backdropPath: text('backdrop_path'),
+		firstAirDate: text('first_air_date'),
+		rating: real('rating'),
+		episodeRuntime: integer('episode_run_time'),
+		numberOfSeasons: integer('number_of_seasons'),
+		numberOfEpisodes: integer('number_of_episodes'),
+		status: text('status'), // 'Returning Series', 'Ended', 'Canceled', etc.
+		originCountry: text('origin_country'), // JSON array of country codes
+		productionCompanies: text('production_companies'), // JSON array of company objects
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		index('idx_tv_shows_tmdb_id').on(table.tmdbId),
+		index('idx_tv_shows_imdb_id').on(table.imdbId),
+		index('idx_tv_shows_title').on(table.title),
+		index('idx_tv_shows_first_air_date').on(table.firstAirDate)
+	]
+);
+
+export const seasons = sqliteTable(
+	'seasons',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		tvShowId: integer('tv_show_id')
+			.notNull()
+			.references(() => tvShows.id, { onDelete: 'cascade' }),
+		seasonNumber: integer('season_number').notNull(),
+		name: text('name').notNull(),
+		overview: text('overview'),
+		posterPath: text('poster_path'),
+		airDate: text('air_date'),
+		episodeCount: integer('episode_count').notNull().default(0),
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.tvShowId, table.seasonNumber] }),
+		index('idx_seasons_tv_show_id').on(table.tvShowId),
+		index('idx_seasons_season_number').on(table.seasonNumber),
+		index('idx_seasons_air_date').on(table.airDate)
+	]
+);
+
+export const episodes = sqliteTable(
+	'episodes',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		tvShowId: integer('tv_show_id')
+			.notNull()
+			.references(() => tvShows.id, { onDelete: 'cascade' }),
+		seasonId: integer('season_id')
+			.notNull()
+			.references(() => seasons.id, { onDelete: 'cascade' }),
+		episodeNumber: integer('episode_number').notNull(),
+		name: text('name').notNull(),
+		overview: text('overview'),
+		stillPath: text('still_path'),
+		airDate: text('air_date'),
+		runtimeMinutes: integer('runtime_minutes'),
+		tmdbId: integer('tmdb_id'),
+		imdbId: text('imdb_id'),
+		guestStars: text('guest_stars'), // JSON array of guest star objects
+		crew: text('crew'), // JSON array of crew objects
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.seasonId, table.episodeNumber] }),
+		index('idx_episodes_tv_show_id').on(table.tvShowId),
+		index('idx_episodes_season_id').on(table.seasonId),
+		index('idx_episodes_episode_number').on(table.episodeNumber),
+		index('idx_episodes_air_date').on(table.airDate),
+		index('idx_episodes_tmdb_id').on(table.tmdbId)
+	]
+);
+
+export const episodeWatchStatus = sqliteTable(
+	'episode_watch_status',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		episodeId: integer('episode_id')
+			.notNull()
+			.references(() => episodes.id, { onDelete: 'cascade' }),
+		watched: integer('watched', { mode: 'boolean' }).notNull().default(false),
+		watchTime: integer('watch_time').notNull().default(0), // seconds watched
+		totalTime: integer('total_time').notNull().default(0), // total episode duration in seconds
+		completedAt: integer('completed_at'), // timestamp when marked as completed
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.episodeId] }),
+		index('idx_episode_watch_status_user_id').on(table.userId),
+		index('idx_episode_watch_status_episode_id').on(table.episodeId),
+		index('idx_episode_watch_status_watched').on(table.watched)
+	]
+);
+
+export const seasonWatchStatus = sqliteTable(
+	'season_watch_status',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		seasonId: integer('season_id')
+			.notNull()
+			.references(() => seasons.id, { onDelete: 'cascade' }),
+		episodesWatched: integer('episodes_watched').notNull().default(0),
+		totalEpisodes: integer('total_episodes').notNull().default(0),
+		completedAt: integer('completed_at'),
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.seasonId] }),
+		index('idx_season_watch_status_user_id').on(table.userId),
+		index('idx_season_watch_status_season_id').on(table.seasonId)
+	]
+);
+
+export const tvShowWatchStatus = sqliteTable(
+	'tv_show_watch_status',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		tvShowId: integer('tv_show_id')
+			.notNull()
+			.references(() => tvShows.id, { onDelete: 'cascade' }),
+		status: text('status').notNull().default('watching'), // 'watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'
+		seasonsCompleted: integer('seasons_completed').notNull().default(0),
+		totalSeasons: integer('total_seasons').notNull().default(0),
+		episodesWatched: integer('episodes_watched').notNull().default(0),
+		totalEpisodes: integer('total_episodes').notNull().default(0),
+		rating: real('rating'),
+		notes: text('notes'),
+		startedAt: integer('started_at'),
+		completedAt: integer('completed_at'),
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.tvShowId] }),
+		index('idx_tv_show_watch_status_user_id').on(table.userId),
+		index('idx_tv_show_watch_status_tv_show_id').on(table.tvShowId),
+		index('idx_tv_show_watch_status_status').on(table.status)
+	]
+);
+
+// Relations for TV Show tables
+export const tvShowsRelations = relations(tvShows, ({ many }) => ({
+	seasons: many(seasons),
+	episodes: many(episodes),
+	tvShowWatchStatus: many(tvShowWatchStatus)
+}));
+
+export const seasonsRelations = relations(seasons, ({ one, many }) => ({
+	tvShow: one(tvShows, {
+		fields: [seasons.tvShowId],
+		references: [tvShows.id]
+	}),
+	episodes: many(episodes),
+	seasonWatchStatus: many(seasonWatchStatus)
+}));
+
+export const episodesRelations = relations(episodes, ({ one, many }) => ({
+	tvShow: one(tvShows, {
+		fields: [episodes.tvShowId],
+		references: [tvShows.id]
+	}),
+	season: one(seasons, {
+		fields: [episodes.seasonId],
+		references: [seasons.id]
+	}),
+	episodeWatchStatus: many(episodeWatchStatus)
+}));
+
+export const episodeWatchStatusRelations = relations(episodeWatchStatus, ({ one }) => ({
+	user: one(users, {
+		fields: [episodeWatchStatus.userId],
+		references: [users.id]
+	}),
+	episode: one(episodes, {
+		fields: [episodeWatchStatus.episodeId],
+		references: [episodes.id]
+	})
+}));
+
+export const seasonWatchStatusRelations = relations(seasonWatchStatus, ({ one }) => ({
+	user: one(users, {
+		fields: [seasonWatchStatus.userId],
+		references: [users.id]
+	}),
+	season: one(seasons, {
+		fields: [seasonWatchStatus.seasonId],
+		references: [seasons.id]
+	})
+}));
+
+export const tvShowWatchStatusRelations = relations(tvShowWatchStatus, ({ one }) => ({
+	user: one(users, {
+		fields: [tvShowWatchStatus.userId],
+		references: [users.id]
+	}),
+	tvShow: one(tvShows, {
+		fields: [tvShowWatchStatus.tvShowId],
+		references: [tvShows.id]
+	})
+});

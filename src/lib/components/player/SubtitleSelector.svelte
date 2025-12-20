@@ -55,7 +55,7 @@
 
 {#if subtitles.length > 0}
 	<div class="relative">
-		<Select bind:value={selectedSubtitleValue} {disabled}>
+	<Select bind:value={selectedSubtitleValue} type="single" {disabled}>
 			<SelectTrigger class="w-36 bg-black/80 text-white border-white/20 hover:bg-black/90">
 				<div class="flex items-center gap-2">
 					<Subtitles class="h-4 w-4" />

@@ -122,14 +122,10 @@
 	let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 	let playbackSpeed = $state(1.0);
 	let iframeElement = $state<HTMLIFrameElement | null>(null);
-
-	// Quality and subtitle state
 	let selectedQuality = $state<string>('auto');
-	let selectedSubtitle = $state<string | undefined>(undefined);
+	let selectedSubtitle = $state<string | null>(null);
 	let currentQualities = $state<VideoQuality[]>([]);
 	let currentSubtitles = $state<SubtitleTrack[]>([]);
-
-	// Save playback progress periodically
 	let progressSaveInterval: ReturnType<typeof setInterval> | null = null;
 
 	function stopProgressTracking() {
@@ -149,17 +145,13 @@
 		const currentSelectedEpisode = selectedEpisode;
 
 		if (currentDisplayPlayer && currentMovie) {
-			// Stop any existing interval first
 			stopProgressTracking();
 
-			// Start new interval with current values
 			if (progressSaveInterval) {
 				clearInterval(progressSaveInterval);
 			}
 
-			// Save progress every 30 seconds
 			progressSaveInterval = setInterval(async () => {
-				// Re-check current values inside interval
 				if (!movie || !displayPlayer) return;
 
 				try {
@@ -181,7 +173,7 @@
 				} catch (error) {
 					console.error('Failed to save playback progress:', error);
 				}
-			}, 30000); // Every 30 seconds
+			}, 30000);
 		} else {
 			stopProgressTracking();
 		}
@@ -191,11 +183,8 @@
 		};
 	});
 
-	// Add keyboard event listener
 	$effect(() => {
-		// Define handler inside effect to capture current reactive values
 		function handleKeyDown(event: KeyboardEvent) {
-			// Don't trigger shortcuts when typing in inputs
 			if (
 				event.target instanceof HTMLInputElement ||
 				event.target instanceof HTMLTextAreaElement ||
@@ -204,7 +193,6 @@
 				return;
 			}
 
-			// Access reactive variables directly - they'll be current values
 			const currentDisplayPlayer = displayPlayer;
 			const currentIsTheaterMode = isTheaterMode;
 			const currentMediaType = mediaType;
@@ -212,67 +200,55 @@
 
 			switch (event.key.toLowerCase()) {
 				case 'f':
-					// Toggle fullscreen/theater mode
 					if (currentDisplayPlayer) {
 						event.preventDefault();
 						toggleTheaterMode();
 					}
 					break;
 				case 'escape':
-					// Exit theater mode
 					if (currentIsTheaterMode) {
 						event.preventDefault();
 						isTheaterMode = false;
 					}
 					break;
 				case 'n':
-					// Next episode (TV only)
 					if (currentDisplayPlayer && currentMediaType === 'tv') {
 						event.preventDefault();
 						goToNextEpisode();
 					}
 					break;
 				case 'p':
-					// Previous episode (TV only)
 					if (currentDisplayPlayer && currentMediaType === 'tv' && currentSelectedEpisode > 1) {
 						event.preventDefault();
 						handleEpisodeSelect(currentSelectedEpisode - 1);
 					}
 					break;
 				case 'arrowright':
-					// Skip forward 10 seconds (if we had direct video control)
 					if (currentDisplayPlayer) {
 						event.preventDefault();
-						// This would need to be implemented with postMessage to iframe
 					}
 					break;
 				case 'arrowleft':
-					// Skip backward 10 seconds (if we had direct video control)
 					if (currentDisplayPlayer) {
 						event.preventDefault();
-						// This would need to be implemented with postMessage to iframe
 					}
 					break;
 				case '+':
 				case '=':
-					// Increase playback speed
 					if (currentDisplayPlayer) {
 						event.preventDefault();
 						playbackSpeed = Math.min(2.0, playbackSpeed + 0.25);
 					}
 					break;
 				case '-':
-					// Decrease playback speed
 					if (currentDisplayPlayer) {
 						event.preventDefault();
 						playbackSpeed = Math.max(0.25, playbackSpeed - 0.25);
 					}
 					break;
 				case 'i':
-					// Toggle Picture-in-Picture
 					if (currentDisplayPlayer && 'pictureInPictureEnabled' in document) {
 						event.preventDefault();
-						// PiP toggle logic
 					}
 					break;
 			}
@@ -720,7 +696,6 @@
 							selectedSubtitle={selectedSubtitle}
 							onQualityChange={handleQualityChange}
 							onSubtitleChange={handleSubtitleChange}
-							class="absolute bottom-4 left-4 z-30"
 							compact={true}
 						/>
 					{/if}

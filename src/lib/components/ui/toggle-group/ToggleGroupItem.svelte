@@ -2,6 +2,7 @@
 	import { cn } from '$lib/utils';
 	import { getContext } from 'svelte';
 	import { toggleGroupItemVariants } from './ToggleGroup.svelte';
+	import type { VariantProps } from 'tailwind-variants';
 
 	interface Props {
 		value: string;
@@ -32,7 +33,10 @@
 
 <button
 	type="button"
-	class={cn(styles({ variant: isActive ? 'active' : 'default' }), className)}
+	class={cn(
+		styles({ variant: isActive ? 'active' : 'default' }),
+		className
+	)}
 	onclick={handleClick}
 	disabled={isDisabled}
 	aria-pressed={isActive}

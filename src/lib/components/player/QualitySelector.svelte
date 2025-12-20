@@ -65,7 +65,7 @@
 
 {#if qualities.length > 1}
 	<div class="relative">
-	<Select bind:value={selectedQualityValue} {disabled}>
+	<Select bind:value={selectedQualityValue} type="single" {disabled}>
 		<SelectTrigger class="w-32 bg-black/80 text-white border-white/20 hover:bg-black/90">
 			<div class="flex items-center gap-2">
 				<Monitor class="h-4 w-4" />

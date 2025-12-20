@@ -3,15 +3,14 @@
 		Select,
 		SelectContent,
 		SelectItem,
-		SelectTrigger,
-		SelectValue
+		SelectTrigger
 	} from '$lib/components/ui/select';
 	import { Button } from '$lib/components/ui/button';
 	import { Globe, X } from '@lucide/svelte';
 	import { LANGUAGE_OPTIONS } from '$lib/types/filters';
 
 	interface Props {
-		language?: string;
+		language?: string | undefined;
 		onLanguageChange: (language: string | undefined) => void;
 	}
 
@@ -26,14 +25,13 @@
 	}
 
 	let selectedLanguageName = $derived(() => {
-		if (!language) return null;
+		if (!language) return undefined;
 		const lang = LANGUAGE_OPTIONS.find((l) => l.code === language);
 		return lang?.name || language;
 	});
 </script>
 
 <div class="space-y-3">
-	<!-- Current selection -->
 	{#if language}
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">
@@ -47,10 +45,9 @@
 		</div>
 	{/if}
 
-	<!-- Language selector -->
-	<Select value={language} onValueChange={handleLanguageChange}>
+	<Select value={language} type="single" onValueChange={handleLanguageChange}>
 		<SelectTrigger class="w-full">
-			<SelectValue placeholder="Select language" />
+			<p class="text-sm">Select language</p>
 		</SelectTrigger>
 		<SelectContent>
 			{#each LANGUAGE_OPTIONS as lang}

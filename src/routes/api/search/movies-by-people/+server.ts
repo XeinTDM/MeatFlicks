@@ -93,7 +93,10 @@ async function searchMoviesByPeople(
 	if (roles.length > 0) {
 		// Filter by specific roles (actor, director, writer, etc.)
 		const roleConditions = roles.map(role => eq(moviePeople.role, role));
-		whereConditions.push(or(...roleConditions));
+		const roleOrCondition = or(...roleConditions);
+		if (roleOrCondition) {
+			whereConditions.push(roleOrCondition);
+		}
 	}
 
 	try {
