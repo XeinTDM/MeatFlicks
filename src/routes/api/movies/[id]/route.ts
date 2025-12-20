@@ -16,6 +16,7 @@ import {
 	lookupTmdbIdByImdbId
 } from '$lib/server/services/tmdb.service';
 import { randomUUID } from 'node:crypto';
+import { errorHandler, NotFoundError, ValidationError } from '$lib/server';
 
 const clampTtl = (value: number): number => {
 	const min = 300;
@@ -191,8 +192,8 @@ async function upsertMovieWithGenres(payload: {
 			releaseDate: payload.releaseDate,
 			rating: payload.rating,
 			durationMinutes: payload.durationMinutes,
-			is4K: payload.is4K ? 1 : 0,
-			isHD: payload.isHD ? 1 : 0,
+			is4K: payload.is4K,
+			isHD: payload.isHD,
 			updatedAt: Date.now()
 		};
 
@@ -283,7 +284,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	const queryMode = queryModeParam === 'tmdb' || queryModeParam === 'imdb' ? queryModeParam : 'id';
 
 	if (!movieIdentifier) {
-		return json({ error: 'Movie identifier is required.' }, { status: 400 });
+		throw new ValidationError('Movie identifier is required.');
 	}
 
 	try {
@@ -300,7 +301,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 				: null;
 
 			if (!fallbackMovie) {
-				return json({ message: 'Movie not found' }, { status: 404 });
+				throw new NotFoundError('Movie not found');
 			}
 
 			return json(fallbackMovie);
@@ -321,10 +322,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 		return json(payload);
 	} catch (error) {
-		console.error('Error fetching movie with identifier ' + movieIdentifier + ':', error);
-		return json(
-			{ error: 'Failed to fetch movie with identifier ' + movieIdentifier },
-			{ status: 500 }
-		);
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };

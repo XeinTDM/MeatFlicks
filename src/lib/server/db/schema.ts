@@ -34,8 +34,8 @@ export const movies = sqliteTable(
 		releaseDate: text('releaseDate'),
 		rating: real('rating'),
 		durationMinutes: integer('durationMinutes'),
-		is4K: integer('is4K').notNull().default(0),
-		isHD: integer('isHD').notNull().default(0),
+		is4K: integer('is4K', { mode: 'boolean' }).notNull().default(false),
+		isHD: integer('isHD', { mode: 'boolean' }).notNull().default(false),
 		language: text('language'),
 		popularity: real('popularity'),
 		collectionId: integer('collectionId').references(() => collections.id, {
@@ -215,7 +215,6 @@ export const people = sqliteTable(
 export const moviePeople = sqliteTable(
 	'movie_people',
 	{
-		id: integer('id').primaryKey({ autoIncrement: true }),
 		movieId: text('movieId')
 			.notNull()
 			.references(() => movies.id, { onDelete: 'cascade' }),

@@ -72,8 +72,8 @@ export const upsertMovieWithGenres = async (
 				releaseDate: payload.releaseDate,
 				rating: payload.rating,
 				durationMinutes: payload.durationMinutes,
-				is4K: payload.is4K ? 1 : 0,
-				isHD: payload.isHD ? 1 : 0,
+				is4K: payload.is4K,
+				isHD: payload.isHD,
 				collectionId: payload.collectionId ?? (existingMovie?.collectionId || null),
 				updatedAt: Date.now()
 			};

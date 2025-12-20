@@ -21,16 +21,14 @@ export interface MovieRow {
 	releaseDate: string | null;
 	rating: number | null;
 	durationMinutes: number | null;
-	is4K: 0 | 1;
-	isHD: 0 | 1;
+	is4K: boolean;
+	isHD: boolean;
 	collectionId: number | null;
 	createdAt: number;
 	updatedAt: number;
 }
 
-export interface MovieRecord extends Omit<MovieRow, 'is4K' | 'isHD'> {
-	is4K: boolean;
-	isHD: boolean;
+export interface MovieRecord extends MovieRow {
 	genres: GenreRecord[];
 }
 
