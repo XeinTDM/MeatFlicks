@@ -213,7 +213,6 @@ export const libraryRepository = {
 			const offset = calculateOffset(pagination.page, pagination.pageSize);
 			const conditions: any[] = [];
 
-			// Year filters
 			if (filters.yearFrom) {
 				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
 			}
@@ -221,7 +220,6 @@ export const libraryRepository = {
 				conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
 			}
 
-			// Rating filters
 			if (filters.minRating !== undefined) {
 				conditions.push(gte(movies.rating, filters.minRating));
 			}
@@ -229,7 +227,6 @@ export const libraryRepository = {
 				conditions.push(lte(movies.rating, filters.maxRating));
 			}
 
-			// Runtime filters
 			if (filters.runtimeMin !== undefined) {
 				conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
 			}
@@ -237,21 +234,16 @@ export const libraryRepository = {
 				conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
 			}
 
-			// Language filter
 			if (filters.language) {
 				conditions.push(eq(movies.language, filters.language));
 			}
 
-			// Build base query
 			let query = db.select({ movies }).from(movies);
 
-			// Handle genre filtering
 			if (filters.genres && filters.genres.length > 0) {
 				const genreMode = filters.genreMode || 'OR';
 
 				if (genreMode === 'AND') {
-					// For AND mode, we need movies that have ALL specified genres
-					// This requires a more complex query with subqueries
 					for (const genreName of filters.genres) {
 						query = query.innerJoin(
 							moviesGenres,
@@ -265,7 +257,6 @@ export const libraryRepository = {
 						) as any;
 					}
 				} else {
-					// For OR mode, movies can have ANY of the specified genres
 					query = query
 						.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
 						.innerJoin(genres, eq(genres.id, moviesGenres.genreId)) as any;
@@ -274,27 +265,21 @@ export const libraryRepository = {
 				}
 			}
 
-			// Apply all conditions
 			if (conditions.length > 0) {
 				query = query.where(and(...conditions)) as any;
 			}
 
-			// Apply sorting
 			const orderByClause = this.buildOrderByClause(sort);
 			query = query.orderBy(...orderByClause) as any;
 
-			// Get total count for pagination (before limit/offset)
 			const totalItems = await this.countMoviesWithFilters(filters);
 
-			// Apply pagination
 			query = query.limit(pagination.pageSize).offset(offset) as any;
 
-			// Execute query
 			const rows = await query;
 			const movieRows = rows.map((r: any) => r.movies);
 			const items = await mapRowsToSummaries(movieRows as MovieRow[]);
 
-			// Calculate pagination metadata
 			const paginationMetadata = calculatePagination(
 				pagination.page,
 				pagination.pageSize,
@@ -318,7 +303,6 @@ export const libraryRepository = {
 		try {
 			const conditions: any[] = [];
 
-			// Year filters
 			if (filters.yearFrom) {
 				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
 			}
@@ -326,7 +310,6 @@ export const libraryRepository = {
 				conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
 			}
 
-			// Rating filters
 			if (filters.minRating !== undefined) {
 				conditions.push(gte(movies.rating, filters.minRating));
 			}
@@ -334,7 +317,6 @@ export const libraryRepository = {
 				conditions.push(lte(movies.rating, filters.maxRating));
 			}
 
-			// Runtime filters
 			if (filters.runtimeMin !== undefined) {
 				conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
 			}
@@ -342,15 +324,12 @@ export const libraryRepository = {
 				conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
 			}
 
-			// Language filter
 			if (filters.language) {
 				conditions.push(eq(movies.language, filters.language));
 			}
 
-			// Build count query
 			let countQuery = db.select({ count: sql<number>`count(DISTINCT ${movies.id})` }).from(movies);
 
-			// Handle genre filtering
 			if (filters.genres && filters.genres.length > 0) {
 				const genreMode = filters.genreMode || 'OR';
 
@@ -361,10 +340,8 @@ export const libraryRepository = {
 
 					conditions.push(inArray(genres.name, filters.genres));
 				}
-				// For AND mode, counting is more complex - we'll use a simpler approach
 			}
 
-			// Apply conditions
 			if (conditions.length > 0) {
 				countQuery = countQuery.where(and(...conditions)) as any;
 			}

@@ -34,7 +34,6 @@ export function extractQualities(sources: QualitySource[], fallbackUrl?: string)
 		});
 	}
 
-	// Add fallback URL if provided and no qualities found
 	if (qualities.length === 0 && fallbackUrl) {
 		qualities.push({
 			label: 'Auto',
@@ -72,7 +71,6 @@ export function extractSubtitles(sources: SubtitleSource[]): SubtitleTrack[] {
 	}
 
 	return tracks.sort((a, b) => {
-		// Sort by: default first, then English, then alphabetically
 		if (a.isDefault && !b.isDefault) return -1;
 		if (!a.isDefault && b.isDefault) return 1;
 		if (a.language === 'en' && b.language !== 'en') return -1;
@@ -86,10 +84,10 @@ export function extractSubtitles(sources: SubtitleSource[]): SubtitleTrack[] {
  */
 function parseResolutionFromLabel(label: string): string {
 	const resolutionPatterns = [
-		/(\d{3,4})p/i,           // 720p, 1080p
-		/(\d{3,4})x(\d{3,4})/i,  // 1920x1080
-		/(4K|UHD)/i,             // 4K, UHD
-		/(HD|SD)/i               // HD, SD
+		/(\d{3,4})p/i,
+		/(\d{3,4})x(\d{3,4})/i,
+		/(4K|UHD)/i,
+		/(HD|SD)/i
 	];
 
 	for (const pattern of resolutionPatterns) {
@@ -176,43 +174,37 @@ export function getBestQualityUrl(
 ): string | null {
 	if (!qualities.length) return null;
 
-	// If no preferred quality, return default or first
 	if (!preferredQuality) {
 		const defaultQuality = qualities.find(q => q.isDefault);
 		return defaultQuality?.url || qualities[0].url;
 	}
 
-	// Try to find exact match
-	const exactMatch = qualities.find(q => 
+	const exactMatch = qualities.find(q =>
 		q.label.toLowerCase().includes(preferredQuality.toLowerCase()) ||
 		q.resolution.toLowerCase().includes(preferredQuality.toLowerCase())
 	);
 	if (exactMatch) return exactMatch.url;
 
-	// Try to find closest quality based on resolution hierarchy
 	const qualityHierarchy = ['4K', '1080p', '720p', '480p', '360p'];
-	const targetIndex = qualityHierarchy.findIndex(q => 
+	const targetIndex = qualityHierarchy.findIndex(q =>
 		preferredQuality.toLowerCase().includes(q.toLowerCase())
 	);
 
 	if (targetIndex !== -1) {
-		// Look for quality at or above the target
 		for (let i = targetIndex; i >= 0; i--) {
-			const match = qualities.find(q => 
+			const match = qualities.find(q =>
 				q.resolution.toLowerCase().includes(qualityHierarchy[i].toLowerCase())
 			);
 			if (match) return match.url;
 		}
-		// Look for quality below the target
 		for (let i = targetIndex + 1; i < qualityHierarchy.length; i++) {
-			const match = qualities.find(q => 
+			const match = qualities.find(q =>
 				q.resolution.toLowerCase().includes(qualityHierarchy[i].toLowerCase())
 			);
 			if (match) return match.url;
 		}
 	}
 
-	// Fallback to first available
 	return qualities[0].url;
 }
 
@@ -225,25 +217,21 @@ export function getSubtitleTrack(
 ): SubtitleTrack | null {
 	if (!subtitles.length) return null;
 
-	// If no preferred language, return default or first
 	if (!preferredLanguage) {
 		const defaultTrack = subtitles.find(s => s.isDefault);
 		return defaultTrack || subtitles[0];
 	}
 
-	// Try to find exact language match
-	const exactMatch = subtitles.find(s => 
-		s.language === preferredLanguage || 
+	const exactMatch = subtitles.find(s =>
+		s.language === preferredLanguage ||
 		s.label.toLowerCase().includes(preferredLanguage.toLowerCase())
 	);
 	if (exactMatch) return exactMatch;
 
-	// Try to find English as fallback
-	const englishTrack = subtitles.find(s => 
+	const englishTrack = subtitles.find(s =>
 		s.language === 'en' || s.language === 'eng' || s.label.toLowerCase().includes('english')
 	);
 	if (englishTrack) return englishTrack;
 
-	// Fallback to first available
 	return subtitles[0];
 }

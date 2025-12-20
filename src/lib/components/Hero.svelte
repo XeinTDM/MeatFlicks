@@ -197,7 +197,6 @@
 		trailerVideoId ? `https://www.youtube.com/watch?v=${trailerVideoId}` : null
 	);
 
-	// Actions
 	function goToSlide(index: number) {
 		if (!slides.length) return;
 		const length = slides.length;
@@ -279,9 +278,7 @@
 		}
 	}
 
-	// Effects
 	$effect(() => {
-		// Reset active index if out of bounds
 		if (slides.length === 0) {
 			activeIndex = 0;
 		} else if (activeIndex >= slides.length) {
@@ -290,14 +287,12 @@
 	});
 
 	$effect(() => {
-		// Disable autoplay for single slides
 		if (!isMultiSlide && isAutoPlaying) {
 			isAutoPlaying = false;
 		}
 	});
 
 	$effect(() => {
-		// Autoplay timer
 		if (!isAutoPlaying || !isMultiSlide) return;
 
 		const timer = setInterval(showNext, safeInterval);
@@ -305,7 +300,6 @@
 	});
 
 	$effect(() => {
-		// Message auto-dismiss
 		if (!message) return;
 
 		const timeout = setTimeout(() => {
@@ -316,7 +310,6 @@
 	});
 
 	$effect(() => {
-		// Clear message on slide change
 		const key = activeSlide?.key ?? null;
 		if (lastSlideKey !== key) {
 			lastSlideKey = key;

@@ -102,16 +102,12 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 	let invalidated = 0;
 
 	try {
-		// Convert pattern to regex
-		// Escape special regex characters except * and :
-		// Replace * with .* (any characters)
 		const escapedPattern = pattern
-			.replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-			.replace(/\*/g, '.*'); // Replace * with .*
+			.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+			.replace(/\*/g, '.*');
 
 		const regex = new RegExp(`^meatflicks:${escapedPattern}$`);
 
-		// Clear matching keys from LRU cache
 		const lruKeys = Array.from(lruStore.keys());
 		for (const key of lruKeys) {
 			if (regex.test(key)) {
@@ -120,33 +116,25 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 			}
 		}
 
-		// For SQLite cache, try to access KeyvSqlite's internal database
-		// KeyvSqlite uses better-sqlite3 internally
 		try {
 			const sqliteStore = store as any;
 			const db = sqliteStore.db || sqliteStore.client;
 
 			if (db) {
-				// Convert pattern to SQL LIKE pattern
-				// Keyv stores keys with namespace prefix: "meatflicks:key"
 				const sqlPattern = `meatflicks:${pattern.replace(/\*/g, '%')}`;
 
-				// Query matching keys from SQLite
 				let rows: Array<{ key: string }> = [];
 
 				if (typeof db.prepare === 'function') {
-					// better-sqlite3 style
 					const stmt = db.prepare('SELECT key FROM cache_v2 WHERE key LIKE ?');
 					rows = stmt.all(sqlPattern) as Array<{ key: string }>;
 				} else if (typeof db.query === 'function') {
-					// Async query style
 					const result = await db.query('SELECT key FROM cache_v2 WHERE key LIKE ?', [sqlPattern]);
 					rows = Array.isArray(result) ? result : result.rows || [];
 				}
 
 				for (const row of rows) {
 					const fullKey = row.key;
-					// Remove namespace prefix for deletion
 					const keyWithoutNamespace = fullKey.replace(/^meatflicks:/, '');
 
 					if (regex.test(fullKey)) {
@@ -156,8 +144,6 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 				}
 			}
 		} catch (dbError) {
-			// If database access fails, log warning but continue
-			// LRU cache clearing is still effective for immediate performance
 			logger.warn(
 				{ err: dbError, pattern },
 				'Failed to query SQLite cache, only cleared LRU cache'

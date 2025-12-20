@@ -63,13 +63,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
 	const cacheKey = buildCacheKey('search', 'people', hash, limit);
 
-	try {
-		const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-			// For now, we'll search TMDB directly since we don't have local people data yet
-			// In the future, this could be enhanced to search local database first
-			const tmdbResults = await searchTmdbPeople(query, limit);
-			return tmdbResults;
-		});
+		try {
+			const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+				const tmdbResults = await searchTmdbPeople(query, limit);
+				return tmdbResults;
+			});
 
 		return json(results);
 	} catch (error) {
@@ -79,18 +77,17 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 async function searchTmdbPeople(query: string, limit: number): Promise<PersonSearchResult[]> {
-	try {
-		// Use TMDB's person search API
-		const response = await fetch(
-			`https://api.themoviedb.org/3/search/person?query=${encodeURIComponent(
-				query
-			)}&include_adult=false&language=en-US&page=1`,
-			{
-				headers: {
-					Authorization: `Bearer ${process.env.TMDB_API_KEY || process.env.TMDB_READ_ACCESS_TOKEN}`
+		try {
+			const response = await fetch(
+				`https://api.themoviedb.org/3/search/person?query=${encodeURIComponent(
+					query
+				)}&include_adult=false&language=en-US&page=1`,
+				{
+					headers: {
+						Authorization: `Bearer ${process.env.TMDB_API_KEY || process.env.TMDB_READ_ACCESS_TOKEN}`
+					}
 				}
-			}
-		);
+			);
 
 		if (!response.ok) {
 			throw new Error(`TMDB API responded with status ${response.status}`);
@@ -106,12 +103,12 @@ async function searchTmdbPeople(query: string, limit: number): Promise<PersonSea
 			id: person.id,
 			tmdbId: person.id,
 			name: person.name,
-			profilePath: person.profile_path 
+			profilePath: person.profile_path
 				? `https://image.tmdb.org/t/p/w185${person.profile_path}`
 				: null,
 			knownForDepartment: person.known_for_department || null,
 			popularity: person.popularity || 0,
-			biography: undefined, // We don't get this in search results, only in detailed fetch
+			biography: undefined,
 			birthday: undefined,
 			placeOfBirth: undefined
 		}));

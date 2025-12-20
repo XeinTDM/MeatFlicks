@@ -40,14 +40,12 @@
 		}
 	}
 
-	// Only show settings panel if we have qualities or subtitles
 	const hasControls = $derived(qualities.length > 1 || subtitles.length > 0);
 </script>
 
 {#if hasControls}
 	<div class="relative">
 		{#if compact}
-			<!-- Compact mode: Show settings button -->
 			<button
 				class="flex items-center gap-2 bg-black/80 text-white px-3 py-2 rounded-lg border border-white/20 hover:bg-black/90 transition-colors"
 				onclick={() => showSettings = !showSettings}
@@ -87,7 +85,6 @@
 				</div>
 			{/if}
 		{:else}
-			<!-- Full mode: Show controls directly -->
 			<div class="flex items-center gap-3">
 				{#if qualities.length > 1}
 					<QualitySelector
@@ -110,14 +107,12 @@
 		{/if}
 	</div>
 {:else if !disabled}
-	<!-- No controls available -->
 	<div class="flex items-center gap-2 text-sm text-white/60 bg-black/40 px-3 py-1 rounded">
 		<Settings class="h-4 w-4" />
 		<span>No controls</span>
 	</div>
 {/if}
 
-<!-- Click outside to close settings panel -->
 {#if compact && showSettings}
 	<div
 		class="fixed inset-0 z-40"
@@ -129,7 +124,6 @@
 {/if}
 
 <style>
-	/* Ensure settings panel appears above other content */
 	:global(.relative) {
 		position: relative;
 	}

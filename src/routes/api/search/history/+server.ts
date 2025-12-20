@@ -37,7 +37,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Query is required' }, { status: 400 });
 		}
 
-		// Validate filters if provided
 		if (filters && typeof filters !== 'object') {
 			return json({ error: 'Invalid filters format' }, { status: 400 });
 		}
@@ -67,13 +66,11 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		const { id } = body;
 
 		if (id !== undefined) {
-			// Delete specific search entry
 			if (typeof id !== 'number') {
 				return json({ error: 'Invalid search ID' }, { status: 400 });
 			}
 			await searchHistoryRepository.deleteSearch(user.id, id);
 		} else {
-			// Clear all history
 			await searchHistoryRepository.clearHistory(user.id);
 		}
 

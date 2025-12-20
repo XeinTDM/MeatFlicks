@@ -6,7 +6,6 @@ export const prerender = true;
 
 const website = 'https://meatflicks.com';
 
-// Static pages with their priorities
 const staticPages = [
 	{ url: '', changefreq: 'daily', priority: '1.0' },
 	{ url: '/explore', changefreq: 'daily', priority: '0.9' },
@@ -21,7 +20,6 @@ const staticPages = [
 
 export async function GET() {
 	try {
-		// Fetch recent movies from database
 		const recentMovies = await db
 			.select({
 				id: movies.id,
@@ -29,7 +27,7 @@ export async function GET() {
 			})
 			.from(movies)
 			.orderBy(desc(movies.updatedAt))
-			.limit(1000); // Limit to prevent sitemap from being too large
+			.limit(1000);
 
 		const movieEntries = recentMovies
 			.map((movie) => {
@@ -45,9 +43,6 @@ export async function GET() {
 			})
 			.join('');
 
-		// Note: TV shows are fetched dynamically from TMDB API and not stored in database
-		// They are accessible via /tv/[tmdbId] but cannot be included in static sitemap
-		// TV show URLs are generated on-demand when accessed
 
 		const staticEntries = staticPages
 			.map(
@@ -82,7 +77,6 @@ export async function GET() {
 	} catch (error) {
 		console.error('Error generating sitemap:', error);
 
-		// Fallback to static sitemap if database query fails
 		const fallbackBody = `<?xml version="1.0" encoding="UTF-8" ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${staticPages

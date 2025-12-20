@@ -12,18 +12,15 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
 	}
 
-	try {
-		// Get TV show from database
-		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
-		if (!tvShow) {
-			return json({ error: 'TV show not found' }, { status: 404 });
-		}
+		try {
+			const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+			if (!tvShow) {
+				return json({ error: 'TV show not found' }, { status: 404 });
+			}
 
-		// Get user's watch status for this TV show
-		const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
+			const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
 
-		// Get detailed status with seasons and episodes if requested
-		const includeDetails = url.searchParams.get('includeDetails') === 'true';
+			const includeDetails = url.searchParams.get('includeDetails') === 'true';
 		if (includeDetails) {
 			const seasons = await tvShowRepository.getSeasonsByTVShowId(tvShow.id);
 			const seasonsWithStatus = await Promise.all(
@@ -75,28 +72,26 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
 	}
 
-	try {
-		const body = await request.json();
-		const { status, rating, notes } = body;
+		try {
+			const body = await request.json();
+			const { status, rating, notes } = body;
 
-		if (!status || !['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'].includes(status)) {
-			return json({ error: 'Invalid status' }, { status: 400 });
-		}
+			if (!status || !['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'].includes(status)) {
+				return json({ error: 'Invalid status' }, { status: 400 });
+			}
 
-		// Get TV show from database
-		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
-		if (!tvShow) {
-			return json({ error: 'TV show not found' }, { status: 404 });
-		}
+			const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+			if (!tvShow) {
+				return json({ error: 'TV show not found' }, { status: 404 });
+			}
 
-		// Update TV show status
-		const watchStatus = await tvShowRepository.setTVShowStatus(
-			user.id,
-			tvShow.id,
-			status,
-			rating ? Number(rating) : undefined,
-			notes
-		);
+			const watchStatus = await tvShowRepository.setTVShowStatus(
+				user.id,
+				tvShow.id,
+				status,
+				rating ? Number(rating) : undefined,
+				notes
+			);
 
 		return json({
 			success: true,
@@ -119,19 +114,15 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
 	}
 
-	try {
-		// Get TV show from database
-		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
-		if (!tvShow) {
-			return json({ error: 'TV show not found' }, { status: 404 });
-		}
+		try {
+			const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+			if (!tvShow) {
+				return json({ error: 'TV show not found' }, { status: 404 });
+			}
 
-		// Delete TV show watch status (this would cascade to delete season and episode statuses)
-		const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
-		if (watchStatus) {
-			// Note: We don't have a delete method in the repository, but this would be implemented
-			// For now, we'll just return success
-		}
+			const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
+			if (watchStatus) {
+			}
 
 		return json({
 			success: true,
