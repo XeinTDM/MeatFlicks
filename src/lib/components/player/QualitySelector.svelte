@@ -10,18 +10,15 @@
 		disabled?: boolean;
 	}
 
-	let {
-		qualities = [],
-		selectedQuality,
-		onQualityChange,
-		disabled = false
-	}: Props = $props();
+	let { qualities = [], selectedQuality, onQualityChange, disabled = false }: Props = $props();
 
-	let selectedQualityValue = $state(selectedQuality || qualities.find(q => q.isDefault)?.label || qualities[0]?.label || 'auto');
+	let selectedQualityValue = $state(
+		selectedQuality || qualities.find((q) => q.isDefault)?.label || qualities[0]?.label || 'auto'
+	);
 
 	function handleQualityChange(value: string) {
 		selectedQualityValue = value;
-		const quality = qualities.find(q => q.label === value || q.resolution === value);
+		const quality = qualities.find((q) => q.label === value || q.resolution === value);
 		if (quality && onQualityChange) {
 			onQualityChange(quality);
 		}
@@ -55,39 +52,42 @@
 
 	// Get current selected quality object
 	const currentQuality = $derived(
-		qualities.find(q => 
-			q.label === selectedQualityValue || 
-			q.resolution === selectedQualityValue ||
-			(q.isDefault && selectedQualityValue === 'auto')
-		) || qualities.find(q => q.isDefault) || qualities[0]
+		qualities.find(
+			(q) =>
+				q.label === selectedQualityValue ||
+				q.resolution === selectedQualityValue ||
+				(q.isDefault && selectedQualityValue === 'auto')
+		) ||
+			qualities.find((q) => q.isDefault) ||
+			qualities[0]
 	);
 </script>
 
 {#if qualities.length > 1}
 	<div class="relative">
-	<Select bind:value={selectedQualityValue} type="single" {disabled}>
-		<SelectTrigger class="w-32 bg-black/80 text-white border-white/20 hover:bg-black/90">
-			<div class="flex items-center gap-2">
-				<Monitor class="h-4 w-4" />
-				<span>{getQualityDisplayName(currentQuality)}</span>
-			</div>
-		</SelectTrigger>
-		<SelectContent class="bg-black/95 border-white/20">
-			{#each sortedQualities as quality}
-				<SelectItem value={quality.label} class="text-white hover:bg-white/10 focus:bg-white/10">
-					<div class="flex items-center justify-between w-full">
-						<span>{getQualityDisplayName(quality)}</span>
-						{#if quality.isDefault}
-							<span class="text-xs text-primary ml-2">Default</span>
-						{/if}
-					</div>
-				</SelectItem>
-			{/each}
-		</SelectContent>
-	</Select>
+		<Select bind:value={selectedQualityValue} type="single" {disabled}>
+			<SelectTrigger class="w-32 border-white/20 bg-black/80 text-white hover:bg-black/90">
+				<div class="flex items-center gap-2">
+					<Monitor class="h-4 w-4" />
+					<span>{getQualityDisplayName(currentQuality)}</span>
+				</div>
+			</SelectTrigger>
+			<SelectContent class="border-white/20 bg-black/95">
+				{#each sortedQualities as quality}
+					<SelectItem value={quality.label} class="text-white hover:bg-white/10 focus:bg-white/10">
+						<div class="flex w-full items-center justify-between">
+							<span>{getQualityDisplayName(quality)}</span>
+							{#if quality.isDefault}
+								<span class="ml-2 text-xs text-primary">Default</span>
+							{/if}
+						</div>
+					</SelectItem>
+				{/each}
+			</SelectContent>
+		</Select>
 	</div>
 {:else if qualities.length === 1}
-	<div class="flex items-center gap-2 text-sm text-white/80 bg-black/60 px-3 py-1 rounded">
+	<div class="flex items-center gap-2 rounded bg-black/60 px-3 py-1 text-sm text-white/80">
 		<Monitor class="h-4 w-4" />
 		<span>{getQualityDisplayName(qualities[0])}</span>
 	</div>

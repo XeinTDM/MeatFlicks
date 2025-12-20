@@ -79,7 +79,7 @@
 
 	function handlePersonSelect(person: PersonSearchResult) {
 		// Check if person is already selected
-		if (!selectedPeople.find(p => p.id === person.id)) {
+		if (!selectedPeople.find((p) => p.id === person.id)) {
 			dispatch('personselect', person);
 			query = '';
 			results = [];
@@ -118,13 +118,11 @@
 		{#if selectedPeople.length > 0}
 			<div class="flex flex-wrap gap-2">
 				{#each selectedPeople as person (person.id)}
-					<div class="group flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm">
+					<div
+						class="group flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm"
+					>
 						{#if person.profilePath}
-							<img 
-								src={person.profilePath} 
-								alt="" 
-								class="h-5 w-5 rounded-full object-cover"
-							/>
+							<img src={person.profilePath} alt="" class="h-5 w-5 rounded-full object-cover" />
 						{:else}
 							<User class="h-4 w-4 text-primary" />
 						{/if}
@@ -152,12 +150,12 @@
 			/>
 			<input
 				type="text"
-				placeholder={placeholder}
+				{placeholder}
 				class="flex-1 border-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
 				value={query}
 				oninput={handleInput}
 				onfocus={() => (isFocused = true)}
-				disabled={disabled}
+				{disabled}
 				onkeydown={(e) => {
 					if (e.key === 'Escape') {
 						isFocused = false;
@@ -169,7 +167,7 @@
 					onclick={clearSearch}
 					class="rounded-full p-1 transition-colors hover:bg-muted"
 					type="button"
-					disabled={disabled}
+					{disabled}
 				>
 					<X class="size-3 text-muted-foreground" />
 				</button>
@@ -180,7 +178,7 @@
 	<!-- Search Results Dropdown -->
 	{#if isFocused && (results.length > 0 || isLoading)}
 		<div
-			class="absolute top-full left-0 right-0 z-[100] mt-2 rounded-xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
+			class="absolute top-full right-0 left-0 z-[100] mt-2 rounded-xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
 		>
 			{#if isLoading}
 				<div class="flex items-center justify-center p-4">
@@ -197,11 +195,7 @@
 							>
 								<div class="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-muted">
 									{#if person.profilePath}
-										<img 
-											src={person.profilePath} 
-											alt="" 
-											class="h-full w-full object-cover"
-										/>
+										<img src={person.profilePath} alt="" class="h-full w-full object-cover" />
 									{:else}
 										<div class="flex h-full w-full items-center justify-center">
 											<User class="h-5 w-5 text-muted-foreground" />
@@ -209,7 +203,9 @@
 									{/if}
 								</div>
 								<div class="min-w-0 flex-1">
-									<h4 class="truncate text-sm font-semibold transition-colors group-hover:text-primary">
+									<h4
+										class="truncate text-sm font-semibold transition-colors group-hover:text-primary"
+									>
 										{person.name}
 									</h4>
 									{#if person.knownForDepartment}

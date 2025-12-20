@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		Select,
-		SelectContent,
-		SelectItem,
-		SelectTrigger
-	} from '$lib/components/ui/select';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { Button } from '$lib/components/ui/button';
 	import { Globe, X } from '@lucide/svelte';
 	import { LANGUAGE_OPTIONS } from '$lib/types/filters';

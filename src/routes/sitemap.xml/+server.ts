@@ -43,7 +43,6 @@ export async function GET() {
 			})
 			.join('');
 
-
 		const staticEntries = staticPages
 			.map(
 				(page) => `

@@ -9,7 +9,14 @@ import {
 	episodeWatchStatus,
 	users
 } from '$lib/server/db/schema';
-import type { TVShow, Season, Episode, EpisodeWatchStatus, SeasonWatchStatus, TVShowWatchStatus } from '$lib/types/tv-show';
+import type {
+	TVShow,
+	Season,
+	Episode,
+	EpisodeWatchStatus,
+	SeasonWatchStatus,
+	TVShowWatchStatus
+} from '$lib/types/tv-show';
 
 export class TVShowRepository {
 	async createTVShow(showData: Omit<TVShow, 'id' | 'createdAt' | 'updatedAt'>): Promise<TVShow> {
@@ -32,7 +39,10 @@ export class TVShowRepository {
 		return result || null;
 	}
 
-	async updateTVShow(id: number, updateData: Partial<Omit<TVShow, 'id' | 'createdAt'>>): Promise<TVShow> {
+	async updateTVShow(
+		id: number,
+		updateData: Partial<Omit<TVShow, 'id' | 'createdAt'>>
+	): Promise<TVShow> {
 		const [result] = await db
 			.update(tvShows)
 			.set({ ...updateData, updatedAt: Date.now() })
@@ -72,7 +82,10 @@ export class TVShowRepository {
 		return result || null;
 	}
 
-	async updateSeason(id: number, updateData: Partial<Omit<Season, 'id' | 'createdAt'>>): Promise<Season> {
+	async updateSeason(
+		id: number,
+		updateData: Partial<Omit<Season, 'id' | 'createdAt'>>
+	): Promise<Season> {
 		const [result] = await db
 			.update(seasons)
 			.set({ ...updateData, updatedAt: Date.now() })
@@ -86,7 +99,9 @@ export class TVShowRepository {
 	}
 
 	// Episode operations
-	async createEpisode(episodeData: Omit<Episode, 'id' | 'createdAt' | 'updatedAt'>): Promise<Episode> {
+	async createEpisode(
+		episodeData: Omit<Episode, 'id' | 'createdAt' | 'updatedAt'>
+	): Promise<Episode> {
 		const [result] = await db.insert(episodes).values(episodeData).returning();
 		return result;
 	}
@@ -137,7 +152,10 @@ export class TVShowRepository {
 		return result || null;
 	}
 
-	async updateEpisode(id: number, updateData: Partial<Omit<Episode, 'id' | 'createdAt'>>): Promise<Episode> {
+	async updateEpisode(
+		id: number,
+		updateData: Partial<Omit<Episode, 'id' | 'createdAt'>>
+	): Promise<Episode> {
 		const [result] = await db
 			.update(episodes)
 			.set({ ...updateData, updatedAt: Date.now() })
@@ -151,11 +169,16 @@ export class TVShowRepository {
 	}
 
 	// Episode Watch Status operations
-	async getEpisodeWatchStatus(userId: string, episodeId: number): Promise<EpisodeWatchStatus | null> {
+	async getEpisodeWatchStatus(
+		userId: string,
+		episodeId: number
+	): Promise<EpisodeWatchStatus | null> {
 		const [result] = await db
 			.select()
 			.from(episodeWatchStatus)
-			.where(and(eq(episodeWatchStatus.userId, userId), eq(episodeWatchStatus.episodeId, episodeId)));
+			.where(
+				and(eq(episodeWatchStatus.userId, userId), eq(episodeWatchStatus.episodeId, episodeId))
+			);
 		return result || null;
 	}
 
@@ -170,7 +193,9 @@ export class TVShowRepository {
 			const [result] = await db
 				.update(episodeWatchStatus)
 				.set({ ...statusData, updatedAt: Date.now() })
-				.where(and(eq(episodeWatchStatus.userId, userId), eq(episodeWatchStatus.episodeId, episodeId)))
+				.where(
+					and(eq(episodeWatchStatus.userId, userId), eq(episodeWatchStatus.episodeId, episodeId))
+				)
 				.returning();
 			return result as EpisodeWatchStatus;
 		} else {
@@ -188,7 +213,11 @@ export class TVShowRepository {
 		}
 	}
 
-	async markEpisodeAsWatched(userId: string, episodeId: number, watchTime: number = 0): Promise<EpisodeWatchStatus> {
+	async markEpisodeAsWatched(
+		userId: string,
+		episodeId: number,
+		watchTime: number = 0
+	): Promise<EpisodeWatchStatus> {
 		return await this.upsertEpisodeWatchStatus(userId, episodeId, {
 			watched: true,
 			watchTime,
@@ -204,7 +233,12 @@ export class TVShowRepository {
 		});
 	}
 
-	async updateEpisodeProgress(userId: string, episodeId: number, watchTime: number, totalTime: number): Promise<EpisodeWatchStatus> {
+	async updateEpisodeProgress(
+		userId: string,
+		episodeId: number,
+		watchTime: number,
+		totalTime: number
+	): Promise<EpisodeWatchStatus> {
 		return await this.upsertEpisodeWatchStatus(userId, episodeId, {
 			watchTime,
 			totalTime,
@@ -221,7 +255,10 @@ export class TVShowRepository {
 			.orderBy(desc(episodeWatchStatus.completedAt));
 	}
 
-	async getWatchedEpisodesForSeason(userId: string, seasonId: number): Promise<EpisodeWatchStatus[]> {
+	async getWatchedEpisodesForSeason(
+		userId: string,
+		seasonId: number
+	): Promise<EpisodeWatchStatus[]> {
 		return await db
 			.select({
 				id: episodeWatchStatus.id,
@@ -313,23 +350,26 @@ export class TVShowRepository {
 		const totalSeasons = showSeasons.length;
 
 		// Get season IDs for this TV show
-		const seasonIds = showSeasons.map(s => s.id);
+		const seasonIds = showSeasons.map((s) => s.id);
 
 		// Get season watch statuses by joining through seasons
-		const seasonStatuses = seasonIds.length > 0 ? await db
-			.select({
-				id: seasonWatchStatus.id,
-				userId: seasonWatchStatus.userId,
-				seasonId: seasonWatchStatus.seasonId,
-				episodesWatched: seasonWatchStatus.episodesWatched,
-				totalEpisodes: seasonWatchStatus.totalEpisodes,
-				completedAt: seasonWatchStatus.completedAt,
-				createdAt: seasonWatchStatus.createdAt,
-				updatedAt: seasonWatchStatus.updatedAt
-			})
-			.from(seasonWatchStatus)
-			.innerJoin(seasons, eq(seasonWatchStatus.seasonId, seasons.id))
-			.where(and(eq(seasonWatchStatus.userId, userId), eq(seasons.tvShowId, tvShowId))) : [];
+		const seasonStatuses =
+			seasonIds.length > 0
+				? await db
+						.select({
+							id: seasonWatchStatus.id,
+							userId: seasonWatchStatus.userId,
+							seasonId: seasonWatchStatus.seasonId,
+							episodesWatched: seasonWatchStatus.episodesWatched,
+							totalEpisodes: seasonWatchStatus.totalEpisodes,
+							completedAt: seasonWatchStatus.completedAt,
+							createdAt: seasonWatchStatus.createdAt,
+							updatedAt: seasonWatchStatus.updatedAt
+						})
+						.from(seasonWatchStatus)
+						.innerJoin(seasons, eq(seasonWatchStatus.seasonId, seasons.id))
+						.where(and(eq(seasonWatchStatus.userId, userId), eq(seasons.tvShowId, tvShowId)))
+				: [];
 
 		const seasonsCompleted = seasonStatuses.filter((s) => s.completedAt !== null).length;
 		const episodesWatched = seasonStatuses.reduce((sum, s) => sum + s.episodesWatched, 0);
@@ -349,7 +389,8 @@ export class TVShowRepository {
 			totalSeasons,
 			episodesWatched,
 			totalEpisodes,
-			completedAt: status === 'completed' && !existing?.completedAt ? Date.now() : existing?.completedAt,
+			completedAt:
+				status === 'completed' && !existing?.completedAt ? Date.now() : existing?.completedAt,
 			updatedAt: Date.now()
 		};
 
@@ -449,7 +490,8 @@ export class TVShowRepository {
 			totalEpisodesWatched: 0
 		};
 
-		const totalShows = stat.watching + stat.completed + stat.onHold + stat.dropped + stat.planToWatch;
+		const totalShows =
+			stat.watching + stat.completed + stat.onHold + stat.dropped + stat.planToWatch;
 
 		return {
 			totalShows,
@@ -462,12 +504,17 @@ export class TVShowRepository {
 		};
 	}
 
-	async getContinueWatching(userId: string, limit: number = 10): Promise<Array<{
-		tvShow: TVShow;
-		season: Season;
-		episode: Episode;
-		watchStatus: EpisodeWatchStatus;
-	}>> {
+	async getContinueWatching(
+		userId: string,
+		limit: number = 10
+	): Promise<
+		Array<{
+			tvShow: TVShow;
+			season: Season;
+			episode: Episode;
+			watchStatus: EpisodeWatchStatus;
+		}>
+	> {
 		// Get episodes that have been started but not completed
 		const result = await db
 			.select({

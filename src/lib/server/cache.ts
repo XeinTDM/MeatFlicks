@@ -102,9 +102,7 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 	let invalidated = 0;
 
 	try {
-		const escapedPattern = pattern
-			.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-			.replace(/\*/g, '.*');
+		const escapedPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 
 		const regex = new RegExp(`^meatflicks:${escapedPattern}$`);
 

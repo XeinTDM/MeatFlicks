@@ -12,15 +12,15 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
 	}
 
-		try {
-			const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
-			if (!tvShow) {
-				return json({ error: 'TV show not found' }, { status: 404 });
-			}
+	try {
+		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+		if (!tvShow) {
+			return json({ error: 'TV show not found' }, { status: 404 });
+		}
 
-			const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
+		const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
 
-			const includeDetails = url.searchParams.get('includeDetails') === 'true';
+		const includeDetails = url.searchParams.get('includeDetails') === 'true';
 		if (includeDetails) {
 			const seasons = await tvShowRepository.getSeasonsByTVShowId(tvShow.id);
 			const seasonsWithStatus = await Promise.all(
@@ -29,7 +29,10 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 					const episodes = await tvShowRepository.getEpisodesBySeasonId(season.id);
 					const episodesWithStatus = await Promise.all(
 						episodes.map(async (episode) => {
-							const episodeStatus = await tvShowRepository.getEpisodeWatchStatus(user.id, episode.id);
+							const episodeStatus = await tvShowRepository.getEpisodeWatchStatus(
+								user.id,
+								episode.id
+							);
 							return {
 								...episode,
 								watchStatus: episodeStatus
@@ -72,26 +75,29 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
 	}
 
-		try {
-			const body = await request.json();
-			const { status, rating, notes } = body;
+	try {
+		const body = await request.json();
+		const { status, rating, notes } = body;
 
-			if (!status || !['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'].includes(status)) {
-				return json({ error: 'Invalid status' }, { status: 400 });
-			}
+		if (
+			!status ||
+			!['watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'].includes(status)
+		) {
+			return json({ error: 'Invalid status' }, { status: 400 });
+		}
 
-			const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
-			if (!tvShow) {
-				return json({ error: 'TV show not found' }, { status: 404 });
-			}
+		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+		if (!tvShow) {
+			return json({ error: 'TV show not found' }, { status: 404 });
+		}
 
-			const watchStatus = await tvShowRepository.setTVShowStatus(
-				user.id,
-				tvShow.id,
-				status,
-				rating ? Number(rating) : undefined,
-				notes
-			);
+		const watchStatus = await tvShowRepository.setTVShowStatus(
+			user.id,
+			tvShow.id,
+			status,
+			rating ? Number(rating) : undefined,
+			notes
+		);
 
 		return json({
 			success: true,
@@ -114,15 +120,15 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		return json({ error: 'Invalid TMDB ID' }, { status: 400 });
 	}
 
-		try {
-			const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
-			if (!tvShow) {
-				return json({ error: 'TV show not found' }, { status: 404 });
-			}
+	try {
+		const tvShow = await tvShowRepository.getTVShowByTmdbId(tmdbId);
+		if (!tvShow) {
+			return json({ error: 'TV show not found' }, { status: 404 });
+		}
 
-			const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
-			if (watchStatus) {
-			}
+		const watchStatus = await tvShowRepository.getTVShowWatchStatus(user.id, tvShow.id);
+		if (watchStatus) {
+		}
 
 		return json({
 			success: true,

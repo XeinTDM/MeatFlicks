@@ -22,8 +22,6 @@
 	const isDisabled = $derived(disabled || context?.disabled);
 	const isActive = $derived(context?.isActive(value) || false);
 
-	const styles = toggleGroupItemVariants();
-
 	function handleClick() {
 		if (!isDisabled) {
 			context?.toggleValue(value);
@@ -33,10 +31,7 @@
 
 <button
 	type="button"
-	class={cn(
-		styles({ variant: isActive ? 'active' : 'default' }),
-		className
-	)}
+	class={cn(toggleGroupItemVariants({ variant: isActive ? 'active' : 'default' }), className)}
 	onclick={handleClick}
 	disabled={isDisabled}
 	aria-pressed={isActive}

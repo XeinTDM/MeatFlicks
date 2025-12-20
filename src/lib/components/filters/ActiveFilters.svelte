@@ -19,12 +19,11 @@
 		value: string;
 	}
 
-	let activeFilterChips: FilterChip[] = [];
+	let activeFilterChips = $state<FilterChip[]>([]);
 
 	$effect(() => {
 		const chips: FilterChip[] = [];
 
-		// Year range
 		if (filters.yearFrom || filters.yearTo) {
 			let label = 'Year: ';
 			if (filters.yearFrom && filters.yearTo) {
@@ -37,7 +36,6 @@
 			chips.push({ key: 'yearFrom', label, value: '' });
 		}
 
-		// Rating
 		if (filters.minRating !== undefined) {
 			chips.push({
 				key: 'minRating',
@@ -46,7 +44,6 @@
 			});
 		}
 
-		// Runtime
 		if (filters.runtimeMin || filters.runtimeMax) {
 			let label = 'Runtime: ';
 			if (filters.runtimeMin && filters.runtimeMax) {
@@ -59,7 +56,6 @@
 			chips.push({ key: 'runtimeMin', label, value: '' });
 		}
 
-		// Language
 		if (filters.language) {
 			const lang = LANGUAGE_OPTIONS.find((l) => l.code === filters.language);
 			chips.push({
@@ -69,7 +65,6 @@
 			});
 		}
 
-		// Genres
 		if (filters.genres && filters.genres.length > 0) {
 			const genreMode = filters.genreMode || 'OR';
 			const modeLabel = genreMode === 'AND' ? 'All of' : 'Any of';
@@ -80,13 +75,12 @@
 			});
 		}
 
-		return chips;
+		activeFilterChips = chips;
 	});
 
 	let hasActiveFilters = $derived(activeFilterChips.length > 0);
 
 	function removeFilter(filterKey: keyof MovieFilters) {
-		// Handle related filters
 		if (filterKey === 'yearFrom') {
 			onRemoveFilter('yearFrom');
 			onRemoveFilter('yearTo');

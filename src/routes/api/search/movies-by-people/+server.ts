@@ -29,7 +29,10 @@ const parsePersonIds = (value: string | null): number[] => {
 	}
 
 	try {
-		const ids = value.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+		const ids = value
+			.split(',')
+			.map((id) => parseInt(id.trim()))
+			.filter((id) => !isNaN(id));
 		return ids;
 	} catch {
 		return [];
@@ -41,7 +44,10 @@ const parseRoles = (value: string | null): string[] => {
 		return [];
 	}
 
-	return value.split(',').map(role => role.trim()).filter(Boolean);
+	return value
+		.split(',')
+		.map((role) => role.trim())
+		.filter(Boolean);
 };
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -79,20 +85,20 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 async function searchMoviesByPeople(
-	personIds: number[], 
-	roles: string[], 
+	personIds: number[],
+	roles: string[],
 	limit: number
 ): Promise<LibraryMovie[]> {
 	// For now, return empty results since we don't have person data in the database yet
 	// In a real implementation, this would query the local database
 	// For testing purposes, we'll return an empty array
-	
+
 	// Build the query conditions (for future use when we have person data)
 	const whereConditions = [inArray(moviePeople.personId, personIds)];
-	
+
 	if (roles.length > 0) {
 		// Filter by specific roles (actor, director, writer, etc.)
-		const roleConditions = roles.map(role => eq(moviePeople.role, role));
+		const roleConditions = roles.map((role) => eq(moviePeople.role, role));
 		const roleOrCondition = or(...roleConditions);
 		if (roleOrCondition) {
 			whereConditions.push(roleOrCondition);
@@ -111,12 +117,12 @@ async function searchMoviesByPeople(
 			.where(and(...whereConditions))
 			.limit(limit)
 			.groupBy(movies.id)
-		.orderBy(sql`(m.rating IS NULL) ASC, m.rating DESC, m.releaseDate DESC, m.title ASC`);
+			.orderBy(sql`(m.rating IS NULL) ASC, m.rating DESC, m.releaseDate DESC, m.title ASC`);
 
 		const results = await query;
-		
+
 		// Map to LibraryMovie format
-		const movieRows = results.map(result => result.movie);
+		const movieRows = results.map((result) => result.movie);
 		// Type cast to MovieRow to handle the is4K/isHD type mismatch
 		return await mapRowsToSummaries(movieRows as MovieRow[]);
 	} catch (error) {

@@ -12,33 +12,41 @@ import { eq } from 'drizzle-orm';
 export async function syncPersonFromTmdb(tmdbId: number) {
 	try {
 		// Check if person already exists
-		const existingPerson = await db.select().from(people).where(eq(people.tmdbId, tmdbId)).limit(1).get();
-		
+		const existingPerson = await db
+			.select()
+			.from(people)
+			.where(eq(people.tmdbId, tmdbId))
+			.limit(1)
+			.get();
+
 		if (existingPerson) {
 			return existingPerson;
 		}
 
 		// Fetch person details from TMDB
 		const tmdbPerson = await fetchTmdbPersonDetails(tmdbId);
-		
+
 		if (!tmdbPerson) {
 			return null;
 		}
 
 		// Insert person into local database
-		const [insertedPerson] = await db.insert(people).values({
-			tmdbId: tmdbPerson.id,
-			name: tmdbPerson.name,
-			biography: tmdbPerson.biography,
-			birthday: tmdbPerson.birthday,
-			deathday: tmdbPerson.deathday,
-			placeOfBirth: tmdbPerson.placeOfBirth,
-			profilePath: tmdbPerson.profilePath,
-			popularity: (tmdbPerson as any).popularity || 0,
-			knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
-			createdAt: Date.now(),
-			updatedAt: Date.now()
-		}).returning();
+		const [insertedPerson] = await db
+			.insert(people)
+			.values({
+				tmdbId: tmdbPerson.id,
+				name: tmdbPerson.name,
+				biography: tmdbPerson.biography,
+				birthday: tmdbPerson.birthday,
+				deathday: tmdbPerson.deathday,
+				placeOfBirth: tmdbPerson.placeOfBirth,
+				profilePath: tmdbPerson.profilePath,
+				popularity: (tmdbPerson as any).popularity || 0,
+				knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
+				createdAt: Date.now(),
+				updatedAt: Date.now()
+			})
+			.returning();
 
 		return insertedPerson;
 	} catch (error) {
@@ -54,7 +62,7 @@ export async function syncMovieCast(movieId: string, tmdbMovieId: number) {
 	try {
 		// Get movie details with cast from TMDB
 		const tmdbPerson = await fetchTmdbPersonDetails(tmdbMovieId);
-		
+
 		if (!tmdbPerson) {
 			return;
 		}
@@ -65,16 +73,18 @@ export async function syncMovieCast(movieId: string, tmdbMovieId: number) {
 		});
 
 		const syncedCast = await Promise.all(castPromises);
-		
+
 		// Then create movie-people relationships
 		const relationships = syncedCast
 			.filter((person: any) => person !== null)
-			.map(person => ({
+			.map((person) => ({
 				movieId,
 				personId: person.id!,
 				role: 'actor' as const,
 				character: (tmdbPerson as any).cast?.find((c: any) => c.id === person.tmdbId)?.character,
-				order: (tmdbPerson as any).cast?.find((c: any, index: number) => c.id === person.tmdbId ? index : 0),
+				order: (tmdbPerson as any).cast?.find((c: any, index: number) =>
+					c.id === person.tmdbId ? index : 0
+				),
 				createdAt: Date.now()
 			}));
 
@@ -95,7 +105,7 @@ export async function syncMovieCast(movieId: string, tmdbMovieId: number) {
 export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 	try {
 		const tmdbPerson = await fetchTmdbPersonDetails(tmdbMovieId);
-		
+
 		if (!tmdbPerson) {
 			return;
 		}
@@ -103,7 +113,7 @@ export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 		// Extract crew from knownFor (combine cast + crew for comprehensive view)
 		const crewMembers = [
 			...(tmdbPerson as any).cast?.slice(0, 10), // Top cast as crew
-			...(tmdbPerson as any).knownFor || []
+			...((tmdbPerson as any).knownFor || [])
 		];
 
 		// Sync all crew members first
@@ -112,7 +122,7 @@ export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 		});
 
 		const syncedCrew = await Promise.all(syncPromises);
-		
+
 		// Create relationships for directors and key crew roles
 		const relationships = syncedCrew
 			.filter((person: any) => person !== null)
@@ -144,8 +154,10 @@ export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 
 function determineCrewRole(personTmdbId: number, tmdbPerson: any): string | null {
 	// Find this person in the knownFor list to determine their role
-	const crewMember = (tmdbPerson as any).knownFor?.find((member: any) => member.id === personTmdbId);
-	
+	const crewMember = (tmdbPerson as any).knownFor?.find(
+		(member: any) => member.id === personTmdbId
+	);
+
 	if (!crewMember) {
 		return null;
 	}

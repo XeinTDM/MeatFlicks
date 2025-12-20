@@ -41,7 +41,7 @@
 	<Select
 		type="single"
 		value={sort.field}
-		onSelectedChange={(value) => value && handleFieldChange(value)}
+		onValueChange={(value) => value && handleFieldChange(value)}
 	>
 		<SelectTrigger class="w-[140px] cursor-pointer" aria-label="Sort by">
 			<span class="flex items-center gap-2" data-slot="select-value">

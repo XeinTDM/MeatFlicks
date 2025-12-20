@@ -492,15 +492,18 @@
 	function handleQualityChange(quality: VideoQuality) {
 		selectedQuality = quality.label;
 		// Update the stream URL if we have the same source
-		if (primarySource && currentQualities.some(q => q.url === quality.url)) {
+		if (primarySource && currentQualities.some((q) => q.url === quality.url)) {
 			playbackUrl = quality.url;
 			// In a real implementation, we would communicate with the iframe
 			// to change the video source using postMessage
 			if (iframeElement && iframeElement.contentWindow) {
-				iframeElement.contentWindow.postMessage({
-					type: 'qualityChange',
-					quality: quality.url
-				}, '*');
+				iframeElement.contentWindow.postMessage(
+					{
+						type: 'qualityChange',
+						quality: quality.url
+					},
+					'*'
+				);
 			}
 		}
 	}
@@ -510,14 +513,19 @@
 		// In a real implementation, we would communicate with the iframe
 		// to enable/disable subtitles using postMessage
 		if (iframeElement && iframeElement.contentWindow) {
-			iframeElement.contentWindow.postMessage({
-				type: 'subtitleChange',
-				subtitle: subtitle ? {
-					url: subtitle.url,
-					language: subtitle.language,
-					label: subtitle.label
-				} : null
-			}, '*');
+			iframeElement.contentWindow.postMessage(
+				{
+					type: 'subtitleChange',
+					subtitle: subtitle
+						? {
+								url: subtitle.url,
+								language: subtitle.language,
+								label: subtitle.label
+							}
+						: null
+				},
+				'*'
+			);
 		}
 	}
 
@@ -692,8 +700,8 @@
 						<PlayerControls
 							qualities={currentQualities}
 							subtitles={currentSubtitles}
-							selectedQuality={selectedQuality}
-							selectedSubtitle={selectedSubtitle}
+							{selectedQuality}
+							selectedSubtitle={selectedSubtitle ?? undefined}
 							onQualityChange={handleQualityChange}
 							onSubtitleChange={handleSubtitleChange}
 							compact={true}

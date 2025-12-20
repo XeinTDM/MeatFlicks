@@ -131,7 +131,7 @@
 			const directorIds = selectedDirectors.map((d: any) => d.id);
 			const allPersonIds = [...actorIds, ...directorIds];
 			const roles = [];
-			
+
 			if (actorIds.length > 0) roles.push('actor');
 			if (directorIds.length > 0) roles.push('director');
 
@@ -141,7 +141,7 @@
 			});
 
 			const res = await fetch(`/api/search/movies-by-people?${searchParams.toString()}`);
-			
+
 			if (!res.ok) throw new Error('Failed to fetch movies by people');
 
 			const data: LibraryMovie[] = await res.json();
@@ -219,11 +219,11 @@
 	});
 
 	const hasActiveFilters = $derived(
-		qualityFilter !== 'any' || 
-		onlyWithOverview || 
-		sortBy !== 'relevance' ||
-		selectedActors.length > 0 ||
-		selectedDirectors.length > 0
+		qualityFilter !== 'any' ||
+			onlyWithOverview ||
+			sortBy !== 'relevance' ||
+			selectedActors.length > 0 ||
+			selectedDirectors.length > 0
 	);
 
 	const resultsSummary = $derived(() => {

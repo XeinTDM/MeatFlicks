@@ -29,13 +29,7 @@
 		class?: string;
 	}
 
-	let {
-		value = 0,
-		max = 100,
-		class: className,
-		variant,
-		size
-	}: Props = $props();
+	let { value = 0, max = 100, class: className, variant, size }: Props = $props();
 
 	let percentage = $derived(Math.min(Math.max((value / max) * 100, 0), 100));
 </script>
@@ -52,10 +46,7 @@
 		style="transform: translateX(-{100 - percentage}%)"
 	>
 		<div
-			class={cn(
-				'h-full rounded-full',
-				variant === 'primary' ? 'bg-primary' : 'bg-primary'
-			)}
+			class={cn('h-full rounded-full', variant === 'primary' ? 'bg-primary' : 'bg-primary')}
 			style="width: {percentage}%"
 		></div>
 	</div>

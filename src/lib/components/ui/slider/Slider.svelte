@@ -148,6 +148,7 @@
 			aria-valuemax={max}
 			aria-valuenow={val}
 			aria-disabled={disabled}
+			aria-label={`Slider thumb ${index + 1}, value: ${val}`}
 			class={styles.thumb()}
 			style="left: {getPercentage(val)}%"
 			onpointerdown={(e) => handlePointerDown(e, index)}

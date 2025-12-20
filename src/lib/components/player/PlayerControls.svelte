@@ -47,8 +47,8 @@
 	<div class="relative">
 		{#if compact}
 			<button
-				class="flex items-center gap-2 bg-black/80 text-white px-3 py-2 rounded-lg border border-white/20 hover:bg-black/90 transition-colors"
-				onclick={() => showSettings = !showSettings}
+				class="flex items-center gap-2 rounded-lg border border-white/20 bg-black/80 px-3 py-2 text-white transition-colors hover:bg-black/90"
+				onclick={() => (showSettings = !showSettings)}
 				title="Player Settings"
 			>
 				<Settings class="h-4 w-4" />
@@ -56,11 +56,13 @@
 			</button>
 
 			{#if showSettings}
-				<div class="absolute bottom-full right-0 mb-2 bg-black/95 border border-white/20 rounded-lg p-4 shadow-xl z-50 min-w-48">
+				<div
+					class="absolute right-0 bottom-full z-50 mb-2 min-w-48 rounded-lg border border-white/20 bg-black/95 p-4 shadow-xl"
+				>
 					<div class="space-y-4">
 						{#if qualities.length > 1}
 							<div class="flex items-center justify-between">
-								<span class="text-white text-sm font-medium">Quality</span>
+								<span class="text-sm font-medium text-white">Quality</span>
 								<QualitySelector
 									{qualities}
 									{selectedQuality}
@@ -72,7 +74,7 @@
 
 						{#if subtitles.length > 0}
 							<div class="flex items-center justify-between">
-								<span class="text-white text-sm font-medium">Subtitles</span>
+								<span class="text-sm font-medium text-white">Subtitles</span>
 								<SubtitleSelector
 									{subtitles}
 									{selectedSubtitle}
@@ -107,7 +109,7 @@
 		{/if}
 	</div>
 {:else if !disabled}
-	<div class="flex items-center gap-2 text-sm text-white/60 bg-black/40 px-3 py-1 rounded">
+	<div class="flex items-center gap-2 rounded bg-black/40 px-3 py-1 text-sm text-white/60">
 		<Settings class="h-4 w-4" />
 		<span>No controls</span>
 	</div>
@@ -116,9 +118,10 @@
 {#if compact && showSettings}
 	<div
 		class="fixed inset-0 z-40"
-		onclick={() => showSettings = false}
+		onclick={() => (showSettings = false)}
+		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ' ? (showSettings = false) : null)}
 		role="button"
-		tabindex="-1"
+		tabindex="0"
 		aria-label="Close settings"
 	></div>
 {/if}

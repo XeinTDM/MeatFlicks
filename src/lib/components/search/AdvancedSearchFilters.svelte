@@ -89,20 +89,20 @@
 		}
 	});
 
-	function handleActorSelect(actor: PersonSearchResult) {
-		actors = [...actors, actor];
+	function handleActorSelect(e: CustomEvent<PersonSearchResult>) {
+		actors = [...actors, e.detail];
 	}
 
-	function handleActorRemove(actor: PersonSearchResult) {
-		actors = actors.filter(a => a.id !== actor.id);
+	function handleActorRemove(e: CustomEvent<PersonSearchResult>) {
+		actors = actors.filter((a) => a.id !== e.detail.id);
 	}
 
-	function handleDirectorSelect(director: PersonSearchResult) {
-		directors = [...directors, director];
+	function handleDirectorSelect(e: CustomEvent<PersonSearchResult>) {
+		directors = [...directors, e.detail];
 	}
 
-	function handleDirectorRemove(director: PersonSearchResult) {
-		directors = directors.filter(d => d.id !== director.id);
+	function handleDirectorRemove(e: CustomEvent<PersonSearchResult>) {
+		directors = directors.filter((d) => d.id !== e.detail.id);
 	}
 </script>
 
@@ -132,29 +132,33 @@
 			<div class="grid gap-4 sm:grid-cols-2">
 				<!-- Actors -->
 				<div class="space-y-2">
-					<p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase flex items-center gap-1">
+					<p
+						class="flex items-center gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+					>
 						<Users class="size-3" />
 						Actors
 					</p>
 					<PersonSearch
 						placeholder="Search for actors..."
 						selectedPeople={actors}
-						onpersonselect={handleActorSelect}
-						onpersonremove={handleActorRemove}
+						on:personselect={handleActorSelect}
+						on:personremove={handleActorRemove}
 					/>
 				</div>
 
 				<!-- Directors -->
 				<div class="space-y-2">
-					<p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase flex items-center gap-1">
+					<p
+						class="flex items-center gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+					>
 						<Film class="size-3" />
 						Directors
 					</p>
 					<PersonSearch
 						placeholder="Search for directors..."
 						selectedPeople={directors}
-						onpersonselect={handleDirectorSelect}
-						onpersonremove={handleDirectorRemove}
+						on:personselect={handleDirectorSelect}
+						on:personremove={handleDirectorRemove}
 					/>
 				</div>
 			</div>

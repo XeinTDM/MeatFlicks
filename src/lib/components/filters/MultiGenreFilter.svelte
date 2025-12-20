@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { ToggleGroup, ToggleGroupItem } from '$lib/components/ui/toggle-group';
+	import ToggleGroup from '$lib/components/ui/toggle-group/ToggleGroup.svelte';
+	import ToggleGroupItem from '$lib/components/ui/toggle-group/ToggleGroupItem.svelte';
 	import { X, Check } from '@lucide/svelte';
 
 	interface Props {
@@ -62,12 +63,8 @@
 				value={genreMode}
 				onValueChange={(value) => onGenreModeChange(value as 'AND' | 'OR')}
 			>
-				<ToggleGroupItem value="OR" aria-label="Match any genre" class="h-7 text-xs">
-					Any
-				</ToggleGroupItem>
-				<ToggleGroupItem value="AND" aria-label="Match all genres" class="h-7 text-xs">
-					All
-				</ToggleGroupItem>
+				<ToggleGroupItem value="OR" class="h-7 text-xs">Any</ToggleGroupItem>
+				<ToggleGroupItem value="AND" class="h-7 text-xs">All</ToggleGroupItem>
 			</ToggleGroup>
 			<span class="text-xs text-muted-foreground">
 				{genreMode === 'AND' ? 'Must have all selected genres' : 'Can have any selected genre'}

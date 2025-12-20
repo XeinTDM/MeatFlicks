@@ -15,7 +15,13 @@
 	];
 
 	const mockSubtitles: SubtitleTrack[] = [
-		{ id: 'en', label: 'English', language: 'en', url: 'https://example.com/en.vtt', isDefault: true },
+		{
+			id: 'en',
+			label: 'English',
+			language: 'en',
+			url: 'https://example.com/en.vtt',
+			isDefault: true
+		},
 		{ id: 'es', label: 'Español', language: 'es', url: 'https://example.com/es.vtt' },
 		{ id: 'fr', label: 'Français', language: 'fr', url: 'https://example.com/fr.vtt' }
 	];
@@ -34,46 +40,46 @@
 	}
 </script>
 
-<div class="p-6 bg-background text-foreground min-h-screen">
-	<div class="max-w-4xl mx-auto">
-		<h1 class="text-2xl font-bold mb-6">Player Quality & Subtitle Test</h1>
-			
-			<div class="mb-8 p-6 border rounded-lg bg-muted/20">
-				<h2 class="text-lg font-semibold mb-4">Quality Selector</h2>
-				<QualitySelector
-					qualities={mockQualities}
-					selectedQuality={selectedQuality}
-					onQualityChange={handleQualityChange}
-				/>
-			</div>
+<div class="min-h-screen bg-background p-6 text-foreground">
+	<div class="mx-auto max-w-4xl">
+		<h1 class="mb-6 text-2xl font-bold">Player Quality & Subtitle Test</h1>
 
-			<div class="mb-8 p-6 border rounded-lg bg-muted/20">
-				<h2 class="text-lg font-semibold mb-4">Subtitle Selector</h2>
-				<SubtitleSelector
-					subtitles={mockSubtitles}
-					selectedSubtitle={selectedSubtitle}
-					onSubtitleChange={handleSubtitleChange}
-				/>
-			</div>
+		<div class="mb-8 rounded-lg border bg-muted/20 p-6">
+			<h2 class="mb-4 text-lg font-semibold">Quality Selector</h2>
+			<QualitySelector
+				qualities={mockQualities}
+				{selectedQuality}
+				onQualityChange={handleQualityChange}
+			/>
+		</div>
 
-			<div class="mb-8 p-6 border rounded-lg bg-muted/20">
-				<h2 class="text-lg font-semibold mb-4">Combined Player Controls</h2>
-				<PlayerControls
-					qualities={mockQualities}
-					subtitles={mockSubtitles}
-					selectedQuality={selectedQuality}
-					selectedSubtitle={selectedSubtitle}
-					onQualityChange={handleQualityChange}
-					onSubtitleChange={handleSubtitleChange}
-				/>
-			</div>
+		<div class="mb-8 rounded-lg border bg-muted/20 p-6">
+			<h2 class="mb-4 text-lg font-semibold">Subtitle Selector</h2>
+			<SubtitleSelector
+				subtitles={mockSubtitles}
+				{selectedSubtitle}
+				onSubtitleChange={handleSubtitleChange}
+			/>
+		</div>
 
-			<div class="p-4 bg-muted rounded-lg">
-				<h3 class="font-semibold mb-2">Current State</h3>
-				<div class="space-y-2 text-sm">
-					<p><strong>Selected Quality:</strong> {selectedQuality}</p>
-					<p><strong>Selected Subtitle:</strong> {selectedSubtitle || 'None'}</p>
-				</div>
+		<div class="mb-8 rounded-lg border bg-muted/20 p-6">
+			<h2 class="mb-4 text-lg font-semibold">Combined Player Controls</h2>
+			<PlayerControls
+				qualities={mockQualities}
+				subtitles={mockSubtitles}
+				{selectedQuality}
+				{selectedSubtitle}
+				onQualityChange={handleQualityChange}
+				onSubtitleChange={handleSubtitleChange}
+			/>
+		</div>
+
+		<div class="rounded-lg bg-muted p-4">
+			<h3 class="mb-2 font-semibold">Current State</h3>
+			<div class="space-y-2 text-sm">
+				<p><strong>Selected Quality:</strong> {selectedQuality}</p>
+				<p><strong>Selected Subtitle:</strong> {selectedSubtitle || 'None'}</p>
 			</div>
 		</div>
 	</div>
+</div>

@@ -63,11 +63,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
 	const cacheKey = buildCacheKey('search', 'people', hash, limit);
 
-		try {
-			const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const tmdbResults = await searchTmdbPeople(query, limit);
-				return tmdbResults;
-			});
+	try {
+		const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+			const tmdbResults = await searchTmdbPeople(query, limit);
+			return tmdbResults;
+		});
 
 		return json(results);
 	} catch (error) {
@@ -77,24 +77,24 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 async function searchTmdbPeople(query: string, limit: number): Promise<PersonSearchResult[]> {
-		try {
-			const response = await fetch(
-				`https://api.themoviedb.org/3/search/person?query=${encodeURIComponent(
-					query
-				)}&include_adult=false&language=en-US&page=1`,
-				{
-					headers: {
-						Authorization: `Bearer ${process.env.TMDB_API_KEY || process.env.TMDB_READ_ACCESS_TOKEN}`
-					}
+	try {
+		const response = await fetch(
+			`https://api.themoviedb.org/3/search/person?query=${encodeURIComponent(
+				query
+			)}&include_adult=false&language=en-US&page=1`,
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.TMDB_API_KEY || process.env.TMDB_READ_ACCESS_TOKEN}`
 				}
-			);
+			}
+		);
 
 		if (!response.ok) {
 			throw new Error(`TMDB API responded with status ${response.status}`);
 		}
 
 		const data = await response.json();
-		
+
 		if (!data.results || !Array.isArray(data.results)) {
 			return [];
 		}

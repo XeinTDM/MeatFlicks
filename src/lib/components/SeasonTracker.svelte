@@ -45,7 +45,9 @@
 		}
 	}
 
-	function handlePlayEpisode(event: CustomEvent<{ episode: Episode; watchStatus?: EpisodeWatchStatus | null }>) {
+	function handlePlayEpisode(
+		event: CustomEvent<{ episode: Episode; watchStatus?: EpisodeWatchStatus | null }>
+	) {
 		if (onPlayEpisode) {
 			onPlayEpisode(event.detail.episode, event.detail.watchStatus);
 		}
@@ -56,9 +58,13 @@
 	let completedAt = $state<string | null>(null);
 
 	$effect(() => {
-		progress = watchStatus ? Math.round((watchStatus.episodesWatched / watchStatus.totalEpisodes) * 100) : 0;
+		progress = watchStatus
+			? Math.round((watchStatus.episodesWatched / watchStatus.totalEpisodes) * 100)
+			: 0;
 		isCompleted = watchStatus?.completedAt !== null;
-		completedAt = watchStatus?.completedAt ? new Date(watchStatus.completedAt).toLocaleDateString() : null;
+		completedAt = watchStatus?.completedAt
+			? new Date(watchStatus.completedAt).toLocaleDateString()
+			: null;
 	});
 </script>
 
@@ -73,34 +79,27 @@
 					{episodes.length} Episodes
 				</Badge>
 				{#if isCompleted}
-					<Badge variant="default" class="bg-green-100 text-green-800 border-green-200">
-						<Check class="h-3 w-3 mr-1" />
+					<Badge variant="default" class="border-green-200 bg-green-100 text-green-800">
+						<Check class="mr-1 h-3 w-3" />
 						Completed
 					</Badge>
 				{:else if progress > 0}
-					<Badge variant="secondary" class="bg-orange-100 text-orange-800 border-orange-200">
-						<Clock class="h-3 w-3 mr-1" />
+					<Badge variant="secondary" class="border-orange-200 bg-orange-100 text-orange-800">
+						<Clock class="mr-1 h-3 w-3" />
 						In Progress
 					</Badge>
 				{:else}
-					<Badge variant="outline">
-						Not Started
-					</Badge>
+					<Badge variant="outline">Not Started</Badge>
 				{/if}
 			</div>
-			
+
 			<div class="flex items-center gap-2">
 				{#if season.airDate}
 					<span class="text-sm text-muted-foreground">
 						Aired: {new Date(season.airDate).toLocaleDateString()}
 					</span>
 				{/if}
-				<Button
-					variant="ghost"
-					size="sm"
-					onclick={toggleExpanded}
-					class="ml-2"
-				>
+				<Button variant="ghost" size="sm" onclick={toggleExpanded} class="ml-2">
 					{#if expanded}
 						<ChevronUp class="h-4 w-4" />
 					{:else}
@@ -120,7 +119,7 @@
 				</div>
 				<Progress value={progress} class="h-2" />
 				{#if isCompleted && completedAt}
-					<p class="text-xs text-muted-foreground mt-1">
+					<p class="mt-1 text-xs text-muted-foreground">
 						Completed on {completedAt}
 					</p>
 				{/if}

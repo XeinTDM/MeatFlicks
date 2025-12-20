@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 
 	const tmdbId = Number(params.tmdbId);
 	const episodeNumber = Number(params.episodeNumber);
-	
+
 	if (!tmdbId || Number.isNaN(tmdbId) || !episodeNumber || Number.isNaN(episodeNumber)) {
 		return json({ error: 'Invalid parameters' }, { status: 400 });
 	}
@@ -57,7 +57,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	const tmdbId = Number(params.tmdbId);
 	const episodeNumber = Number(params.episodeNumber);
-	
+
 	if (!tmdbId || Number.isNaN(tmdbId) || !episodeNumber || Number.isNaN(episodeNumber)) {
 		return json({ error: 'Invalid parameters' }, { status: 400 });
 	}
@@ -120,7 +120,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	const tmdbId = Number(params.tmdbId);
 	const episodeNumber = Number(params.episodeNumber);
-	
+
 	if (!tmdbId || Number.isNaN(tmdbId) || !episodeNumber || Number.isNaN(episodeNumber)) {
 		return json({ error: 'Invalid parameters' }, { status: 400 });
 	}
@@ -152,7 +152,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		}
 
 		// Mark episode as watched/unwatched
-		const watchStatus = watched 
+		const watchStatus = watched
 			? await tvShowRepository.markEpisodeAsWatched(user.id, episode.id)
 			: await tvShowRepository.markEpisodeAsUnwatched(user.id, episode.id);
 

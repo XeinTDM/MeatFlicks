@@ -10,12 +10,7 @@
 		disabled?: boolean;
 	}
 
-	let {
-		subtitles = [],
-		selectedSubtitle,
-		onSubtitleChange,
-		disabled = false
-	}: Props = $props();
+	let { subtitles = [], selectedSubtitle, onSubtitleChange, disabled = false }: Props = $props();
 
 	let selectedSubtitleValue = $state(selectedSubtitle || 'off');
 
@@ -26,7 +21,7 @@
 				onSubtitleChange(null);
 			}
 		} else {
-			const subtitle = subtitles.find(s => s.id === value);
+			const subtitle = subtitles.find((s) => s.id === value);
 			if (subtitle && onSubtitleChange) {
 				onSubtitleChange(subtitle);
 			}
@@ -46,17 +41,18 @@
 
 	// Get current selected subtitle object
 	const currentSubtitle = $derived(
-		selectedSubtitleValue === 'off' ? null : 
-		subtitles.find(s => s.id === selectedSubtitleValue) || 
-		subtitles.find(s => s.isDefault) || 
-		subtitles[0]
+		selectedSubtitleValue === 'off'
+			? null
+			: subtitles.find((s) => s.id === selectedSubtitleValue) ||
+					subtitles.find((s) => s.isDefault) ||
+					subtitles[0]
 	);
 </script>
 
 {#if subtitles.length > 0}
 	<div class="relative">
-	<Select bind:value={selectedSubtitleValue} type="single" {disabled}>
-			<SelectTrigger class="w-36 bg-black/80 text-white border-white/20 hover:bg-black/90">
+		<Select bind:value={selectedSubtitleValue} type="single" {disabled}>
+			<SelectTrigger class="w-36 border-white/20 bg-black/80 text-white hover:bg-black/90">
 				<div class="flex items-center gap-2">
 					<Subtitles class="h-4 w-4" />
 					<span class="truncate">
@@ -64,7 +60,7 @@
 					</span>
 				</div>
 			</SelectTrigger>
-			<SelectContent class="bg-black/95 border-white/20">
+			<SelectContent class="border-white/20 bg-black/95">
 				<!-- Off option -->
 				<SelectItem value="off" class="text-white hover:bg-white/10 focus:bg-white/10">
 					<div class="flex items-center gap-2">
@@ -72,10 +68,10 @@
 						<span>Off</span>
 					</div>
 				</SelectItem>
-				
+
 				{#each sortedSubtitles as subtitle}
 					<SelectItem value={subtitle.id} class="text-white hover:bg-white/10 focus:bg-white/10">
-						<div class="flex items-center justify-between w-full">
+						<div class="flex w-full items-center justify-between">
 							<span>{subtitle.label}</span>
 							<div class="flex items-center gap-2">
 								{#if subtitle.language}
@@ -92,7 +88,7 @@
 		</Select>
 	</div>
 {:else}
-	<div class="flex items-center gap-2 text-sm text-white/60 bg-black/40 px-3 py-1 rounded">
+	<div class="flex items-center gap-2 rounded bg-black/40 px-3 py-1 text-sm text-white/60">
 		<Subtitles class="h-4 w-4" />
 		<span>No subtitles</span>
 	</div>

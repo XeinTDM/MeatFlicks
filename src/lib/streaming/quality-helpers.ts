@@ -19,12 +19,12 @@ export interface SubtitleSource {
  */
 export function extractQualities(sources: QualitySource[], fallbackUrl?: string): VideoQuality[] {
 	const qualities: VideoQuality[] = [];
-	
+
 	for (const source of sources) {
 		const quality = source.quality || source.label || source.resolution || 'Unknown';
 		const resolution = source.resolution || parseResolutionFromLabel(quality);
 		const label = source.label || formatQualityLabel(quality, resolution);
-		
+
 		qualities.push({
 			label,
 			resolution,
@@ -45,8 +45,8 @@ export function extractQualities(sources: QualitySource[], fallbackUrl?: string)
 
 	return qualities.sort((a, b) => {
 		const priorityOrder = ['4K', '1080p', '720p', '480p', '360p', 'Auto'];
-		const aIndex = priorityOrder.findIndex(q => a.resolution.includes(q));
-		const bIndex = priorityOrder.findIndex(q => b.resolution.includes(q));
+		const aIndex = priorityOrder.findIndex((q) => a.resolution.includes(q));
+		const bIndex = priorityOrder.findIndex((q) => b.resolution.includes(q));
 		return aIndex - bIndex;
 	});
 }
@@ -56,11 +56,11 @@ export function extractQualities(sources: QualitySource[], fallbackUrl?: string)
  */
 export function extractSubtitles(sources: SubtitleSource[]): SubtitleTrack[] {
 	const tracks: SubtitleTrack[] = [];
-	
+
 	for (const source of sources) {
 		const language = source.language || 'unknown';
 		const label = source.label || formatLanguageLabel(language);
-		
+
 		tracks.push({
 			id: `${language}_${tracks.length}`,
 			label,
@@ -83,12 +83,7 @@ export function extractSubtitles(sources: SubtitleSource[]): SubtitleTrack[] {
  * Parse resolution from quality label string
  */
 function parseResolutionFromLabel(label: string): string {
-	const resolutionPatterns = [
-		/(\d{3,4})p/i,
-		/(\d{3,4})x(\d{3,4})/i,
-		/(4K|UHD)/i,
-		/(HD|SD)/i
-	];
+	const resolutionPatterns = [/(\d{3,4})p/i, /(\d{3,4})x(\d{3,4})/i, /(4K|UHD)/i, /(HD|SD)/i];
 
 	for (const pattern of resolutionPatterns) {
 		const match = label.match(pattern);
@@ -136,30 +131,30 @@ function isDefaultSubtitle(language: string): boolean {
  */
 function formatLanguageLabel(language: string): string {
 	const languageMap: Record<string, string> = {
-		'en': 'English',
-		'eng': 'English',
-		'es': 'Español',
-		'spa': 'Español',
-		'fr': 'Français',
-		'fra': 'Français',
-		'de': 'Deutsch',
-		'ger': 'Deutsch',
-		'it': 'Italiano',
-		'ita': 'Italiano',
-		'pt': 'Português',
-		'por': 'Português',
-		'ru': 'Русский',
-		'rus': 'Русский',
-		'ja': '日本語',
-		'jpn': '日本語',
-		'ko': '한국어',
-		'kor': '한국어',
-		'zh': '中文',
-		'chi': '中文',
-		'ar': 'العربية',
-		'ara': 'العربية',
-		'hi': 'हिन्दी',
-		'hin': 'हिन्दी'
+		en: 'English',
+		eng: 'English',
+		es: 'Español',
+		spa: 'Español',
+		fr: 'Français',
+		fra: 'Français',
+		de: 'Deutsch',
+		ger: 'Deutsch',
+		it: 'Italiano',
+		ita: 'Italiano',
+		pt: 'Português',
+		por: 'Português',
+		ru: 'Русский',
+		rus: 'Русский',
+		ja: '日本語',
+		jpn: '日本語',
+		ko: '한국어',
+		kor: '한국어',
+		zh: '中文',
+		chi: '中文',
+		ar: 'العربية',
+		ara: 'العربية',
+		hi: 'हिन्दी',
+		hin: 'हिन्दी'
 	};
 
 	return languageMap[language.toLowerCase()] || language.toUpperCase();
@@ -175,30 +170,31 @@ export function getBestQualityUrl(
 	if (!qualities.length) return null;
 
 	if (!preferredQuality) {
-		const defaultQuality = qualities.find(q => q.isDefault);
+		const defaultQuality = qualities.find((q) => q.isDefault);
 		return defaultQuality?.url || qualities[0].url;
 	}
 
-	const exactMatch = qualities.find(q =>
-		q.label.toLowerCase().includes(preferredQuality.toLowerCase()) ||
-		q.resolution.toLowerCase().includes(preferredQuality.toLowerCase())
+	const exactMatch = qualities.find(
+		(q) =>
+			q.label.toLowerCase().includes(preferredQuality.toLowerCase()) ||
+			q.resolution.toLowerCase().includes(preferredQuality.toLowerCase())
 	);
 	if (exactMatch) return exactMatch.url;
 
 	const qualityHierarchy = ['4K', '1080p', '720p', '480p', '360p'];
-	const targetIndex = qualityHierarchy.findIndex(q =>
+	const targetIndex = qualityHierarchy.findIndex((q) =>
 		preferredQuality.toLowerCase().includes(q.toLowerCase())
 	);
 
 	if (targetIndex !== -1) {
 		for (let i = targetIndex; i >= 0; i--) {
-			const match = qualities.find(q =>
+			const match = qualities.find((q) =>
 				q.resolution.toLowerCase().includes(qualityHierarchy[i].toLowerCase())
 			);
 			if (match) return match.url;
 		}
 		for (let i = targetIndex + 1; i < qualityHierarchy.length; i++) {
-			const match = qualities.find(q =>
+			const match = qualities.find((q) =>
 				q.resolution.toLowerCase().includes(qualityHierarchy[i].toLowerCase())
 			);
 			if (match) return match.url;
@@ -218,18 +214,19 @@ export function getSubtitleTrack(
 	if (!subtitles.length) return null;
 
 	if (!preferredLanguage) {
-		const defaultTrack = subtitles.find(s => s.isDefault);
+		const defaultTrack = subtitles.find((s) => s.isDefault);
 		return defaultTrack || subtitles[0];
 	}
 
-	const exactMatch = subtitles.find(s =>
-		s.language === preferredLanguage ||
-		s.label.toLowerCase().includes(preferredLanguage.toLowerCase())
+	const exactMatch = subtitles.find(
+		(s) =>
+			s.language === preferredLanguage ||
+			s.label.toLowerCase().includes(preferredLanguage.toLowerCase())
 	);
 	if (exactMatch) return exactMatch;
 
-	const englishTrack = subtitles.find(s =>
-		s.language === 'en' || s.language === 'eng' || s.label.toLowerCase().includes('english')
+	const englishTrack = subtitles.find(
+		(s) => s.language === 'en' || s.language === 'eng' || s.label.toLowerCase().includes('english')
 	);
 	if (englishTrack) return englishTrack;
 

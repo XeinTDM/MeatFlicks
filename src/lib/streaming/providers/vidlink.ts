@@ -7,7 +7,12 @@ import {
 	fetchWithTimeout
 } from '../provider-helpers';
 import type { StreamingProvider, VideoQuality, SubtitleTrack } from '../types';
-import { extractQualities, extractSubtitles, type QualitySource, type SubtitleSource } from '../quality-helpers';
+import {
+	extractQualities,
+	extractSubtitles,
+	type QualitySource,
+	type SubtitleSource
+} from '../quality-helpers';
 
 const { vidlink } = streamingConfig;
 
@@ -104,7 +109,7 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 		if (context.includeQualities) {
 			// Try to extract multiple quality sources from the payload
 			const qualitySources: QualitySource[] = [];
-			
+
 			// Check for different quality formats in the response
 			if (payload.sources && Array.isArray(payload.sources)) {
 				for (const source of payload.sources) {
@@ -147,7 +152,7 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 		if (context.includeSubtitles) {
 			// Try to extract subtitle information from the payload
 			const subtitleSources: SubtitleSource[] = [];
-			
+
 			if (payload.subtitles && Array.isArray(payload.subtitles)) {
 				for (const subtitle of payload.subtitles) {
 					if (subtitle.url && subtitle.language) {
@@ -183,9 +188,10 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 		// Use preferred quality if specified
 		let finalStreamUrl = streamCandidate ?? embedCandidate!;
 		if (qualities && context.preferredQuality) {
-			const preferredUrl = qualities.find(q => 
-				q.resolution.toLowerCase().includes(context.preferredQuality!.toLowerCase()) ||
-				q.label.toLowerCase().includes(context.preferredQuality!.toLowerCase())
+			const preferredUrl = qualities.find(
+				(q) =>
+					q.resolution.toLowerCase().includes(context.preferredQuality!.toLowerCase()) ||
+					q.label.toLowerCase().includes(context.preferredQuality!.toLowerCase())
 			)?.url;
 			if (preferredUrl) {
 				finalStreamUrl = preferredUrl;

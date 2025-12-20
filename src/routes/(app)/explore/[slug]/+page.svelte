@@ -119,11 +119,9 @@
 
 	let searchTerm = $state('');
 	let sortOption = $state<'curated' | 'rating' | 'newest' | 'alpha'>('curated');
-	let currentFilters = $state<MovieFilters>(filters);
-	let currentSort = $state<SortOptions>(sort);
-	let currentPagination = $state<PaginationParams>(
-		pagination || { page: 1, pageSize: DEFAULT_PAGE_SIZE }
-	);
+	let currentFilters = $state<MovieFilters>({} as MovieFilters);
+	let currentSort = $state<SortOptions>({ field: 'popularity', order: 'desc' } as SortOptions);
+	let currentPagination = $state<PaginationParams>({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
 
 	// Update local state when data changes
 	$effect(() => {

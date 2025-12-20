@@ -87,9 +87,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (body.episode) params.set('episode', String(body.episode));
 		if (body.language) params.set('language', body.language);
 		if (body.preferredQuality) params.set('preferredQuality', body.preferredQuality);
-		if (body.preferredSubtitleLanguage) params.set('preferredSubtitleLanguage', body.preferredSubtitleLanguage);
-		if (body.includeQualities !== undefined) params.set('includeQualities', String(body.includeQualities));
-		if (body.includeSubtitles !== undefined) params.set('includeSubtitles', String(body.includeSubtitles));
+		if (body.preferredSubtitleLanguage)
+			params.set('preferredSubtitleLanguage', body.preferredSubtitleLanguage);
+		if (body.includeQualities !== undefined)
+			params.set('includeQualities', String(body.includeQualities));
+		if (body.includeSubtitles !== undefined)
+			params.set('includeSubtitles', String(body.includeSubtitles));
 		if (Array.isArray(body.preferredProviders)) {
 			params.set('preferred', body.preferredProviders.join(','));
 		}
