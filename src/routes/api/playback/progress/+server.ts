@@ -111,5 +111,3 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Failed to delete playback progress' }, { status: 500 });
 	}
 };
-
-

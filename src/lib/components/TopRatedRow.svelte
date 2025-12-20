@@ -26,5 +26,3 @@
 {#if !isLoading && topRatedMovies.length > 0}
 	<MovieScrollContainer title="Top Rated" movies={topRatedMovies} />
 {/if}
-
-

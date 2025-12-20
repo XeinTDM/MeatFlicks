@@ -15,5 +15,3 @@ CREATE TABLE IF NOT EXISTS playback_progress (
 CREATE INDEX IF NOT EXISTS idx_playback_progress_user ON playback_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_playback_progress_media ON playback_progress(media_id);
 CREATE INDEX IF NOT EXISTS idx_playback_progress_updated ON playback_progress(updated_at);
-
-

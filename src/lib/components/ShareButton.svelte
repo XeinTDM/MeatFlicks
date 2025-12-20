@@ -61,5 +61,3 @@
 		<span class="sr-only">Share</span>
 	{/if}
 </Button>
-
-

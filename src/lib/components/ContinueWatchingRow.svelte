@@ -48,5 +48,3 @@
 {#if !isLoading && continueWatchingMovies.length > 0}
 	<MovieScrollContainer title="Continue Watching" movies={continueWatchingMovies} />
 {/if}
-
-
