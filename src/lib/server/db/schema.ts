@@ -531,4 +531,4 @@ export const tvShowWatchStatusRelations = relations(tvShowWatchStatus, ({ one })
 		fields: [tvShowWatchStatus.tvShowId],
 		references: [tvShows.id]
 	})
-});
+}));
