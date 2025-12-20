@@ -104,7 +104,7 @@
 						{/if}
 					</div>
 				</button>
-				{#if !search[displayedSearches.length - 1]}
+				{#if search !== displayedSearches[displayedSearches.length - 1]}
 					<Separator class="bg-border/60" />
 				{/if}
 			{/each}

@@ -93,7 +93,7 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 };
 
 const buildExtrasMap = async (
-	movies: { tmdbId: number | null }[]
+	movies: { tmdbId?: number | null | undefined }[]
 ): Promise<Map<number, { imdbId: string | null; trailerUrl: string | null }>> => {
 	const uniqueIds = Array.from(
 		movies

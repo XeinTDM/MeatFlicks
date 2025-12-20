@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			{ page: Math.floor(offset / limit) + 1, pageSize: limit }
 		);
 
-		return json({ movies: movies.data, total: movies.total });
+		return json({ movies: movies.items, total: movies.pagination.totalItems });
 	} catch (error) {
 		console.error('Error fetching recently added movies:', error);
 		return json({ error: 'Failed to fetch recently added movies' }, { status: 500 });

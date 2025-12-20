@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { watchlistRepository } from '$lib/server';
+import { watchlistRepository } from '$lib/server/repositories/watchlist.repository';
 
 import { z } from 'zod';
 
@@ -16,12 +16,26 @@ const movieSchema = z.object({
 	addedAt: z.string().optional()
 });
 
-export const GET: RequestHandler = async () => {
-	const movies = await watchlistRepository.getWatchlist();
+export const GET: RequestHandler = async ({ locals }) => {
+	const session = locals.session;
+	const user = locals.user;
+
+	if (!session || !user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
+	const movies = await watchlistRepository.getWatchlist(user.id);
 	return json(movies);
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const session = locals.session;
+	const user = locals.user;
+
+	if (!session || !user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	const body = await request.json();
 	const result = z.object({ movie: movieSchema }).safeParse(body);
 
@@ -29,16 +43,23 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Invalid movie data', details: result.error.format() }, { status: 400 });
 	}
 
-	await watchlistRepository.addToWatchlist(result.data.movie.id, result.data.movie);
+	await watchlistRepository.addToWatchlist(user.id, result.data.movie);
 	return json({ success: true });
 };
 
-export const DELETE: RequestHandler = async ({ request }) => {
+export const DELETE: RequestHandler = async ({ request, locals }) => {
+	const session = locals.session;
+	const user = locals.user;
+
+	if (!session || !user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	const body = await request.json();
 	const { movieId, clearAll } = body;
 
 	if (clearAll) {
-		await watchlistRepository.clearWatchlist();
+		await watchlistRepository.clearWatchlist(user.id);
 		return json({ success: true });
 	}
 
@@ -46,11 +67,18 @@ export const DELETE: RequestHandler = async ({ request }) => {
 		return json({ error: 'Movie ID is required' }, { status: 400 });
 	}
 
-	await watchlistRepository.removeFromWatchlist(movieId);
+	await watchlistRepository.removeFromWatchlist(user.id, movieId);
 	return json({ success: true });
 };
 
-export const PUT: RequestHandler = async ({ request }) => {
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	const session = locals.session;
+	const user = locals.user;
+
+	if (!session || !user) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
 	const body = await request.json();
 	const result = z.object({ movies: z.array(movieSchema) }).safeParse(body);
 
@@ -58,6 +86,6 @@ export const PUT: RequestHandler = async ({ request }) => {
 		return json({ error: 'Invalid movies data', details: result.error.format() }, { status: 400 });
 	}
 
-	await watchlistRepository.replaceWatchlist(result.data.movies);
+	await watchlistRepository.replaceWatchlist(user.id, result.data.movies);
 	return json({ success: true });
 };

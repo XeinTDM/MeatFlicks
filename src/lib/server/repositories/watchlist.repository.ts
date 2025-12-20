@@ -1,38 +1,45 @@
 import { db } from '$lib/server/db';
 import { watchlist } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 
 export interface WatchlistRecord {
-	id: string;
+	userId: string;
+	movieId: string;
 	movieData: string;
 	addedAt: number;
 }
 
 export const watchlistRepository = {
-	async getWatchlist(): Promise<any[]> {
+	async getWatchlist(userId: string): Promise<any[]> {
 		try {
-			const rows = await db
-				.select({ movieData: watchlist.movieData })
+			const results = await db
+				.select()
 				.from(watchlist)
+				.where(eq(watchlist.userId, userId))
 				.orderBy(desc(watchlist.addedAt));
-			return rows.map((row) => JSON.parse(row.movieData));
+
+			return results.map((record) => ({
+				...JSON.parse(record.movieData),
+				addedAt: record.addedAt
+			}));
 		} catch (error) {
 			console.error('Error fetching watchlist:', error);
 			return [];
 		}
 	},
 
-	async addToWatchlist(id: string, movie: any): Promise<void> {
+	async addToWatchlist(userId: string, movie: any): Promise<void> {
 		try {
 			await db
 				.insert(watchlist)
 				.values({
-					id,
+					userId,
+					movieId: movie.id,
 					movieData: JSON.stringify(movie),
-					addedAt: movie.addedAt ? new Date(movie.addedAt).getTime() : Date.now()
+					addedAt: Date.now()
 				})
 				.onConflictDoUpdate({
-					target: watchlist.id,
+					target: [watchlist.userId, watchlist.movieId],
 					set: {
 						movieData: JSON.stringify(movie)
 					}
@@ -43,14 +50,15 @@ export const watchlistRepository = {
 		}
 	},
 
-	async replaceWatchlist(moviesList: any[]): Promise<void> {
+	async replaceWatchlist(userId: string, moviesList: any[]): Promise<void> {
 		try {
 			await db.transaction(async (tx) => {
-				await tx.delete(watchlist);
+				await tx.delete(watchlist).where(eq(watchlist.userId, userId));
 				for (const movie of moviesList) {
 					if (movie && movie.id) {
 						await tx.insert(watchlist).values({
-							id: movie.id,
+							userId,
+							movieId: movie.id,
 							movieData: JSON.stringify(movie),
 							addedAt: movie.addedAt ? new Date(movie.addedAt).getTime() : Date.now()
 						});
@@ -63,18 +71,20 @@ export const watchlistRepository = {
 		}
 	},
 
-	async removeFromWatchlist(id: string): Promise<void> {
+	async removeFromWatchlist(userId: string, movieId: string): Promise<void> {
 		try {
-			await db.delete(watchlist).where(eq(watchlist.id, id));
+			await db
+				.delete(watchlist)
+				.where(and(eq(watchlist.userId, userId), eq(watchlist.movieId, movieId)));
 		} catch (error) {
 			console.error('Error removing from watchlist:', error);
 			throw new Error('Failed to remove from watchlist');
 		}
 	},
 
-	async clearWatchlist(): Promise<void> {
+	async clearWatchlist(userId: string): Promise<void> {
 		try {
-			await db.delete(watchlist);
+			await db.delete(watchlist).where(eq(watchlist.userId, userId));
 		} catch (error) {
 			console.error('Error clearing watchlist:', error);
 			throw new Error('Failed to clear watchlist');

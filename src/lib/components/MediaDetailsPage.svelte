@@ -119,6 +119,8 @@
 	let showNextOverlay = $state(false);
 	let nextEpTimer: ReturnType<typeof setTimeout> | null = null;
 	let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
+	let playbackSpeed = $state(1.0);
+	let iframeElement = $state<HTMLIFrameElement | null>(null);
 
 	// Save playback progress periodically
 	let progressSaveInterval: ReturnType<typeof setInterval> | null = null;

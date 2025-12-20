@@ -113,7 +113,13 @@ export const playbackProgressRepository = {
 				.where(and(...conditions))
 				.limit(1);
 
-			return results[0] ?? null;
+			if (results[0]) {
+				return {
+					...results[0],
+					mediaType: results[0].mediaType as 'movie' | 'tv'
+				};
+			}
+			return null;
 		} catch (error) {
 			console.error('Error fetching playback progress:', error);
 			return null;
@@ -129,11 +135,16 @@ export const playbackProgressRepository = {
 				.orderBy(desc(playbackProgress.updatedAt))
 				.limit(limit);
 
-			// Filter out completed items (progress >= 90% of duration)
-			return results.filter((record) => {
-				const progressPercent = (record.progress / record.duration) * 100;
-				return progressPercent < 90;
-			});
+			// Filter out completed items (progress >= 90% of duration) and cast mediaType
+			return results
+				.filter((record) => {
+					const progressPercent = (record.progress / record.duration) * 100;
+					return progressPercent < 90;
+				})
+				.map((record) => ({
+					...record,
+					mediaType: record.mediaType as 'movie' | 'tv'
+				}));
 		} catch (error) {
 			console.error('Error fetching continue watching:', error);
 			return [];
