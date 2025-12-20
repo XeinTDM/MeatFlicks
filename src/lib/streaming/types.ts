@@ -7,6 +7,26 @@ export interface StreamingProviderContext {
 	season?: number;
 	episode?: number;
 	language?: string;
+	preferredQuality?: string;
+	preferredSubtitleLanguage?: string;
+	includeQualities?: boolean;
+	includeSubtitles?: boolean;
+}
+
+export interface VideoQuality {
+	label: string;
+	resolution: string;
+	bitrate?: number;
+	url: string;
+	isDefault?: boolean;
+}
+
+export interface SubtitleTrack {
+	id: string;
+	label: string;
+	language: string;
+	url: string;
+	isDefault?: boolean;
 }
 
 export interface StreamingSource {
@@ -15,6 +35,8 @@ export interface StreamingSource {
 	embedUrl?: string;
 	reliabilityScore: number;
 	notes?: string;
+	qualities?: VideoQuality[];
+	subtitles?: SubtitleTrack[];
 }
 
 export interface StreamingProvider {

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
-	import type { StreamingSource } from '$lib/streaming';
+	import type { StreamingSource, VideoQuality, SubtitleTrack } from '$lib/streaming';
 	import { Button } from '$lib/components/ui/button';
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MovieScrollContainer } from '$lib/components';
 	import ShareButton from '$lib/components/ShareButton.svelte';
+	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
 	import { PictureInPicture, Gauge } from '@lucide/svelte';
@@ -121,6 +122,12 @@
 	let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 	let playbackSpeed = $state(1.0);
 	let iframeElement = $state<HTMLIFrameElement | null>(null);
+
+	// Quality and subtitle state
+	let selectedQuality = $state<string>('auto');
+	let selectedSubtitle = $state<string | undefined>(undefined);
+	let currentQualities = $state<VideoQuality[]>([]);
+	let currentSubtitles = $state<SubtitleTrack[]>([]);
 
 	// Save playback progress periodically
 	let progressSaveInterval: ReturnType<typeof setInterval> | null = null;
@@ -416,6 +423,10 @@
 					imdbId: movie.imdbId ?? undefined,
 					season: mediaType === 'tv' ? selectedSeason : undefined,
 					episode: mediaType === 'tv' ? selectedEpisode : undefined,
+					preferredQuality: selectedQuality,
+					preferredSubtitleLanguage: selectedSubtitle,
+					includeQualities: true,
+					includeSubtitles: true,
 					preferredProviders: providerId ? [providerId] : undefined
 				})
 			});
@@ -423,6 +434,12 @@
 			if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
 
 			const payload = await response.json();
+
+			// Update qualities and subtitles from the response
+			if (payload.source) {
+				currentQualities = payload.source.qualities || [];
+				currentSubtitles = payload.source.subtitles || [];
+			}
 
 			currentStreaming = {
 				source: payload?.source ?? null,
@@ -492,6 +509,40 @@
 		selectedEpisode = 1;
 		hasRequestedPlayback = false;
 		currentStreaming = { source: null, resolutions: [] };
+		currentQualities = [];
+		currentSubtitles = [];
+	}
+
+	function handleQualityChange(quality: VideoQuality) {
+		selectedQuality = quality.label;
+		// Update the stream URL if we have the same source
+		if (primarySource && currentQualities.some(q => q.url === quality.url)) {
+			playbackUrl = quality.url;
+			// In a real implementation, we would communicate with the iframe
+			// to change the video source using postMessage
+			if (iframeElement && iframeElement.contentWindow) {
+				iframeElement.contentWindow.postMessage({
+					type: 'qualityChange',
+					quality: quality.url
+				}, '*');
+			}
+		}
+	}
+
+	function handleSubtitleChange(subtitle: SubtitleTrack | null) {
+		selectedSubtitle = subtitle?.id || null;
+		// In a real implementation, we would communicate with the iframe
+		// to enable/disable subtitles using postMessage
+		if (iframeElement && iframeElement.contentWindow) {
+			iframeElement.contentWindow.postMessage({
+				type: 'subtitleChange',
+				subtitle: subtitle ? {
+					url: subtitle.url,
+					language: subtitle.language,
+					label: subtitle.label
+				} : null
+			}, '*');
+		}
 	}
 
 	function toggleTheaterMode() {
@@ -658,6 +709,20 @@
 								/><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg
 							>
 						</button>
+					{/if}
+
+					<!-- Player Controls -->
+					{#if displayPlayer && (currentQualities.length > 1 || currentSubtitles.length > 0)}
+						<PlayerControls
+							qualities={currentQualities}
+							subtitles={currentSubtitles}
+							selectedQuality={selectedQuality}
+							selectedSubtitle={selectedSubtitle}
+							onQualityChange={handleQualityChange}
+							onSubtitleChange={handleSubtitleChange}
+							class="absolute bottom-4 left-4 z-30"
+							compact={true}
+						/>
 					{/if}
 
 					{#if primarySource?.embedUrl}

@@ -44,6 +44,10 @@ const buildInput = (params: URLSearchParams) => {
 		season,
 		episode,
 		language: params.get('language') ?? undefined,
+		preferredQuality: params.get('preferredQuality') ?? undefined,
+		preferredSubtitleLanguage: params.get('preferredSubtitleLanguage') ?? undefined,
+		includeQualities: params.get('includeQualities') === 'true',
+		includeSubtitles: params.get('includeSubtitles') === 'true',
 		preferredProviders
 	} as const;
 };
@@ -82,6 +86,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (body.season) params.set('season', String(body.season));
 		if (body.episode) params.set('episode', String(body.episode));
 		if (body.language) params.set('language', body.language);
+		if (body.preferredQuality) params.set('preferredQuality', body.preferredQuality);
+		if (body.preferredSubtitleLanguage) params.set('preferredSubtitleLanguage', body.preferredSubtitleLanguage);
+		if (body.includeQualities !== undefined) params.set('includeQualities', String(body.includeQualities));
+		if (body.includeSubtitles !== undefined) params.set('includeSubtitles', String(body.includeSubtitles));
 		if (Array.isArray(body.preferredProviders)) {
 			params.set('preferred', body.preferredProviders.join(','));
 		}

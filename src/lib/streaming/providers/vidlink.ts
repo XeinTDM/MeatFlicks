@@ -6,7 +6,8 @@ import {
 	extractFirstUrl,
 	fetchWithTimeout
 } from '../provider-helpers';
-import type { StreamingProvider } from '../types';
+import type { StreamingProvider, VideoQuality, SubtitleTrack } from '../types';
+import { extractQualities, extractSubtitles, type QualitySource, type SubtitleSource } from '../quality-helpers';
 
 const { vidlink } = streamingConfig;
 
@@ -96,15 +97,112 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 			return fallbackSource(context, params);
 		}
 
+		// Extract quality information if requested
+		let qualities: VideoQuality[] | undefined;
+		let subtitles: SubtitleTrack[] | undefined;
+
+		if (context.includeQualities) {
+			// Try to extract multiple quality sources from the payload
+			const qualitySources: QualitySource[] = [];
+			
+			// Check for different quality formats in the response
+			if (payload.sources && Array.isArray(payload.sources)) {
+				for (const source of payload.sources) {
+					if (source.url) {
+						const absoluteUrl = ensureAbsoluteUrl(vidlink.baseUrl, source.url);
+						if (absoluteUrl) {
+							qualitySources.push({
+								url: absoluteUrl,
+								quality: source.quality,
+								label: source.label,
+								resolution: source.resolution,
+								bitrate: source.bitrate
+							});
+						}
+					}
+				}
+			} else if (payload.qualities && typeof payload.qualities === 'object') {
+				for (const [quality, url] of Object.entries(payload.qualities)) {
+					if (typeof url === 'string') {
+						const absoluteUrl = ensureAbsoluteUrl(vidlink.baseUrl, url);
+						if (absoluteUrl) {
+							qualitySources.push({
+								url: absoluteUrl,
+								quality,
+								label: quality
+							});
+						}
+					}
+				}
+			}
+
+			// If we found multiple qualities, use them; otherwise create a single quality from the main stream
+			if (qualitySources.length > 1) {
+				qualities = extractQualities(qualitySources);
+			} else if (streamCandidate) {
+				qualities = extractQualities([], streamCandidate);
+			}
+		}
+
+		if (context.includeSubtitles) {
+			// Try to extract subtitle information from the payload
+			const subtitleSources: SubtitleSource[] = [];
+			
+			if (payload.subtitles && Array.isArray(payload.subtitles)) {
+				for (const subtitle of payload.subtitles) {
+					if (subtitle.url && subtitle.language) {
+						const absoluteUrl = ensureAbsoluteUrl(vidlink.baseUrl, subtitle.url);
+						if (absoluteUrl) {
+							subtitleSources.push({
+								url: absoluteUrl,
+								language: subtitle.language,
+								label: subtitle.label
+							});
+						}
+					}
+				}
+			} else if (payload.subtitles && typeof payload.subtitles === 'object') {
+				for (const [language, url] of Object.entries(payload.subtitles)) {
+					if (typeof url === 'string') {
+						const absoluteUrl = ensureAbsoluteUrl(vidlink.baseUrl, url);
+						if (absoluteUrl) {
+							subtitleSources.push({
+								url: absoluteUrl,
+								language
+							});
+						}
+					}
+				}
+			}
+
+			if (subtitleSources.length > 0) {
+				subtitles = extractSubtitles(subtitleSources);
+			}
+		}
+
+		// Use preferred quality if specified
+		let finalStreamUrl = streamCandidate ?? embedCandidate!;
+		if (qualities && context.preferredQuality) {
+			const preferredUrl = qualities.find(q => 
+				q.resolution.toLowerCase().includes(context.preferredQuality!.toLowerCase()) ||
+				q.label.toLowerCase().includes(context.preferredQuality!.toLowerCase())
+			)?.url;
+			if (preferredUrl) {
+				finalStreamUrl = preferredUrl;
+			}
+		}
+
 		return {
 			providerId: 'vidlink',
-			streamUrl: streamCandidate ?? embedCandidate!,
+			streamUrl: finalStreamUrl,
 			embedUrl: embedCandidate ?? undefined,
 			reliabilityScore: streamCandidate ? 0.85 : 0.65,
 			notes: streamCandidate
 				? 'Direct stream retrieved from Vidlink API.'
-				: 'Embed stream retrieved from Vidlink API.'
-		} as const;
+				: 'Embed stream retrieved from Vidlink API.',
+			qualities,
+			subtitles
+		};
 	} catch (error) {
 		console.warn('[streaming][vidlink]', error);
 		return fallbackSource(context, params);

@@ -92,3 +92,15 @@ export async function resolveStreamingSource(
 	const success = resolutions.find((resolution) => resolution.success && resolution.source);
 	return success?.source ?? null;
 }
+
+export async function resolveStreamingWithDetails(
+	context: StreamingProviderContext,
+	preferredProviders: string[] = []
+): Promise<{ source: StreamingSource | null; resolutions: ProviderResolution[] }> {
+	const resolutions = await collectStreamingSources(context, preferredProviders);
+	const success = resolutions.find((resolution) => resolution.success && resolution.source);
+	return {
+		source: success?.source ?? null,
+		resolutions
+	};
+}
