@@ -49,7 +49,9 @@
 
 		isLoading = true;
 		try {
-			const res = await fetch(`/api/search/people?q=${encodeURIComponent(q)}&limit=${maxResults}`);
+			const res = await fetch(`/api/search/people?q=${encodeURIComponent(q)}&limit=${maxResults}`, {
+				credentials: 'include'
+			});
 			if (res.ok) {
 				results = await res.json();
 			}

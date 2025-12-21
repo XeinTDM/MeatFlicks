@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { validateQueryParams, searchQuerySchema } from '$lib/server/validation';
 import { errorHandler } from '$lib/server';
+import { personRepository } from '$lib/server/repositories/person.repository';
 
 const DEFAULT_LIMIT = 100;
 

@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { type VariantProps, tv } from 'tailwind-variants';
 
 	export const toggleGroupVariants = tv({

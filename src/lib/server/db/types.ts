@@ -10,6 +10,35 @@ export interface CollectionRecord {
 	description: string | null;
 }
 
+export interface PersonRecord {
+	id: number;
+	tmdbId: number;
+	name: string;
+	biography: string | null;
+	birthday: string | null;
+	deathday: string | null;
+	placeOfBirth: string | null;
+	profilePath: string | null;
+	popularity: number | null;
+	knownForDepartment: string | null;
+	createdAt: number;
+	updatedAt: number;
+}
+
+export interface MoviePersonRecord {
+	movieId: string;
+	personId: number;
+	role: string;
+	character: string | null;
+	job: string | null;
+	order: number | null;
+	createdAt: number;
+}
+
+export interface PersonSearchResult extends PersonRecord {
+	score: number;
+}
+
 export interface MovieRow {
 	numericId: number;
 	id: string;

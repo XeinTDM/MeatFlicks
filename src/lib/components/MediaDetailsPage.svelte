@@ -167,7 +167,8 @@
 								duration,
 								seasonNumber: mediaType === 'tv' ? selectedSeason : undefined,
 								episodeNumber: mediaType === 'tv' ? selectedEpisode : undefined
-							})
+							}),
+							credentials: 'include'
 						});
 					}
 				} catch (error) {
@@ -342,7 +343,9 @@
 		if (!movie?.tmdbId) return;
 		isLoadingEpisodes = true;
 		try {
-			const response = await fetch(`/api/tv/${movie.tmdbId}/season/${seasonNumber}`);
+			const response = await fetch(`/api/tv/${movie.tmdbId}/season/${seasonNumber}`, {
+				credentials: 'include'
+			});
 			if (response.ok) {
 				const data = await response.json();
 				episodesList = data.episodes || [];
@@ -404,7 +407,8 @@
 					includeQualities: true,
 					includeSubtitles: true,
 					preferredProviders: providerId ? [providerId] : undefined
-				})
+				}),
+				credentials: 'include'
 			});
 
 			if (!response.ok) throw new Error(`Request failed with status ${response.status}`);

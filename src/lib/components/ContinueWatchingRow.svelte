@@ -8,14 +8,18 @@
 
 	onMount(async () => {
 		try {
-			const response = await fetch('/api/playback/progress');
+			const response = await fetch('/api/playback/progress', {
+				credentials: 'include'
+			});
 			if (response.ok) {
 				const data = await response.json();
 				if (data.continueWatching && Array.isArray(data.continueWatching)) {
 					// Fetch movie details for each progress entry
 					const moviePromises = data.continueWatching.map(async (progress: any) => {
 						try {
-							const movieResponse = await fetch(`/api/movies/${progress.mediaId}`);
+							const movieResponse = await fetch(`/api/movies/${progress.mediaId}`, {
+								credentials: 'include'
+							});
 							if (movieResponse.ok) {
 								const movieData = await movieResponse.json();
 								return {

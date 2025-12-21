@@ -8,7 +8,9 @@
 
 	onMount(async () => {
 		try {
-			const response = await fetch('/api/movies/top-rated?limit=20');
+			const response = await fetch('/api/movies/top-rated?limit=20', {
+				credentials: 'include'
+			});
 			if (response.ok) {
 				const data = await response.json();
 				if (data.movies && Array.isArray(data.movies)) {

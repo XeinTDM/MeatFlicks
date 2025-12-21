@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres, collections } from '$lib/server/db/schema';
+import { movies, genres, moviesGenres, collections, moviePeople, people } from '$lib/server/db/schema';
 import { eq, sql, and, count as drizzleCount } from 'drizzle-orm';
 import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
+import { personRepository } from '$lib/server/repositories/person.repository';
+import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
 
 export const loadMovieById = async (id: string): Promise<MovieRecord | null> => {
 	const rows = await db.select().from(movies).where(eq(movies.id, id)).limit(1);
@@ -89,14 +91,22 @@ export const upsertMovieWithGenres = async (
 				await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
 			}
 
-			// Since we are inside a transaction, we should use a load function that also uses tx
-			// but for simplicity here we'll just return the final result after transaction
-			// Actually, mapRowsToRecords uses 'db' which might not see transaction yet?
-			// Better to just return the results manually or use tx in mapping.
-			// For now, let's just finish the transaction and load after.
+			// Sync person data (cast and crew) for this movie
+			// This will happen outside the transaction to avoid complexity
+			// but we'll wait for it to complete before returning
 			return movieId;
 		})
-		.then((id) => loadMovieById(id));
+		.then(async (movieId) => {
+			// Sync person data after the transaction completes
+			try {
+				await syncMovieCast(movieId, payload.tmdbId);
+				await syncMovieCrew(movieId, payload.tmdbId);
+			} catch (error) {
+				console.warn(`Failed to sync person data for movie ${movieId}:`, error);
+			}
+
+			return loadMovieById(movieId);
+		});
 };
 
 export const setMovieCollection = async (movieId: string, collectionId: number | null) => {

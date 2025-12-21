@@ -22,12 +22,14 @@ export const GET: RequestHandler = async ({ locals }) => {
 		const session = locals.session;
 		const user = locals.user;
 
-		if (!session || !user) {
-			throw new UnauthorizedError();
+		// If authenticated, use server-side watchlist
+		if (session && user) {
+			const movies = await watchlistRepository.getWatchlist(user.id);
+			return json(movies);
 		}
 
-		const movies = await watchlistRepository.getWatchlist(user.id);
-		return json(movies);
+		// If unauthenticated, return empty array - client will use localStorage
+		return json([]);
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);
 		return json(body, { status });
@@ -39,17 +41,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const session = locals.session;
 		const user = locals.user;
 
-		if (!session || !user) {
-			throw new UnauthorizedError();
+		// If authenticated, save to server
+		if (session && user) {
+			const body = await request.json();
+			const validatedBody = validateRequestBody(
+				z.object({ movie: movieSchema }),
+				body
+			);
+
+			await watchlistRepository.addToWatchlist(user.id, validatedBody.movie);
 		}
 
-		const body = await request.json();
-		const validatedBody = validateRequestBody(
-			z.object({ movie: movieSchema }),
-			body
-		);
-
-		await watchlistRepository.addToWatchlist(user.id, validatedBody.movie);
+		// Always return success - unauthenticated users will use localStorage
 		return json({ success: true });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);
@@ -62,29 +65,30 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		const session = locals.session;
 		const user = locals.user;
 
-		if (!session || !user) {
-			throw new UnauthorizedError();
+		// If authenticated, delete from server
+		if (session && user) {
+			const body = await request.json();
+			const validatedBody = validateRequestBody(
+				z.object({
+					movieId: z.string().optional(),
+					clearAll: z.boolean().optional()
+				}),
+				body
+			);
+
+			if (validatedBody.clearAll) {
+				await watchlistRepository.clearWatchlist(user.id);
+				return json({ success: true });
+			}
+
+			if (!validatedBody.movieId) {
+				throw new ValidationError('Movie ID is required');
+			}
+
+			await watchlistRepository.removeFromWatchlist(user.id, validatedBody.movieId);
 		}
 
-		const body = await request.json();
-		const validatedBody = validateRequestBody(
-			z.object({
-				movieId: z.string().optional(),
-				clearAll: z.boolean().optional()
-			}),
-			body
-		);
-
-		if (validatedBody.clearAll) {
-			await watchlistRepository.clearWatchlist(user.id);
-			return json({ success: true });
-		}
-
-		if (!validatedBody.movieId) {
-			throw new ValidationError('Movie ID is required');
-		}
-
-		await watchlistRepository.removeFromWatchlist(user.id, validatedBody.movieId);
+		// Always return success - unauthenticated users will use localStorage
 		return json({ success: true });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);
@@ -97,17 +101,18 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		const session = locals.session;
 		const user = locals.user;
 
-		if (!session || !user) {
-			throw new UnauthorizedError();
+		// If authenticated, replace server watchlist
+		if (session && user) {
+			const body = await request.json();
+			const validatedBody = validateRequestBody(
+				z.object({ movies: z.array(movieSchema) }),
+				body
+			);
+
+			await watchlistRepository.replaceWatchlist(user.id, validatedBody.movies);
 		}
 
-		const body = await request.json();
-		const validatedBody = validateRequestBody(
-			z.object({ movies: z.array(movieSchema) }),
-			body
-		);
-
-		await watchlistRepository.replaceWatchlist(user.id, validatedBody.movies);
+		// Always return success - unauthenticated users will use localStorage
 		return json({ success: true });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);

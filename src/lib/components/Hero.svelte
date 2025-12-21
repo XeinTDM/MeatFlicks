@@ -335,7 +335,6 @@
 						title={`Trailer for ${activeMovie.title}`}
 						src={trailerEmbedUrl}
 						allow="autoplay; fullscreen; picture-in-picture"
-						allowfullscreen
 						class="h-full w-full scale-125 md:scale-110"
 					></iframe>
 				</div>
@@ -550,24 +549,21 @@
 							role="tab"
 							aria-selected={index === activeIndex}
 							aria-controls={`slide-${slide.key}`}
-							class={`group flex max-w-[14rem] items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur transition-colors duration-300 ${
+							class={`group flex max-w-[14rem] items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur transition-colors duration-300 ${
 								index === activeIndex
-									? 'border-primary/70 bg-background/70 text-primary shadow-sm'
-									: 'border-foreground/20 bg-background/40 text-foreground/80 hover:border-foreground/40 hover:text-foreground'
+									? 'bg-background/70 text-primary shadow-sm'
+									: 'bg-background/40 text-foreground/80 hover:text-foreground'
 							}`}
 							onclick={() => goToSlide(index)}
 						>
 							<span
-								class={`size-2 shrink-0 rounded-full transition-colors duration-200 ${
+								class={`size-3 shrink-0 rounded-full transition-colors duration-200 ${
 									index === activeIndex
 										? 'bg-primary'
 										: 'bg-foreground/40 group-hover:bg-foreground/70'
 								}`}
 								aria-hidden="true"
 							></span>
-							<span class="truncate">
-								{slide.movie.title}
-							</span>
 						</button>
 					{/each}
 				</div>

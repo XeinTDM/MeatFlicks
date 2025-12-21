@@ -60,7 +60,8 @@
 
 		try {
 			const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
-				signal: controller.signal
+				signal: controller.signal,
+				credentials: 'include'
 			});
 
 			if (!res.ok) throw new Error('Failed to fetch search results');
@@ -140,7 +141,9 @@
 				roles: roles.join(',')
 			});
 
-			const res = await fetch(`/api/search/movies-by-people?${searchParams.toString()}`);
+			const res = await fetch(`/api/search/movies-by-people?${searchParams.toString()}`, {
+				credentials: 'include'
+			});
 
 			if (!res.ok) throw new Error('Failed to fetch movies by people');
 
@@ -156,7 +159,9 @@
 	async function loadSearchHistory() {
 		if (!browser) return;
 		try {
-			const response = await fetch('/api/search/history');
+			const response = await fetch('/api/search/history', {
+				credentials: 'include'
+			});
 			if (response.ok) {
 				const data = await response.json();
 				searchHistoryItems = data.searches || [];
@@ -177,7 +182,8 @@
 			const response = await fetch('/api/search/history', {
 				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ id })
+				body: JSON.stringify({ id }),
+				credentials: 'include'
 			});
 			if (response.ok) {
 				searchHistoryItems = searchHistoryItems.filter((item) => item.id !== id);
@@ -190,7 +196,8 @@
 	async function handleClearHistory() {
 		try {
 			const response = await fetch('/api/search/history', {
-				method: 'DELETE'
+				method: 'DELETE',
+				credentials: 'include'
 			});
 			if (response.ok) {
 				searchHistoryItems = [];

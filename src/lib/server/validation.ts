@@ -113,11 +113,11 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context?
 			);
 			throw validationError;
 		} else if (error instanceof Error) {
-			const validationError = new ValidationError(`Failed to validate ${context || 'input'} data: ${error.message}`, {});
+			const validationError = new ValidationError(`Failed to validate ${context || 'input'} data: ${error.message}`);
 			throw validationError;
 		}
 		// For unknown errors, create a generic validation error with empty details
-		const validationError = new ValidationError(`Failed to validate ${context || 'input'} data`, {});
+		const validationError = new ValidationError(`Failed to validate ${context || 'input'} data`);
 		throw validationError;
 	}
 }

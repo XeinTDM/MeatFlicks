@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
+	import { searchHistory } from '$lib/state/stores/searchHistoryStore';
 
 	interface SearchHistoryItem {
 		id: number;
@@ -18,9 +19,15 @@
 	let isFocused = $state(false);
 	let searchTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
 	let containerRef = $state<HTMLElement | null>(null);
-	let searchHistory = $state<SearchHistoryItem[]>([]);
 	let isLoadingHistory = $state(false);
-	let showHistory = $derived(isFocused && !query.trim() && searchHistory.length > 0);
+
+	// Get search history from store
+	$effect(() => {
+		const unsubscribe = searchHistory.subscribe(($searchHistory) => {
+			// No need to do anything here since we're using the store directly
+		});
+		return unsubscribe;
+	});
 
 	async function fetchResults(q: string) {
 		if (!q.trim()) {
@@ -30,7 +37,9 @@
 
 		isLoading = true;
 		try {
-			const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=5`);
+			const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=5`, {
+				credentials: 'include'
+			});
 			if (res.ok) {
 				results = await res.json();
 			}
@@ -41,32 +50,11 @@
 		}
 	}
 
-	async function fetchSearchHistory() {
-		isLoadingHistory = true;
-		try {
-			const res = await fetch('/api/search/history');
-			if (res.ok) {
-				const data = await res.json();
-				searchHistory = data.searches || [];
-			}
-		} catch (error) {
-			// Silently fail - search history is optional
-			console.error('[global-search] error fetching history', error);
-		} finally {
-			isLoadingHistory = false;
-		}
-	}
-
 	async function saveSearch(query: string) {
 		if (!query.trim()) return;
 		try {
-			await fetch('/api/search/history', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ query: query.trim() })
-			});
-			// Refresh history after saving
-			await fetchSearchHistory();
+			// Use the search history store which handles both authenticated and unauthenticated users
+			await searchHistory.addSearch(query);
 		} catch (error) {
 			// Silently fail - saving history is optional
 			console.error('[global-search] error saving history', error);
@@ -75,13 +63,8 @@
 
 	async function deleteSearch(id: number) {
 		try {
-			await fetch('/api/search/history', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ searchId: id })
-			});
-			// Remove from local state
-			searchHistory = searchHistory.filter((s) => s.id !== id);
+			// Use the search history store which handles both authenticated and unauthenticated users
+			await searchHistory.deleteSearch(id);
 		} catch (error) {
 			console.error('[global-search] error deleting history', error);
 		}
@@ -89,11 +72,8 @@
 
 	async function clearAllHistory() {
 		try {
-			await fetch('/api/search/history', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' }
-			});
-			searchHistory = [];
+			// Use the search history store which handles both authenticated and unauthenticated users
+			await searchHistory.clearAll();
 		} catch (error) {
 			console.error('[global-search] error clearing history', error);
 		}
@@ -105,8 +85,7 @@
 	}
 
 	onMount(() => {
-		// Fetch history on mount
-		fetchSearchHistory();
+		// The search history store automatically syncs on initialization
 	});
 
 	function handleInput(e: Event) {
@@ -177,9 +156,6 @@
 			oninput={handleInput}
 			onfocus={() => {
 				isFocused = true;
-				if (!query.trim() && searchHistory.length === 0) {
-					fetchSearchHistory();
-				}
 			}}
 			onkeydown={(e) => e.key === 'Enter' && handleGlobalSearch()}
 		/>
@@ -194,12 +170,12 @@
 		{/if}
 	</div>
 
-	{#if isFocused && (showHistory || results.length > 0 || isLoading)}
+	{#if isFocused && ($searchHistory.history.length > 0 || results.length > 0 || isLoading)}
 		<div
 			class="absolute top-full right-0 left-0 z-[100] mt-3 rounded-2xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
 			transition:slide={{ duration: 200 }}
 		>
-			{#if showHistory}
+			{#if $searchHistory.history.length > 0 && !query.trim()}
 				<!-- Show search history when input is focused and empty -->
 				<div class="p-2">
 					<div
@@ -209,7 +185,7 @@
 						Recent Searches
 					</div>
 					<SearchHistory
-						searches={searchHistory}
+						searches={$searchHistory.history}
 						onSearchSelect={handleHistorySelect}
 						onDelete={deleteSearch}
 						onClearAll={clearAllHistory}

@@ -170,22 +170,43 @@ function createWatchlistStore() {
 
 		store.update((state) => ({ ...state, loading: true }));
 		try {
-			const response = await fetch('/api/watchlist');
+			const response = await fetch('/api/watchlist', {
+				credentials: 'include'
+			});
 			if (response.ok) {
 				const serverMovies = await response.json();
 				const sanitized = serverMovies
 					.map(sanitizeMovie)
 					.filter((movie: Movie | null): movie is Movie => Boolean(movie));
 
+				// If server returns movies, use them (authenticated user)
+				if (sanitized.length > 0) {
+					store.update((state) => ({
+						...state,
+						watchlist: sanitized,
+						loading: false,
+						error: null
+					}));
+					persist(sanitized);
+				} else {
+					// Server returned empty array (unauthenticated user), use local storage
+					const stored = readStorage();
+					store.update((state) => ({
+						...state,
+						watchlist: stored,
+						loading: false,
+						error: null
+					}));
+				}
+			} else {
+				// Fallback to local storage if server fails
+				const stored = readStorage();
 				store.update((state) => ({
 					...state,
-					watchlist: sanitized,
+					watchlist: stored,
 					loading: false,
 					error: null
 				}));
-				persist(sanitized);
-			} else {
-				throw new Error('Failed to fetch from server');
 			}
 		} catch (error) {
 			console.error('[watchlist][syncFromServer] Failed', error);
@@ -195,7 +216,7 @@ function createWatchlistStore() {
 				...state,
 				watchlist: stored,
 				loading: false,
-				error: 'Could not sync with server. Using local data.'
+				error: null
 			}));
 		}
 	};
@@ -246,7 +267,8 @@ function createWatchlistStore() {
 			const response = await fetch('/api/watchlist', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movie: sanitized })
+				body: JSON.stringify({ movie: sanitized }),
+				credentials: 'include'
 			});
 			if (!response.ok) throw new Error('Failed to sync with server');
 
@@ -292,7 +314,8 @@ function createWatchlistStore() {
 			const response = await fetch('/api/watchlist', {
 				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movieId })
+				body: JSON.stringify({ movieId }),
+				credentials: 'include'
 			});
 			if (!response.ok) throw new Error('Failed to sync removal with server');
 
@@ -327,7 +350,8 @@ function createWatchlistStore() {
 			const response = await fetch('/api/watchlist', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movies: deduped })
+				body: JSON.stringify({ movies: deduped }),
+				credentials: 'include'
 			});
 			if (!response.ok) throw new Error('Failed to replace watchlist on server');
 		} catch (error) {
@@ -344,7 +368,8 @@ function createWatchlistStore() {
 			const response = await fetch('/api/watchlist', {
 				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ clearAll: true })
+				body: JSON.stringify({ clearAll: true }),
+				credentials: 'include'
 			});
 			if (!response.ok) throw new Error('Failed to clear on server');
 		} catch (error) {
