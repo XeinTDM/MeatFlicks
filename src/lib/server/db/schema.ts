@@ -113,6 +113,68 @@ export const sessions = sqliteTable('sessions', {
 	expiresAt: integer('expires_at').notNull()
 });
 
+export const watchlistFolders = sqliteTable(
+	'watchlist_folders',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		description: text('description'),
+		color: text('color'),
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer('updated_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		index('idx_watchlist_folders_user').on(table.userId),
+		index('idx_watchlist_folders_name').on(table.name)
+	]
+);
+
+export const watchlistTags = sqliteTable(
+	'watchlist_tags',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		color: text('color'),
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		index('idx_watchlist_tags_user').on(table.userId),
+		index('idx_watchlist_tags_name').on(table.name)
+	]
+);
+
+export const watchlistItemTags = sqliteTable(
+	'watchlist_item_tags',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		movieId: text('movie_id').notNull(),
+		tagId: integer('tag_id').notNull(),
+		createdAt: integer('created_at')
+			.notNull()
+			.$defaultFn(() => Date.now())
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.movieId, table.tagId] }),
+		index('idx_watchlist_item_tags_user').on(table.userId),
+		index('idx_watchlist_item_tags_movie').on(table.movieId),
+		index('idx_watchlist_item_tags_tag').on(table.tagId)
+	]
+);
+
 export const watchlist = sqliteTable(
 	'watchlist',
 	{
@@ -123,12 +185,14 @@ export const watchlist = sqliteTable(
 		movieData: text('movie_data').notNull(),
 		addedAt: integer('added_at')
 			.notNull()
-			.$defaultFn(() => Date.now())
+			.$defaultFn(() => Date.now()),
+		folderId: integer('folder_id').references(() => watchlistFolders.id, { onDelete: 'set null' })
 	},
 	(table) => [
 		primaryKey({ columns: [table.userId, table.movieId] }),
 		index('idx_watchlist_user').on(table.userId),
-		index('idx_watchlist_addedAt').on(table.addedAt)
+		index('idx_watchlist_addedAt').on(table.addedAt),
+		index('idx_watchlist_folder').on(table.folderId)
 	]
 );
 
@@ -537,5 +601,49 @@ export const tvShowWatchStatusRelations = relations(tvShowWatchStatus, ({ one })
 	tvShow: one(tvShows, {
 		fields: [tvShowWatchStatus.tvShowId],
 		references: [tvShows.id]
+	})
+}));
+
+// Watchlist organization relations
+export const watchlistRelations = relations(watchlist, ({ one, many }) => ({
+	user: one(users, {
+		fields: [watchlist.userId],
+		references: [users.id]
+	}),
+	folder: one(watchlistFolders, {
+		fields: [watchlist.folderId],
+		references: [watchlistFolders.id]
+	}),
+	tags: many(watchlistItemTags)
+}));
+
+export const watchlistFoldersRelations = relations(watchlistFolders, ({ many }) => ({
+	user: one(users, {
+		fields: [watchlistFolders.userId],
+		references: [users.id]
+	}),
+	items: many(watchlist)
+}));
+
+export const watchlistTagsRelations = relations(watchlistTags, ({ many }) => ({
+	user: one(users, {
+		fields: [watchlistTags.userId],
+		references: [users.id]
+	}),
+	itemTags: many(watchlistItemTags)
+}));
+
+export const watchlistItemTagsRelations = relations(watchlistItemTags, ({ one }) => ({
+	user: one(users, {
+		fields: [watchlistItemTags.userId],
+		references: [users.id]
+	}),
+	tag: one(watchlistTags, {
+		fields: [watchlistItemTags.tagId],
+		references: [watchlistTags.id]
+	}),
+	watchlistItem: one(watchlist, {
+		fields: [watchlistItemTags.userId, watchlistItemTags.movieId],
+		references: [watchlist.userId, watchlist.movieId]
 	})
 }));
