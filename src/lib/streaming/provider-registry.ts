@@ -45,39 +45,89 @@ export interface ProviderResolution {
 
 export async function collectStreamingSources(
 	context: StreamingProviderContext,
-	preferredProviders: string[] = []
+	preferredProviders: string[] = [],
+	options: {
+		parallel?: boolean;
+		timeoutMs?: number;
+	} = {}
 ): Promise<ProviderResolution[]> {
+	const { parallel = true, timeoutMs = 10000 } = options;
 	const orderedProviders = orderProviders(context, preferredProviders);
 	const results: ProviderResolution[] = [];
 
-	for (const provider of orderedProviders) {
-		try {
-			const source = await provider.fetchSource(context);
-			if (source) {
-				results.push({
+	if (parallel && orderedProviders.length > 1) {
+		// Parallel execution with timeout
+		const promises = orderedProviders.map(async (provider) => {
+			try {
+				const source = await Promise.race([
+					provider.fetchSource(context),
+					new Promise<null>((_, reject) =>
+						setTimeout(() => reject(new Error('Provider timeout')), timeoutMs)
+					)
+				]);
+
+				if (source) {
+					return {
+						providerId: provider.id,
+						label: provider.label,
+						success: true,
+						source
+					};
+				} else {
+					return {
+						providerId: provider.id,
+						label: provider.label,
+						success: false,
+						source: null,
+						error: 'Provider returned no source.'
+					};
+				}
+			} catch (error: unknown) {
+				console.warn(`[streaming][${provider.id}]`, error);
+				return {
 					providerId: provider.id,
 					label: provider.label,
-					success: true,
-					source
-				});
-			} else {
+					success: false,
+					source: null,
+					error: error instanceof Error ? error.message : 'Unknown error'
+				};
+			}
+		});
+
+		// Execute all providers in parallel
+		const settledResults = await Promise.all(promises);
+		return settledResults;
+	} else {
+		// Sequential execution (fallback)
+		for (const provider of orderedProviders) {
+			try {
+				const source = await provider.fetchSource(context);
+				if (source) {
+					results.push({
+						providerId: provider.id,
+						label: provider.label,
+						success: true,
+						source
+					});
+				} else {
+					results.push({
+						providerId: provider.id,
+						label: provider.label,
+						success: false,
+						source: null,
+						error: 'Provider returned no source.'
+					});
+				}
+			} catch (error: unknown) {
+				console.warn(`[streaming][${provider.id}]`, error);
 				results.push({
 					providerId: provider.id,
 					label: provider.label,
 					success: false,
 					source: null,
-					error: 'Provider returned no source.'
+					error: error instanceof Error ? error.message : 'Unknown error'
 				});
 			}
-		} catch (error: unknown) {
-			console.warn(`[streaming][${provider.id}]`, error);
-			results.push({
-				providerId: provider.id,
-				label: provider.label,
-				success: false,
-				source: null,
-				error: error instanceof Error ? error.message : 'Unknown error'
-			});
 		}
 	}
 

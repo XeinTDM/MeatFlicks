@@ -6,7 +6,8 @@ export class AppError extends Error {
 		public message: string,
 		public status: number = 500,
 		public code?: string,
-		public details?: any
+		public details?: any,
+		public context?: Record<string, unknown>
 	) {
 		super(message);
 		this.name = 'AppError';
@@ -16,31 +17,72 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
 	constructor(
 		public message: string,
-		public details?: any
+		public details?: any,
+		public context?: Record<string, unknown>
 	) {
-		super(message, 400, 'VALIDATION_ERROR', details);
+		super(message, 400, 'VALIDATION_ERROR', details, context);
 		this.name = 'ValidationError';
 	}
 }
 
 export class NotFoundError extends AppError {
-	constructor(public message: string = 'Resource not found') {
-		super(message, 404, 'NOT_FOUND');
+	constructor(
+		public message: string = 'Resource not found',
+		public context?: Record<string, unknown>
+	) {
+		super(message, 404, 'NOT_FOUND', undefined, context);
 		this.name = 'NotFoundError';
 	}
 }
 
 export class UnauthorizedError extends AppError {
-	constructor(public message: string = 'Unauthorized') {
-		super(message, 401, 'UNAUTHORIZED');
+	constructor(
+		public message: string = 'Unauthorized',
+		public context?: Record<string, unknown>
+	) {
+		super(message, 401, 'UNAUTHORIZED', undefined, context);
 		this.name = 'UnauthorizedError';
 	}
 }
 
 export class ForbiddenError extends AppError {
-	constructor(public message: string = 'Forbidden') {
-		super(message, 403, 'FORBIDDEN');
+	constructor(
+		public message: string = 'Forbidden',
+		public context?: Record<string, unknown>
+	) {
+		super(message, 403, 'FORBIDDEN', undefined, context);
 		this.name = 'ForbiddenError';
+	}
+}
+
+export class RateLimitError extends AppError {
+	constructor(
+		public message: string = 'Too many requests',
+		public retryAfter?: number,
+		public context?: Record<string, unknown>
+	) {
+		super(message, 429, 'RATE_LIMIT_EXCEEDED', { retryAfter }, context);
+		this.name = 'RateLimitError';
+	}
+}
+
+export class ServiceUnavailableError extends AppError {
+	constructor(
+		public message: string = 'Service unavailable',
+		public context?: Record<string, unknown>
+	) {
+		super(message, 503, 'SERVICE_UNAVAILABLE', undefined, context);
+		this.name = 'ServiceUnavailableError';
+	}
+}
+
+export class ConflictError extends AppError {
+	constructor(
+		public message: string = 'Conflict',
+		public context?: Record<string, unknown>
+	) {
+		super(message, 409, 'CONFLICT', undefined, context);
+		this.name = 'ConflictError';
 	}
 }
 
@@ -102,7 +144,10 @@ export function createErrorHandler() {
 		ValidationError,
 		NotFoundError,
 		UnauthorizedError,
-		ForbiddenError
+		ForbiddenError,
+		RateLimitError,
+		ServiceUnavailableError,
+		ConflictError
 	};
 }
 

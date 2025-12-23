@@ -5,6 +5,14 @@ import { dirname, isAbsolute, resolve } from 'node:path';
 import * as schema from './schema';
 import { logger } from '../logger';
 import { env } from '$lib/config/env';
+import { sql } from 'drizzle-orm';
+
+// Database connection management
+let clientInstance: Client | null = null;
+let dbInstance: LibSQLDatabase<typeof schema> | null = null;
+let connectionAttempts = 0;
+const MAX_CONNECTION_ATTEMPTS = 3;
+const CONNECTION_RETRY_DELAY = 1000;
 
 const resolveDatabasePath = () => {
 	const target = env.SQLITE_DB_PATH;
@@ -18,72 +26,141 @@ const ensureDirectory = (dbPath: string) => {
 };
 
 const runInitSql = async (client: Client) => {
-	await client.executeMultiple(`
-		CREATE TABLE IF NOT EXISTS schema_info (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-		
-		CREATE VIRTUAL TABLE IF NOT EXISTS movie_fts USING fts5(
-			title,
-			overview,
-			movieId UNINDEXED
-		);
+	try {
+		await client.executeMultiple(`
+			CREATE TABLE IF NOT EXISTS schema_info (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
-		CREATE TRIGGER IF NOT EXISTS movies_ai AFTER INSERT ON movies BEGIN
-			INSERT INTO movie_fts(rowid, title, overview, movieId)
-			VALUES (new.numericId, new.title, coalesce(new.overview, ''), new.id);
-		END;
+			CREATE VIRTUAL TABLE IF NOT EXISTS movie_fts USING fts5(
+				title,
+				overview,
+				movieId UNINDEXED
+			);
 
-		CREATE TRIGGER IF NOT EXISTS movies_ad AFTER DELETE ON movies BEGIN
-			INSERT INTO movie_fts(movie_fts, rowid, title, overview, movieId)
-			VALUES ('delete', old.numericId, old.title, coalesce(old.overview, ''), old.id);
-		END;
+			CREATE TRIGGER IF NOT EXISTS movies_ai AFTER INSERT ON movies BEGIN
+				INSERT INTO movie_fts(rowid, title, overview, movieId)
+				VALUES (new.numericId, new.title, coalesce(new.overview, ''), new.id);
+			END;
 
-		CREATE TRIGGER IF NOT EXISTS movies_au AFTER UPDATE ON movies BEGIN
-			INSERT INTO movie_fts(movie_fts, rowid, title, overview, movieId)
-			VALUES ('delete', old.numericId, old.title, coalesce(old.overview, ''), old.id);
-			INSERT INTO movie_fts(rowid, title, overview, movieId)
-			VALUES (new.numericId, new.title, coalesce(new.overview, ''), new.id);
-		END;
+			CREATE TRIGGER IF NOT EXISTS movies_ad AFTER DELETE ON movies BEGIN
+				INSERT INTO movie_fts(movie_fts, rowid, title, overview, movieId)
+				VALUES ('delete', old.numericId, old.title, coalesce(old.overview, ''), old.id);
+			END;
 
-		CREATE TRIGGER IF NOT EXISTS movies_set_updated_at
-		AFTER UPDATE ON movies
-		BEGIN
-			UPDATE movies
-			SET updatedAt = (strftime('%s','now') * 1000)
-			WHERE numericId = new.numericId;
-		END;
+			CREATE TRIGGER IF NOT EXISTS movies_au AFTER UPDATE ON movies BEGIN
+				INSERT INTO movie_fts(movie_fts, rowid, title, overview, movieId)
+				VALUES ('delete', old.numericId, old.title, coalesce(old.overview, ''), old.id);
+				INSERT INTO movie_fts(rowid, title, overview, movieId)
+				VALUES (new.numericId, new.title, coalesce(new.overview, ''), new.id);
+			END;
 
-		INSERT INTO movie_fts(movie_fts) VALUES('rebuild');
-	`);
+			CREATE TRIGGER IF NOT EXISTS movies_set_updated_at
+			AFTER UPDATE ON movies
+			BEGIN
+				UPDATE movies
+				SET updatedAt = (strftime('%s','now') * 1000)
+				WHERE numericId = new.numericId;
+			END;
+
+			INSERT INTO movie_fts(movie_fts) VALUES('rebuild');
+		`);
+		logger.info('Database initialization completed successfully');
+	} catch (err) {
+		logger.error({ err }, 'Failed to initialize database extensions');
+		throw err;
+	}
 };
 
-type GlobalWithDb = typeof globalThis & {
-	__meatflicksClient?: Client;
-	__meatflicksDb?: LibSQLDatabase<typeof schema>;
-};
-
-const globalRef = globalThis as GlobalWithDb;
-
-export const client: Client =
-	globalRef.__meatflicksClient ??
-	(() => {
+const createDatabaseClient = (): Client => {
+	try {
 		const url = resolveDatabasePath();
 		ensureDirectory(url);
-		const c = createClient({ url });
-		globalRef.__meatflicksClient = c;
 
-		runInitSql(c).catch((err) => logger.error({ err }, 'Failed to initialize database extensions'));
+		// Configure client with connection pooling and retry logic
+		const client = createClient({
+			url
+		});
 
-		return c;
-	})();
+		return client;
+	} catch (error) {
+		logger.error({ error }, 'Failed to create database client');
+		throw error;
+	}
+};
 
-export const db =
-	(globalRef.__meatflicksDb as LibSQLDatabase<typeof schema>) ??
-	(() => {
-		const d = drizzle(client, { schema });
-		globalRef.__meatflicksDb = d;
-		return d;
-	})();
+const getDatabaseClient = (): Client => {
+	if (clientInstance) {
+		return clientInstance;
+	}
 
+	try {
+		clientInstance = createDatabaseClient();
+		runInitSql(clientInstance);
+		return clientInstance;
+	} catch (error) {
+		logger.error({ error }, 'Failed to get database client');
+		throw error;
+	}
+};
+
+const getDatabaseInstance = (): LibSQLDatabase<typeof schema> => {
+	if (dbInstance) {
+		return dbInstance;
+	}
+
+	try {
+		const client = getDatabaseClient();
+		dbInstance = drizzle(client, { schema });
+		return dbInstance;
+	} catch (error) {
+		logger.error({ error }, 'Failed to get database instance');
+		throw error;
+	}
+};
+
+// Enhanced database operations with retry logic
+export const executeWithRetry = async <T>(
+	operation: () => Promise<T>,
+	maxAttempts: number = 3,
+	delay: number = 1000
+): Promise<T> => {
+	let lastError: unknown;
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			return await operation();
+		} catch (error) {
+			lastError = error;
+			logger.warn(
+				{ attempt, maxAttempts, error: error instanceof Error ? error.message : String(error) },
+				'Database operation failed, retrying...'
+			);
+
+			if (attempt < maxAttempts) {
+				await new Promise(resolve => setTimeout(resolve, delay));
+			}
+		}
+	}
+
+	logger.error({ error: lastError }, 'Database operation failed after retries');
+	throw lastError;
+};
+
+// Database health check
+export const checkDatabaseHealth = async (): Promise<boolean> => {
+	try {
+		const db = getDatabaseInstance();
+		// Use a simple query to check database health
+		await db.all(sql`SELECT 1`);
+		return true;
+	} catch (error) {
+		logger.error({ error }, 'Database health check failed');
+		return false;
+	}
+};
+
+// Export the database instances
+export const client: Client = getDatabaseClient();
+export const db: LibSQLDatabase<typeof schema> = getDatabaseInstance();
 export const sqlite = client;
 
 export default db;

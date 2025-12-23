@@ -41,6 +41,11 @@ export const movies = sqliteTable(
 		collectionId: integer('collectionId').references(() => collections.id, {
 			onDelete: 'set null'
 		}),
+		trailerUrl: text('trailerUrl'),
+		imdbId: text('imdbId'),
+		canonicalPath: text('canonicalPath'),
+		addedAt: integer('addedAt'),
+		mediaType: text('mediaType').notNull().default('movie'),
 		createdAt: integer('createdAt')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -55,7 +60,10 @@ export const movies = sqliteTable(
 		index('idx_movies_language').on(table.language),
 		index('idx_movies_popularity').on(table.popularity),
 		index('idx_movies_releaseDate').on(table.releaseDate),
-		index('idx_movies_durationMinutes').on(table.durationMinutes)
+		index('idx_movies_durationMinutes').on(table.durationMinutes),
+		index('idx_movies_mediaType').on(table.mediaType),
+		index('idx_movies_addedAt').on(table.addedAt),
+		index('idx_movies_imdbId').on(table.imdbId)
 	]
 );
 

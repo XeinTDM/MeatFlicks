@@ -15,8 +15,9 @@ export type LibraryMovie = MovieSummary & {
 	genres?: GenreSummary[] | string[];
 	cast?: CastMember[];
 	imdbId?: string | null;
-	canonicalPath?: string;
-	addedAt?: string;
+	canonicalPath?: string | null;
+	addedAt?: number | null;
+	mediaType?: string | null;
 	// TV show specific fields
 	season?: number | null;
 	episode?: number | null;

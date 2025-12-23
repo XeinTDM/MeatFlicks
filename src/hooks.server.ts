@@ -1,19 +1,9 @@
 import { validateApiKeys } from '$lib/server';
 import { logger } from '$lib/server/logger';
-import { RateLimiter } from '$lib/server/rate-limiter';
+import { apiRateLimiter, authRateLimiter } from '$lib/server/rate-limiter';
 import { lucia } from '$lib/server/auth';
 import { applySecurityHeaders } from '$lib/server/security-headers';
 import { csrfMiddleware } from '$lib/server/csrf';
-
-const apiRateLimiter = new RateLimiter({
-	maxRequests: 100,
-	windowMs: 60000
-});
-
-const authRateLimiter = new RateLimiter({
-	maxRequests: 10,
-	windowMs: 300000
-});
 
 declare global {
 	var __envValidated: boolean;
@@ -64,7 +54,10 @@ async function applyRateLimiting(event: any) {
 			return new Response('Too many requests. Please try again later.', {
 				status: 429,
 				headers: {
-					'Retry-After': Math.ceil((result.resetTime! - Date.now()) / 1000).toString()
+					'Retry-After': Math.ceil((result.resetTime! - Date.now()) / 1000).toString(),
+					'X-RateLimit-Limit': result.limit?.toString() || '10',
+					'X-RateLimit-Remaining': '0',
+					'X-RateLimit-Reset': Math.ceil((result.resetTime! - Date.now()) / 1000).toString()
 				}
 			});
 		}
@@ -76,7 +69,10 @@ async function applyRateLimiting(event: any) {
 			return new Response('Too many requests. Please try again later.', {
 				status: 429,
 				headers: {
-					'Retry-After': Math.ceil((result.resetTime! - Date.now()) / 1000).toString()
+					'Retry-After': Math.ceil((result.resetTime! - Date.now()) / 1000).toString(),
+					'X-RateLimit-Limit': result.limit?.toString() || '100',
+					'X-RateLimit-Remaining': '0',
+					'X-RateLimit-Reset': Math.ceil((result.resetTime! - Date.now()) / 1000).toString()
 				}
 			});
 		}

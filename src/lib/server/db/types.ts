@@ -53,6 +53,11 @@ export interface MovieRow {
 	is4K: boolean;
 	isHD: boolean;
 	collectionId: number | null;
+	trailerUrl: string | null;
+	imdbId: string | null;
+	canonicalPath: string | null;
+	addedAt: number | null;
+	mediaType: string;
 	createdAt: number;
 	updatedAt: number;
 }

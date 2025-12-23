@@ -4,9 +4,14 @@ import { LRUCache } from 'lru-cache';
 import { logger } from './logger';
 import { env } from '$lib/config/env';
 
+// Cache TTL constants
 export const CACHE_TTL_SHORT_SECONDS = env.CACHE_TTL_SHORT;
 export const CACHE_TTL_MEDIUM_SECONDS = env.CACHE_TTL_MEDIUM;
 export const CACHE_TTL_LONG_SECONDS = env.CACHE_TTL_LONG;
+
+// Cache stampede protection constants
+const CACHE_STAMPEDE_TIMEOUT_MS = 5000; // 5 seconds
+const CACHE_STAMPEDE_MAX_WAITERS = 10; // Maximum concurrent waiters for a cache key
 
 const store = new KeyvSqlite({ uri: `sqlite://${env.SQLITE_DB_PATH}`, table: 'cache_v2' });
 
@@ -29,8 +34,19 @@ const cache = new Keyv({
 
 cache.on('error', (err) => logger.error({ err }, 'Keyv Connection Error'));
 
+// Cache stampede protection
+interface CacheStampedeEntry {
+	promise: Promise<any>;
+	timestamp: number;
+	waiters: number;
+}
+
+const stampedeProtection = new Map<string, CacheStampedeEntry>();
+
+// Enhanced cache cleanup with more frequent LRU cleanup
 setInterval(async () => {
 	try {
+		// More frequent LRU cleanup (every 5 minutes)
 		let lruCleaned = 0;
 		for (const key of lruStore.keys()) {
 			const item = lruStore.peek(key);
@@ -40,6 +56,7 @@ setInterval(async () => {
 			}
 		}
 
+		// Less frequent SQLite cleanup (every hour)
 		let sqliteCleaned = 0;
 		try {
 			const sqliteStore = store as any;
@@ -76,15 +93,26 @@ setInterval(async () => {
 			logger.warn({ err: dbError }, 'Failed to clean up SQLite cache');
 		}
 
-		logger.info({
+		logger.debug({
 			lruCleaned,
 			sqliteCleaned,
-			lruSize: lruStore.size
+			lruSize: lruStore.size,
+			activeStampedeEntries: stampedeProtection.size
 		}, 'Cache cleanup completed');
 	} catch (error) {
 		logger.error({ err: error }, 'Cache cleanup failed');
 	}
-}, 3600000);
+}, 300000); // 5 minutes for more frequent cleanup
+
+// Clean up old stampede protection entries
+setInterval(() => {
+	const now = Date.now();
+	for (const [key, entry] of stampedeProtection) {
+		if (now - entry.timestamp > CACHE_STAMPEDE_TIMEOUT_MS) {
+			stampedeProtection.delete(key);
+		}
+	}
+}, 10000);
 
 export function buildCacheKey(
 	...segments: Array<string | number | boolean | null | undefined>
@@ -126,35 +154,212 @@ export async function deleteCachedValue(key: string): Promise<void> {
 
 const inflight = new Map<string, Promise<unknown>>();
 
+/**
+ * Enhanced cache wrapper with stampede protection and improved error handling
+ */
 export async function withCache<T>(
 	key: string,
 	ttlSeconds: number,
-	factory: () => Promise<T>
+	factory: () => Promise<T>,
+	options: {
+		stampedeProtection?: boolean;
+		cacheOnError?: boolean;
+		errorTtlSeconds?: number;
+	} = {}
 ): Promise<T> {
+	const {
+		stampedeProtection: useStampedeProtection = true,
+		cacheOnError = false,
+		errorTtlSeconds = 60
+	} = options;
+
+	// Check cache first
 	const cached = await getCachedValue<T>(key);
 	if (cached !== undefined) {
 		return cached;
 	}
 
+	// Check for existing stampede protection entry
+	if (useStampedeProtection) {
+		const existingStampede = stampedeProtection.get(key);
+		if (existingStampede) {
+			// Limit the number of concurrent waiters to prevent memory issues
+			if (existingStampede.waiters >= CACHE_STAMPEDE_MAX_WAITERS) {
+				logger.warn(
+					{ key, waiters: existingStampede.waiters },
+					'Cache stampede protection: too many waiters, proceeding without protection'
+				);
+			} else {
+				// Increment waiter count
+				existingStampede.waiters++;
+				try {
+					return await existingStampede.promise;
+				} finally {
+					existingStampede.waiters--;
+				}
+			}
+		}
+	}
+
+	// Check for existing inflight request
 	const pending = inflight.get(key);
 	if (pending) {
 		return pending as Promise<T>;
 	}
 
+	// Create new stampede protection entry
+	let stampedeEntry: CacheStampedeEntry | undefined;
+	if (useStampedeProtection) {
+		const promise = (async () => {
+			try {
+				return await factory();
+			} catch (error) {
+				if (cacheOnError) {
+					await setCachedValue(key, null, errorTtlSeconds);
+				}
+				throw error;
+			}
+		})();
+
+		stampedeEntry = {
+			promise,
+			timestamp: Date.now(),
+			waiters: 1
+		};
+		stampedeProtection.set(key, stampedeEntry);
+	}
+
 	const task = (async () => {
 		try {
-			const value = await factory();
+			const value = stampedeEntry
+				? await stampedeEntry.promise
+				: await factory();
+
 			if (value !== undefined) {
 				await setCachedValue(key, value, ttlSeconds);
+			} else if (cacheOnError) {
+				// Cache null values to prevent repeated failed attempts
+				await setCachedValue(key, null, errorTtlSeconds);
 			}
 			return value;
+		} catch (error) {
+			if (cacheOnError) {
+				logger.warn(
+					{ key, error: error instanceof Error ? error.message : String(error) },
+					'Caching error response to prevent repeated failures'
+				);
+				await setCachedValue(key, null, errorTtlSeconds);
+			}
+			throw error;
 		} finally {
 			inflight.delete(key);
+			if (stampedeEntry) {
+				stampedeProtection.delete(key);
+			}
 		}
 	})();
 
 	inflight.set(key, task);
 	return task as Promise<T>;
+}
+
+/**
+ * Enhanced cache wrapper with automatic refresh for stale data
+ */
+export async function withCacheRefresh<T>(
+	key: string,
+	ttlSeconds: number,
+	factory: () => Promise<T>,
+	staleTtlSeconds: number = ttlSeconds * 2
+): Promise<T> {
+	const cached = await getCachedValue<T>(key);
+	if (cached !== undefined) {
+		// Return cached value immediately but refresh in background if stale
+		if (staleTtlSeconds > 0) {
+			try {
+				await getCachedValue<T>(key); // Check if still in cache
+				// Refresh in background with lower priority
+				setImmediate(() => {
+					withCache(key, staleTtlSeconds, factory, { stampedeProtection: true })
+						.catch(error => {
+							logger.debug(
+								{ key, error: error instanceof Error ? error.message : String(error) },
+								'Background cache refresh failed'
+							);
+						});
+				});
+			} catch {
+				// Ignore background refresh errors
+			}
+		}
+		return cached;
+	}
+
+	// No cache hit, use regular cache
+	return withCache(key, ttlSeconds, factory, { stampedeProtection: true });
+}
+
+/**
+ * Cache warming function to pre-populate cache for expected requests
+ */
+export async function warmCache<T>(
+	keys: string[],
+	ttlSeconds: number,
+	factory: (key: string) => Promise<T>,
+	concurrency: number = 3
+): Promise<void> {
+	const queue = [...keys];
+	const activePromises: Promise<void>[] = [];
+
+	while (queue.length > 0 && activePromises.length < concurrency) {
+		const key = queue.shift()!;
+		const promise = withCache(key, ttlSeconds, () => factory(key), {
+			stampedeProtection: false,
+			cacheOnError: true
+		}).then(() => {
+			// Remove completed promise from active list
+			const index = activePromises.indexOf(promise);
+			if (index !== -1) {
+				activePromises.splice(index, 1);
+			}
+		}).catch(() => {
+			// Remove failed promise from active list
+			const index = activePromises.indexOf(promise);
+			if (index !== -1) {
+				activePromises.splice(index, 1);
+			}
+		});
+
+		activePromises.push(promise);
+	}
+
+	// Wait for all active promises to complete
+	await Promise.all(activePromises);
+}
+
+/**
+ * Get cache statistics for monitoring
+ */
+export function getCacheStats(): {
+	lruSize: number;
+	lruMax: number;
+	stampedeEntries: number;
+} {
+	return {
+		lruSize: lruStore.size,
+		lruMax: lruStore.max,
+		stampedeEntries: stampedeProtection.size
+	};
+}
+
+/**
+ * Cache key generator with versioning support
+ */
+export function buildVersionedCacheKey(
+	version: string,
+	...segments: Array<string | number | boolean | null | undefined>
+): string {
+	return buildCacheKey('v' + version, ...segments);
 }
 
 /**

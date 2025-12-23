@@ -1,10 +1,21 @@
 import pino from 'pino';
 import { env } from '$lib/config/env';
-import { dev } from '$app/environment';
+
+// Handle environment detection for both runtime and test environments
+const isDev = (() => {
+	try {
+		// Try to import from SvelteKit environment
+		const { dev } = require('$app/environment');
+		return dev;
+	} catch (error) {
+		// Fallback for test environment
+		return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+	}
+})();
 
 export const logger = pino({
 	level: env.LOG_LEVEL,
-	transport: dev
+	transport: isDev
 		? {
 				target: 'pino-pretty',
 				options: {

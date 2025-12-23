@@ -43,7 +43,7 @@ export const searchHistorySchema = z.object({
 export const apiRequestSchema = z.object({
 	method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
 	path: z.string().min(1, 'Path is required'),
-	query: z.record(z.string()).optional(),
+	query: z.record(z.string(), z.string()).optional(),
 	body: z.any().optional(),
 });
 
@@ -73,6 +73,68 @@ export const streamingRequestSchema = z.object({
 	url: z.string().url(),
 	quality: z.string().optional(),
 	subtitles: z.boolean().optional(),
+});
+
+export const apiKeySchema = z.object({
+	apiKey: z.string().min(32, 'API key must be at least 32 characters').max(64, 'API key too long'),
+});
+
+export const userRegistrationSchema = z.object({
+	email: z.string().email('Invalid email format'),
+	password: z.string().min(8, 'Password must be at least 8 characters'),
+	username: z.string().min(3, 'Username must be at least 3 characters').max(30, 'Username too long'),
+});
+
+export const userLoginSchema = z.object({
+	email: z.string().email('Invalid email format'),
+	password: z.string().min(1, 'Password is required'),
+});
+
+export const searchFiltersSchema = z.object({
+	query: z.string().optional(),
+	genres: z.array(z.string()).optional(),
+	year: z.coerce.number().int().min(1900).max(new Date().getFullYear()).optional(),
+	rating: z.coerce.number().min(0).max(10).optional(),
+	sort: z.enum(['popularity', 'rating', 'release_date', 'title']).optional(),
+	order: z.enum(['asc', 'desc']).optional(),
+});
+
+export const paginationWithFiltersSchema = z.object({
+	page: z.coerce.number().int().positive().default(1),
+	limit: z.coerce.number().int().positive().max(100).default(20),
+	filters: searchFiltersSchema.optional(),
+});
+
+export const mediaIdentifierSchema = z.object({
+	id: z.string().min(1, 'Media ID is required'),
+	type: z.enum(['movie', 'tv', 'episode']).optional(),
+});
+
+export const userPreferencesSchema = z.object({
+	theme: z.enum(['light', 'dark', 'system']).optional(),
+	language: z.string().min(2).max(10).optional(),
+	notifications: z.boolean().optional(),
+});
+
+export const watchlistOperationSchema = z.object({
+	movieId: z.string().min(1, 'Movie ID is required'),
+	action: z.enum(['add', 'remove']),
+});
+
+export const playbackUpdateSchema = z.object({
+	mediaId: z.string().min(1, 'Media ID is required'),
+	position: z.number().min(0).max(99999),
+	duration: z.number().positive().max(99999),
+	timestamp: z.number().positive().default(() => Date.now()),
+});
+
+export const securitySettingsSchema = z.object({
+	enable2fa: z.boolean().optional(),
+	passwordChange: z.object({
+		currentPassword: z.string().min(1, 'Current password is required'),
+		newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+		confirmPassword: z.string().min(1, 'Please confirm your new password'),
+	}).optional(),
 });
 
 export const searchPeopleSchema = z.object({
@@ -119,6 +181,125 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context?
 		// For unknown errors, create a generic validation error with empty details
 		const validationError = new ValidationError(`Failed to validate ${context || 'input'} data`);
 		throw validationError;
+	}
+}
+
+/**
+ * Validate and sanitize user input for security
+ */
+export function validateAndSanitizeInput<T>(schema: z.ZodSchema<T>, data: unknown, context?: string): T {
+	try {
+		// First validate the structure
+		const parsedData = schema.parse(data);
+
+		// Then sanitize string fields
+		const sanitizedData = deepSanitize(parsedData);
+
+		return sanitizedData;
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			const errorDetails = error.flatten();
+			const validationError = new ValidationError(
+				`Invalid ${context || 'input'} data`,
+				{
+					issues: errorDetails.fieldErrors,
+					formErrors: errorDetails.formErrors,
+				}
+			);
+			throw validationError;
+		} else if (error instanceof Error) {
+			const validationError = new ValidationError(`Failed to validate ${context || 'input'} data: ${error.message}`);
+			throw validationError;
+		}
+		// For unknown errors, create a generic validation error with empty details
+		const validationError = new ValidationError(`Failed to validate ${context || 'input'} data`);
+		throw validationError;
+	}
+}
+
+/**
+ * Deep sanitize object properties to prevent XSS
+ */
+function deepSanitize<T>(obj: T): T {
+	if (typeof obj !== 'object' || obj === null) {
+		return obj;
+	}
+
+	if (Array.isArray(obj)) {
+		return obj.map(item => deepSanitize(item)) as any;
+	}
+
+	const sanitized: Record<string, any> = {};
+	for (const [key, value] of Object.entries(obj)) {
+		if (typeof value === 'string') {
+			sanitized[key] = value
+				.replace(/&/g, '&')
+				.replace(/</g, '<')
+				.replace(/>/g, '>')
+				.replace(/"/g, '"')
+				.replace(/'/g, '&#39;');
+		} else if (typeof value === 'object' && value !== null) {
+			sanitized[key] = deepSanitize(value);
+		} else {
+			sanitized[key] = value;
+		}
+	}
+
+	return sanitized as T;
+}
+
+/**
+ * Validate API key format and extract
+ */
+export function validateAndExtractApiKey(authHeader: string | null): string {
+	if (!authHeader) {
+		throw new ValidationError('Authorization header is required');
+	}
+
+	if (!authHeader.startsWith('Bearer ')) {
+		throw new ValidationError('Authorization header must start with Bearer');
+	}
+
+	const apiKey = authHeader.slice(7).trim();
+	if (!apiKey || apiKey.length < 32) {
+		throw new ValidationError('Invalid API key format');
+	}
+
+	return apiKey;
+}
+
+/**
+ * Validate content type header
+ */
+export function validateContentType(contentType: string | null, expectedTypes: string[]): void {
+	if (!contentType) {
+		throw new ValidationError('Content-Type header is required');
+	}
+
+	const isValid = expectedTypes.some(expected =>
+		contentType.toLowerCase().includes(expected.toLowerCase())
+	);
+
+	if (!isValid) {
+		throw new ValidationError(`Content-Type must be one of: ${expectedTypes.join(', ')}`);
+	}
+}
+
+/**
+ * Validate request origin for security
+ */
+export function validateRequestOrigin(origin: string | null, allowedOrigins: string[]): void {
+	if (!origin) {
+		throw new ValidationError('Origin header is required');
+	}
+
+	try {
+		const url = new URL(origin);
+		if (!allowedOrigins.includes(url.origin)) {
+			throw new ValidationError('Origin not allowed');
+		}
+	} catch (error) {
+		throw new ValidationError('Invalid origin format');
 	}
 }
 
