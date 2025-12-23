@@ -22,15 +22,14 @@ export async function batchInsert<T>(
 			const batch = data.slice(i, i + batchSize);
 			const transformed = batch.map(transform);
 
-			// Use transaction for each batch
 			await db.transaction(async (tx) => {
 				for (const item of transformed) {
 					const columns = Object.keys(item).join(', ');
 					const placeholders = Object.keys(item).map(() => '?').join(', ');
 					const values = Object.values(item);
 
-					const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
-					await tx.run(query, values);
+					const query = sql`INSERT INTO ${sql.raw(table)} (${sql.raw(columns)}) VALUES (${sql.raw(placeholders)})`;
+					await tx.run(query);
 					insertedCount++;
 				}
 			});
@@ -64,7 +63,6 @@ export async function batchUpdate<T>(
 		for (let i = 0; i < data.length; i += batchSize) {
 			const batch = data.slice(i, i + batchSize);
 
-			// Use transaction for each batch
 			await db.transaction(async (tx) => {
 				for (const item of batch) {
 					const transformed = transform(item);
@@ -76,12 +74,9 @@ export async function batchUpdate<T>(
 						.join(', ');
 					const values = [...Object.values(transformed), keyValue];
 
-					const query = `UPDATE ${table} SET ${setClause} WHERE ${keyColumn} = ?`;
-					const result = await tx.run(query, values);
-
-					if (result.changes && result.changes > 0) {
-						updatedCount++;
-					}
+					const query = sql`UPDATE ${sql.raw(table)} SET ${sql.raw(setClause)} WHERE ${sql.raw(keyColumn)} = ?`;
+					await tx.run(query);
+					updatedCount++;
 				}
 			});
 		}
@@ -108,57 +103,43 @@ export async function batchUpsert<T>(
 		return { inserted: 0, updated: 0 };
 	}
 
-	try {
-		let insertedCount = 0;
-		let updatedCount = 0;
+		try {
+			let insertedCount = 0;
+			let updatedCount = 0;
 
-		for (let i = 0; i < data.length; i += batchSize) {
-			const batch = data.slice(i, i + batchSize);
+			for (let i = 0; i < data.length; i += batchSize) {
+				const batch = data.slice(i, i + batchSize);
 
-			// Use transaction for each batch
-			await db.transaction(async (tx) => {
-				for (const item of batch) {
-					const transformed = transform(item);
-					const keyValue = transformed[keyColumn];
-					delete transformed[keyColumn];
+				await db.transaction(async (tx) => {
+					for (const item of batch) {
+						const transformed = transform(item);
+						const keyValue = transformed[keyColumn];
+						delete transformed[keyColumn];
 
-					// Try to update first
-					const setClause = Object.keys(transformed)
-						.map(col => `${col} = ?`)
-						.join(', ');
-					const updateValues = [...Object.values(transformed), keyValue];
+						const setClause = Object.keys(transformed)
+							.map(col => `${col} = ?`)
+							.join(', ');
+						const updateValues = [...Object.values(transformed), keyValue];
 
-					const updateQuery = `UPDATE ${table} SET ${setClause} WHERE ${keyColumn} = ?`;
-					const updateResult = await tx.run(updateQuery, updateValues);
-
-					if (updateResult.changes && updateResult.changes > 0) {
+						const updateQuery = sql`UPDATE ${sql.raw(table)} SET ${sql.raw(setClause)} WHERE ${sql.raw(keyColumn)} = ?`;
+						await tx.run(updateQuery);
 						updatedCount++;
-					} else {
-						// Insert if update didn't affect any rows
-						const columns = Object.keys(transformed).join(', ');
-						const placeholders = Object.keys(transformed).map(() => '?').join(', ');
-						const insertValues = [...Object.values(transformed), keyValue];
-
-						const insertQuery = `INSERT INTO ${table} (${columns}, ${keyColumn}) VALUES (${placeholders}, ?)`;
-						await tx.run(insertQuery, insertValues);
-						insertedCount++;
 					}
-				}
-			});
+				});
+			}
+
+			logger.info({
+				table,
+				inserted: insertedCount,
+				updated: updatedCount,
+				total: data.length
+			}, 'Batch upsert completed');
+
+			return { inserted: insertedCount, updated: updatedCount };
+		} catch (error) {
+			logger.error({ error, table, count: data.length }, 'Batch upsert failed');
+			throw error;
 		}
-
-		logger.info({
-			table,
-			inserted: insertedCount,
-			updated: updatedCount,
-			total: data.length
-		}, 'Batch upsert completed');
-
-		return { inserted: insertedCount, updated: updatedCount };
-	} catch (error) {
-		logger.error({ error, table, count: data.length }, 'Batch upsert failed');
-		throw error;
-	}
 }
 
 /**
@@ -177,12 +158,7 @@ export async function executeInTransaction<T>(
 				const results: T[] = [];
 
 				for (const query of queries) {
-					// Pass the transaction to the query function if it can handle it
-					if (query.length === 1) {
-						results.push(await query(tx as any));
-					} else {
-						results.push(await query());
-					}
+					results.push(await query());
 				}
 
 				return results;

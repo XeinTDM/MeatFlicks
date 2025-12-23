@@ -53,7 +53,9 @@ const tmdbDetailsToLibraryMovie = (details: TmdbMovieDetails): LibraryMovie => (
 		? `/movie/${details.imdbId}`
 		: details.tmdbId
 			? `/movie/${details.tmdbId}`
-			: undefined
+			: null,
+	addedAt: null,
+	mediaType: 'movie'
 });
 
 const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | null> => {

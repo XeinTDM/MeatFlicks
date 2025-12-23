@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, User, X, Loader2 } from '@lucide/svelte';
+	import { Search, User, X, LoaderCircle } from '@lucide/svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount } from 'svelte';
 
@@ -184,7 +184,7 @@
 		>
 			{#if isLoading}
 				<div class="flex items-center justify-center p-4">
-					<Loader2 class="size-5 animate-spin text-primary" />
+					<LoaderCircle class="size-5 animate-spin text-primary" />
 				</div>
 			{:else if results.length > 0}
 				<ul class="space-y-1">

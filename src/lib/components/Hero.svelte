@@ -10,7 +10,7 @@
 		Star,
 		Clapperboard,
 		RefreshCcw,
-		Loader2
+		LoaderCircle
 	} from '@lucide/svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { watchlist } from '$lib/state/stores/watchlistStore';
@@ -391,7 +391,7 @@
 							title="Refresh spotlight picks"
 						>
 							{#if refreshing}
-								<Loader2 class="size-4 animate-spin" />
+								<LoaderCircle class="size-4 animate-spin" />
 							{:else}
 								<RefreshCcw class="size-4" />
 							{/if}
@@ -549,6 +549,7 @@
 							role="tab"
 							aria-selected={index === activeIndex}
 							aria-controls={`slide-${slide.key}`}
+							aria-label={`Go to slide ${index + 1}`}
 							class={`group flex max-w-[14rem] items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur transition-colors duration-300 ${
 								index === activeIndex
 									? 'bg-background/70 text-primary shadow-sm'

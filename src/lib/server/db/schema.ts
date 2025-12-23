@@ -371,8 +371,8 @@ export const tvShows = sqliteTable(
 		numberOfSeasons: integer('number_of_seasons'),
 		numberOfEpisodes: integer('number_of_episodes'),
 		status: text('status'), // 'Returning Series', 'Ended', 'Canceled', etc.
-		originCountry: text('origin_country'), // JSON array of country codes
-		productionCompanies: text('production_companies'), // JSON array of company objects
+		originCountry: text('origin_country'),
+		productionCompanies: text('production_companies'),
 		createdAt: integer('created_at')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -617,7 +617,7 @@ export const watchlistRelations = relations(watchlist, ({ one, many }) => ({
 	tags: many(watchlistItemTags)
 }));
 
-export const watchlistFoldersRelations = relations(watchlistFolders, ({ many }) => ({
+export const watchlistFoldersRelations = relations(watchlistFolders, ({ one, many }) => ({
 	user: one(users, {
 		fields: [watchlistFolders.userId],
 		references: [users.id]
@@ -625,7 +625,7 @@ export const watchlistFoldersRelations = relations(watchlistFolders, ({ many }) 
 	items: many(watchlist)
 }));
 
-export const watchlistTagsRelations = relations(watchlistTags, ({ many }) => ({
+export const watchlistTagsRelations = relations(watchlistTags, ({ one, many }) => ({
 	user: one(users, {
 		fields: [watchlistTags.userId],
 		references: [users.id]

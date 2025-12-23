@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search as SearchIcon, X, Loader2, Play, Clock } from '@lucide/svelte';
+	import { Search as SearchIcon, X, LoaderCircle, Play, Clock } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
@@ -194,7 +194,7 @@
 				</div>
 			{:else if isLoading}
 				<div class="flex items-center justify-center p-8">
-					<Loader2 class="size-6 animate-spin text-primary" />
+					<LoaderCircle class="size-6 animate-spin text-primary" />
 				</div>
 			{:else if results.length > 0}
 				<ul class="space-y-1">

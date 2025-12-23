@@ -515,7 +515,12 @@ export async function fetchTmdbRecommendations(
 					genres: [], // Lightweight summary doesn't need full genres often
 					media_type: isTv ? 'tv' : 'movie',
 					is4K: false,
-					isHD: true
+					isHD: true,
+					trailerUrl: null,
+					imdbId: null,
+					canonicalPath: null,
+					addedAt: null,
+					mediaType: isTv ? 'tv' : 'movie'
 				} as LibraryMovie;
 			});
 	});

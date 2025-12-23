@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Loader2 } from '@lucide/svelte';
+	import { LoaderCircle } from '@lucide/svelte';
 
 	interface Props {
 		onLoadMore: () => void | Promise<void>;
@@ -50,7 +50,7 @@
 	<div bind:this={sentinelRef} class="flex items-center justify-center py-8">
 		{#if isLoading}
 			<div class="flex items-center gap-2 text-muted-foreground">
-				<Loader2 class="size-5 animate-spin" />
+				<LoaderCircle class="size-5 animate-spin" />
 				<span class="text-sm">Loading more...</span>
 			</div>
 		{/if}
