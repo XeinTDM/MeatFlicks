@@ -38,7 +38,7 @@
 </script>
 
 <section
-	class="space-y-6 rounded-3xl border border-border/60 bg-card/70 p-6 shadow-xl backdrop-blur-sm sm:p-8"
+	class="space-y-6 rounded-3xl p-6 sm:p-8"
 >
 	<div class="space-y-3">
 		<span

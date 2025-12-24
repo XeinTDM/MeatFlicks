@@ -1,17 +1,8 @@
 import { db } from '$lib/server/db';
-import {
-	movies,
-	genres,
-	moviesGenres,
-	people,
-	moviePeople,
-	collections
-} from '$lib/server/db/schema';
-import { sql, eq, inArray, asc, desc, and, or, like, gte, lte } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
-import { withCache, buildCacheKey, CACHE_TTL_LONG_SECONDS } from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
-import type { MovieSummary, GenreRecord, MovieRow } from '$lib/server/db';
+import type { GenreRecord, MovieRow } from '$lib/server/db';
 import type { LibraryMovie } from '$lib/types/library';
 
 interface MetadataEnhancementOptions {
@@ -40,6 +31,22 @@ interface CastMember {
 	name: string;
 	character: string;
 	profilePath: string | null;
+}
+
+interface CountResult {
+	count: number;
+}
+
+interface GenreFacetResult {
+	id: number;
+	name: string;
+}
+
+interface CollectionFacetResult {
+	id: number;
+	name: string;
+	slug: string;
+	count: number;
 }
 
 export async function enhanceMovieMetadata(
@@ -103,8 +110,8 @@ export async function getEnhancedMovies(
 			db.all(sql`SELECT COUNT(*) as count FROM movies`)
 		]);
 
-		const movies = await mapRowsToSummaries(movieRows as any[]);
-		const totalCount = (total[0] as any)?.count || 0;
+		const movies = await mapRowsToSummaries(movieRows as unknown as MovieRow[]);
+		const totalCount = (total[0] as CountResult)?.count || 0;
 
 		const enhancedMovies = await Promise.all(
 			movies.map(async (movie) => {
@@ -155,11 +162,11 @@ async function getMovieCast(movieId: string): Promise<CastMember[]> {
 			LIMIT 10
 		`);
 
-		return castRows.map((row: any) => ({
-			id: row.id,
-			name: row.name,
-			character: row.character,
-			profilePath: row.profilePath
+		return castRows.map((row: unknown) => ({
+			id: (row as { id: number }).id,
+			name: (row as { name: string }).name,
+			character: (row as { character: string }).character,
+			profilePath: (row as { profilePath: string | null }).profilePath
 		}));
 	} catch (error) {
 		logger.error({ error, movieId }, 'Failed to get movie cast');
@@ -177,9 +184,9 @@ async function getGenreFacets(): Promise<GenreRecord[]> {
 			ORDER BY count DESC, g.name ASC
 		`);
 
-		return results.map((row: any) => ({
-			id: row.id,
-			name: row.name
+		return results.map((row: unknown) => ({
+			id: (row as GenreFacetResult).id,
+			name: (row as GenreFacetResult).name
 		}));
 	} catch (error) {
 		logger.error({ error }, 'Failed to get genre facets');

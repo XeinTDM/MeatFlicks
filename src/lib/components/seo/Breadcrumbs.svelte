@@ -33,7 +33,7 @@
 </script>
 
 <svelte:head>
-	{@html `<script type="application/ld+json">${JSON.stringify(structuredData)}</script>`}
+	{@html '<script type="application/ld+json">' + JSON.stringify(structuredData) + '</script>'}
 </svelte:head>
 
 <nav aria-label="Breadcrumb" class="mb-4">

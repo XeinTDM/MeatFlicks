@@ -4,7 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Progress } from '$lib/components/ui/progress';
-	import { Check, Play, Clock, Star } from '@lucide/svelte';
+	import { Check, Play, Clock } from '@lucide/svelte';
 	import type { Episode, EpisodeWatchStatus } from '$lib/types/tv-show';
 
 	interface Props {
@@ -20,10 +20,10 @@
 	let {
 		episode,
 		watchStatus,
-		tvShowTmdbId,
-		seasonNumber,
+		tvShowTmdbId, // eslint-disable-line @typescript-eslint/no-unused-vars
+		seasonNumber, // eslint-disable-line @typescript-eslint/no-unused-vars
 		onWatchStatusChange,
-		onProgressUpdate,
+		onProgressUpdate, // eslint-disable-line @typescript-eslint/no-unused-vars
 		disabled = false
 	}: Props = $props();
 

@@ -1,3 +1,4 @@
+import type { Handle, RequestEvent } from '@sveltejs/kit';
 import { validateApiKeys } from '$lib/server';
 import { logger } from '$lib/server/logger';
 import { apiRateLimiter, authRateLimiter } from '$lib/server/rate-limiter';
@@ -9,7 +10,7 @@ declare global {
 	var __envValidated: boolean;
 }
 
-function getClientIp(event: any): string {
+function getClientIp(event: RequestEvent): string {
 	const headers = event.request.headers;
 	const forwarded = headers.get('x-forwarded-for');
 	if (forwarded) {
@@ -23,14 +24,14 @@ function getClientIp(event: any): string {
 	);
 }
 
-async function validateSession(event: any) {
+async function validateSession(event: RequestEvent) {
 	try {
 		if (!event.locals.session) {
 			return;
 		}
 
 		const session = event.locals.session;
-		if (session.expiresAt && Date.now() > session.expiresAt) {
+		if (session.expiresAt && Date.now() > session.expiresAt.getTime()) {
 			logger.warn(`Expired session detected for user ${session.userId}`);
 			await lucia.invalidateSession(session.id);
 			event.locals.session = null;
@@ -41,7 +42,7 @@ async function validateSession(event: any) {
 	}
 }
 
-async function applyRateLimiting(event: any) {
+async function applyRateLimiting(event: RequestEvent) {
 	const path = event.url.pathname;
 	const ip = getClientIp(event);
 
@@ -80,7 +81,7 @@ async function applyRateLimiting(event: any) {
 	}
 }
 
-export const handle = async ({ event, resolve }: { event: any; resolve: any }) => {
+export const handle: Handle = async ({ event, resolve }) => {
 	if (!globalThis.__envValidated) {
 		try {
 			validateApiKeys();

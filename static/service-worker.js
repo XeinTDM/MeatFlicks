@@ -65,8 +65,6 @@ self.addEventListener('fetch', (event) => {
 		return;
 	}
 
-	console.log(`[SW] Fetching: ${event.request.url}`);
-
 	event.respondWith(
 		fetch(event.request)
 			.then((response) => {
