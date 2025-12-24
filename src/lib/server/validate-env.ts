@@ -1,3 +1,4 @@
+import { env as privateEnv } from '$env/dynamic/private';
 import { z } from 'zod';
 import { logger } from './logger';
 
@@ -43,7 +44,7 @@ export function validateEnvironment(): ValidatedEnv {
 	}
 
 	try {
-		const result = envSchema.safeParse(process.env);
+		const result = envSchema.safeParse(privateEnv);
 
 		if (!result.success) {
 			const errors = result.error.flatten();
@@ -58,9 +59,9 @@ export function validateEnvironment(): ValidatedEnv {
 				'Invalid environment variables'
 			);
 
-			if (process.env.NODE_ENV !== 'production') {
+			if (privateEnv.NODE_ENV !== 'production') {
 				logger.warn('Running with invalid environment variables in development mode');
-				validatedEnv = process.env as unknown as ValidatedEnv;
+				validatedEnv = privateEnv as unknown as ValidatedEnv;
 				return validatedEnv;
 			}
 
@@ -71,10 +72,10 @@ export function validateEnvironment(): ValidatedEnv {
 		return validatedEnv;
 	} catch (error) {
 		logger.error({ error }, 'Environment validation failed');
-		if (process.env.NODE_ENV === 'production') {
+		if (privateEnv.NODE_ENV === 'production') {
 			process.exit(1);
 		}
-		validatedEnv = process.env as unknown as ValidatedEnv;
+		validatedEnv = privateEnv as unknown as ValidatedEnv;
 		return validatedEnv;
 	}
 }
@@ -112,7 +113,7 @@ export function getEnv<T extends keyof ValidatedEnv>(
 export function validateApiKeys(): void {
 	const env = validateEnvironment();
 
-	if (process.env.NODE_ENV === 'production') {
+	if (privateEnv.NODE_ENV === 'production') {
 		if (!env.TMDB_API_KEY) {
 			throw new Error('TMDB_API_KEY is required in production');
 		}

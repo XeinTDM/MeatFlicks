@@ -82,7 +82,6 @@ self.addEventListener('fetch', (event) => {
 					event.request.url.endsWith('.woff2'))) {
 					caches.open(CACHE_NAME).then((cache) => {
 						cache.put(event.request, responseToCache);
-						console.log(`[SW] Cached: ${event.request.url}`);
 					});
 				}
 

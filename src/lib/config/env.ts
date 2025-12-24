@@ -17,8 +17,8 @@ const serverSchema = z.object({
 });
 
 const serverResult = serverSchema.safeParse({
-	TMDB_API_KEY: privateEnv.TMDB_API_KEY || '914ebec2be57696f3c9c29e45b61ffea',
-	TMDB_READ_ACCESS_TOKEN: privateEnv.TMDB_READ_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5MTRlYmVjMmJlNTc2OTZmM2M5YzI5ZTQ1YjYxZmZlYSIsIm5iZiI6MTc0MjMwOTQ3NC43MDU5OTk5LCJzdWIiOiI2N2Q5ODg2MmMwNTY2YTEwMGEwODk5OGIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.gBO-g7aTxSulZv858k4MLGTuwN8fcuL_m-rKONYlRgY',
+	TMDB_API_KEY: privateEnv.TMDB_API_KEY || '5aa00ca6320d13f8d492d7806e012f9b',
+	TMDB_READ_ACCESS_TOKEN: privateEnv.TMDB_READ_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1YWEwMGNhNjMyMGQxM2Y4ZDQ5MmQ3ODA2ZTAxMmY5YiIsIm5iZiI6MTc0MjMwOTQ3NC43MDU5OTk5LCJzdWIiOiI2N2Q5ODg2MmMwNTY2YTEwMGEwODk5OGIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.SzZc4ufRUNM_zSZFcjdV9tkiD6PDQQybhEXC2-veUnY',
 	TMDB_IMAGE_BASE_URL: privateEnv.TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p/',
 	TMDB_POSTER_SIZE: privateEnv.TMDB_POSTER_SIZE || 'w500',
 	TMDB_BACKDROP_SIZE: privateEnv.TMDB_BACKDROP_SIZE || 'original',
@@ -30,10 +30,6 @@ const serverResult = serverSchema.safeParse({
 	CACHE_MEMORY_MAX_ITEMS: privateEnv.CACHE_MEMORY_MAX_ITEMS || 512,
 	TMDB_STILL_SIZE: privateEnv.TMDB_STILL_SIZE || 'w300'
 });
-
-// For debugging - check if env vars are loaded
-console.log('Private env TMDB_API_KEY:', !!privateEnv.TMDB_API_KEY);
-console.log('Private env TMDB_READ_ACCESS_TOKEN:', !!privateEnv.TMDB_READ_ACCESS_TOKEN);
 
 if (!serverResult.success) {
 	console.error('Invalid server environment variables:', serverResult.error.flatten().fieldErrors);

@@ -43,11 +43,8 @@ const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
 	if (/^tt\d{7,}$/i.test(identifier)) {
 		return 'imdb';
 	}
-
-	if (/^\d+$/.test(identifier)) {
-		return 'tmdb';
-	}
-
+	// Default to 'id'. If it's a number and not found as local ID,
+	// the fallback logic will attempt to resolve it as a TMDB ID.
 	return 'id';
 };
 

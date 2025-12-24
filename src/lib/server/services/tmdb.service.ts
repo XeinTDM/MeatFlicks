@@ -125,7 +125,16 @@ const api = ofetch.create({
 	},
 	retry: 3,
 	retryDelay: 1000,
-	onResponseError({ response }) {
+	onRequest({ request, options }) {
+		console.log('[ofetch] Request:', { url: request.toString(), options });
+	},
+	onResponseError({ request, response, options }) {
+		console.error('[ofetch] Response Error:', {
+			url: request.toString(),
+			status: response.status,
+			statusText: response.statusText,
+			body: response._data
+		});
 		throw new ApiError(
 			`TMDB responded with status ${response.status}: ${response._data?.status_message || response.statusText}`,
 			response.status
@@ -249,6 +258,7 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 				originCountry: data.origin_country || []
 			};
 		} catch (error) {
+			console.error(`[fetchTmdbTvDetails] Error for tmdbId ${tmdbId}:`, error);
 			if (error instanceof ApiError && error.statusCode === 404) {
 				return { found: false, tmdbId } as TmdbTvDetails;
 			}
@@ -343,6 +353,7 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 				}))
 			};
 		} catch (error) {
+			console.error(`[fetchTmdbMovieDetails] Error for tmdbId ${tmdbId}:`, error);
 			if (error instanceof ApiError && error.statusCode === 404) {
 				return { found: false, tmdbId } as TmdbMovieDetails;
 			}
