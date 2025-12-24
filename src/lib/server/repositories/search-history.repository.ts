@@ -27,7 +27,6 @@ export const searchHistoryRepository = {
 			});
 		} catch (error) {
 			console.error('Error adding search to history:', error);
-			// Don't throw - search history is not critical
 		}
 	},
 
@@ -111,7 +110,6 @@ export const searchHistoryRepository = {
 			await db.delete(searchHistory).where(eq(searchHistory.searchedAt, ninetyDaysAgo));
 		} catch (error) {
 			console.error('Error cleaning up old searches:', error);
-			// Don't throw - cleanup is not critical
 		}
 	}
 };

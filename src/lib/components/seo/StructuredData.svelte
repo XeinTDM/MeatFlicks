@@ -43,7 +43,7 @@
 					ratingValue: media.rating.toFixed(1),
 					bestRating: '10',
 					worstRating: '0',
-					ratingCount: 1000 // Placeholder - should come from TMDB vote_count
+					ratingCount: 1000 // TODO: Replace with actual TMDB vote_count
 				}
 			: null;
 
@@ -92,7 +92,6 @@
 
 			return movieData;
 		} else {
-			// TV Series
 			const tvData: Record<string, unknown> = {
 				'@context': 'https://schema.org',
 				'@type': 'TVSeries',

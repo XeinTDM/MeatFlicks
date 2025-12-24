@@ -20,7 +20,10 @@ export function generateSecureToken(length: number = 32): string {
 /**
  * Generate a secure random string with specific character set
  */
-export function generateSecureString(length: number = 16, charset: 'alphanumeric' | 'hex' | 'base64' = 'alphanumeric'): string {
+export function generateSecureString(
+	length: number = 16,
+	charset: 'alphanumeric' | 'hex' | 'base64' = 'alphanumeric'
+): string {
 	const buffer = randomBytes(length);
 
 	switch (charset) {
@@ -30,7 +33,8 @@ export function generateSecureString(length: number = 16, charset: 'alphanumeric
 			return buffer.toString('base64').slice(0, length);
 		case 'alphanumeric':
 		default:
-			return buffer.toString('base64')
+			return buffer
+				.toString('base64')
 				.replace(/[^a-zA-Z0-9]/g, '')
 				.slice(0, length);
 	}
@@ -49,9 +53,7 @@ export function createSecureHash(data: string, salt: string = ''): string {
  * Create HMAC signature for data integrity verification
  */
 export function createHmacSignature(data: string, secret: string): string {
-	return createHmac('sha256', secret)
-		.update(data)
-		.digest('hex');
+	return createHmac('sha256', secret).update(data).digest('hex');
 }
 
 /**
@@ -94,12 +96,10 @@ export function sanitizeUrl(url: string, allowedDomains: string[] = []): string 
 	try {
 		const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
 
-		// Check if domain is allowed
 		if (allowedDomains.length > 0 && !allowedDomains.includes(parsedUrl.hostname)) {
 			throw new Error('Domain not allowed');
 		}
 
-		// Validate protocol
 		if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
 			throw new Error('Invalid protocol');
 		}
@@ -122,11 +122,14 @@ export function validateEmail(email: string): boolean {
 /**
  * Validate password strength
  */
-export function validatePasswordStrength(password: string): { valid: boolean; score: number; feedback: string[] } {
+export function validatePasswordStrength(password: string): {
+	valid: boolean;
+	score: number;
+	feedback: string[];
+} {
 	let score = 0;
 	const feedback: string[] = [];
 
-	// Length check
 	if (password.length >= 12) {
 		score += 2;
 	} else if (password.length >= 8) {
@@ -135,7 +138,6 @@ export function validatePasswordStrength(password: string): { valid: boolean; sc
 		feedback.push('Password should be at least 8 characters long');
 	}
 
-	// Character variety checks
 	if (/[A-Z]/.test(password)) score += 1;
 	else feedback.push('Password should contain uppercase letters');
 
@@ -148,7 +150,6 @@ export function validatePasswordStrength(password: string): { valid: boolean; sc
 	if (/[^A-Za-z0-9]/.test(password)) score += 1;
 	else feedback.push('Password should contain special characters');
 
-	// Common password check
 	const commonPasswords = ['password', '123456', 'qwerty', 'letmein', 'welcome'];
 	if (commonPasswords.includes(password.toLowerCase())) {
 		score = 0;
@@ -213,7 +214,10 @@ export function validateApiKeyFormat(apiKey: string): boolean {
 /**
  * Generate a secure JWT-like token (simplified)
  */
-export function generateSecureTokenWithClaims(payload: Record<string, any>, secret: string): string {
+export function generateSecureTokenWithClaims(
+	payload: Record<string, any>,
+	secret: string
+): string {
 	const header = JSON.stringify({ alg: 'HS256', typ: 'JWT' });
 	const encodedHeader = Buffer.from(header).toString('base64').replace(/=+$/, '');
 	const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64').replace(/=+$/, '');
@@ -257,7 +261,7 @@ export function sanitizeFileMetadata(metadata: Record<string, any>): Record<stri
 		} else if (typeof value === 'number') {
 			sanitized[key] = value.toString();
 		}
-		// Ignore other types for security
+		// Ignore
 	}
 
 	return sanitized;
@@ -275,7 +279,6 @@ export function validateUserInput(input: any, maxLength: number = 1000): string 
 		throw new ForbiddenError(`Input exceeds maximum length of ${maxLength} characters`);
 	}
 
-	// Check for potentially dangerous patterns
 	const dangerousPatterns = [
 		/<script\b/i,
 		/on\w+=/i,

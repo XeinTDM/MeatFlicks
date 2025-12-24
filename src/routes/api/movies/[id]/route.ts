@@ -18,7 +18,12 @@ import {
 import { randomUUID } from 'node:crypto';
 import { errorHandler, NotFoundError, ValidationError, getEnv } from '$lib/server';
 import { z } from 'zod';
-import { validatePathParams, validateQueryParams, movieIdentifierSchema, queryModeSchema } from '$lib/server/validation';
+import {
+	validatePathParams,
+	validateQueryParams,
+	movieIdentifierSchema,
+	queryModeSchema
+} from '$lib/server/validation';
 
 const clampTtl = (value: number): number => {
 	const min = 300;
@@ -30,7 +35,8 @@ const clampTtl = (value: number): number => {
 };
 
 const MOVIE_CACHE_TTL_SECONDS = clampTtl(
-	Number.parseInt(getEnv('CACHE_TTL_MOVIE', CACHE_TTL_LONG_SECONDS.toString()) ?? '', 10) || CACHE_TTL_LONG_SECONDS
+	Number.parseInt(getEnv('CACHE_TTL_MOVIE', CACHE_TTL_LONG_SECONDS.toString()) ?? '', 10) ||
+		CACHE_TTL_LONG_SECONDS
 );
 
 type MovieLookup = { kind: 'id'; value: string } | { kind: 'tmdb'; value: number };
@@ -281,13 +287,7 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 }
 
 export const GET: RequestHandler = async ({ params, url }) => {
-	// Validate path parameters
-	const pathParams = validatePathParams(
-		movieIdentifierSchema,
-		{ id: params.id ?? '' }
-	);
-
-	// Validate query parameters
+	const pathParams = validatePathParams(movieIdentifierSchema, { id: params.id ?? '' });
 	const queryParams = validateQueryParams(
 		z.object({ by: queryModeSchema.optional() }),
 		url.searchParams

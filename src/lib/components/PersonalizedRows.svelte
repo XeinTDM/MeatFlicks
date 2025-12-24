@@ -25,14 +25,18 @@
 	let libraryWatchlistEntries = $derived(watchlistEntries.map(toLibraryMovie));
 </script>
 
-	{#if hasMounted}
+{#if hasMounted}
 	<div class="space-y-12">
 		{#if libraryHistoryEntries.length > 0}
 			<MovieScrollContainer title="Continue Watching" movies={libraryHistoryEntries} />
 		{/if}
 
 		{#if libraryWatchlistEntries.length > 0}
-			<MovieScrollContainer title="Your Watchlist" movies={libraryWatchlistEntries} linkTo="/watchlist" />
+			<MovieScrollContainer
+				title="Your Watchlist"
+				movies={libraryWatchlistEntries}
+				linkTo="/watchlist"
+			/>
 		{/if}
 	</div>
 {/if}

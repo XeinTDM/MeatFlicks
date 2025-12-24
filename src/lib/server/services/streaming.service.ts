@@ -77,7 +77,6 @@ export async function invalidateStreamingCache(pattern?: string): Promise<number
 		return invalidateCachePattern(pattern);
 	}
 
-	// Default: invalidate all streaming caches
 	return invalidateCachePrefix('streaming:');
 }
 

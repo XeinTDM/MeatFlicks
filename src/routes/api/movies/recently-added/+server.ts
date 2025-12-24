@@ -12,10 +12,7 @@ const recentlyAddedQueryParamsSchema = z.object({
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		// Validate query parameters
 		const queryParams = validateQueryParams(recentlyAddedQueryParamsSchema, url.searchParams);
-
-		// Fetch recently added movies (by releaseDate descending)
 		const movies = await libraryRepository.findMoviesWithFilters(
 			{},
 			{ field: 'releaseDate', order: 'desc' },

@@ -9,22 +9,25 @@ export const paginationSchema = z.object({
 	page: z.coerce.number().int().positive().default(1),
 	limit: z.coerce.number().int().positive().max(100).default(20),
 	sort: z.string().optional(),
-	order: z.enum(['asc', 'desc']).optional(),
+	order: z.enum(['asc', 'desc']).optional()
 });
-export const searchQuerySchema = z.string().min(1, 'Search query is required').max(100, 'Search query too long');
+export const searchQuerySchema = z
+	.string()
+	.min(1, 'Search query is required')
+	.max(100, 'Search query too long');
 
 export const movieIdentifierSchema = z.object({
 	id: z.string().min(1, 'Movie identifier is required'),
-	by: queryModeSchema.optional(),
+	by: queryModeSchema.optional()
 });
 
 export const watchlistItemSchema = z.object({
 	movieId: z.string().min(1, 'Movie ID is required'),
-	userId: z.string().min(1, 'User ID is required'),
+	userId: z.string().min(1, 'User ID is required')
 });
 
 export const watchlistUpdateSchema = z.object({
-	items: z.array(watchlistItemSchema),
+	items: z.array(watchlistItemSchema)
 });
 
 export const playbackProgressSchema = z.object({
@@ -32,24 +35,27 @@ export const playbackProgressSchema = z.object({
 	mediaType: z.enum(['movie', 'tv', 'episode']),
 	position: z.number().min(0).max(99999, { message: 'Position too large' }),
 	duration: z.number().positive().max(99999, { message: 'Duration too large' }),
-	timestamp: z.number().positive().default(() => Date.now()),
+	timestamp: z
+		.number()
+		.positive()
+		.default(() => Date.now())
 });
 
 export const searchHistorySchema = z.object({
 	query: z.string().min(1, 'Search query is required').max(200, 'Search query too long'),
-	userId: z.string().min(1, 'User ID is required'),
+	userId: z.string().min(1, 'User ID is required')
 });
 
 export const apiRequestSchema = z.object({
 	method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
 	path: z.string().min(1, 'Path is required'),
 	query: z.record(z.string(), z.string()).optional(),
-	body: z.any().optional(),
+	body: z.any().optional()
 });
 
 export const tvIdentifierSchema = z.object({
 	id: z.string().min(1, 'TV identifier is required'),
-	tmdbId: tmdbIdSchema.optional(),
+	tmdbId: tmdbIdSchema.optional()
 });
 
 export const tvStatusSchema = z.object({
@@ -57,7 +63,7 @@ export const tvStatusSchema = z.object({
 	userId: z.string().min(1, 'User ID is required'),
 	status: z.enum(['watching', 'completed', 'planned', 'dropped', 'on_hold']),
 	episodeProgress: z.coerce.number().int().min(0).optional(),
-	score: z.coerce.number().int().min(1).max(10).optional(),
+	score: z.coerce.number().int().min(1).max(10).optional()
 });
 
 export const episodeProgressSchema = z.object({
@@ -66,28 +72,28 @@ export const episodeProgressSchema = z.object({
 	episodeNumber: z.coerce.number().int().positive(),
 	userId: z.string().min(1, 'User ID is required'),
 	position: z.coerce.number().min(0).max(99999),
-	duration: z.coerce.number().positive().max(99999),
+	duration: z.coerce.number().positive().max(99999)
 });
 
 export const streamingRequestSchema = z.object({
 	url: z.string().url(),
 	quality: z.string().optional(),
-	subtitles: z.boolean().optional(),
+	subtitles: z.boolean().optional()
 });
 
 export const apiKeySchema = z.object({
-	apiKey: z.string().min(32, 'API key must be at least 32 characters').max(64, 'API key too long'),
+	apiKey: z.string().min(32, 'API key must be at least 32 characters').max(64, 'API key too long')
 });
 
 export const userRegistrationSchema = z.object({
 	email: z.string().email('Invalid email format'),
 	password: z.string().min(8, 'Password must be at least 8 characters'),
-	username: z.string().min(3, 'Username must be at least 3 characters').max(30, 'Username too long'),
+	username: z.string().min(3, 'Username must be at least 3 characters').max(30, 'Username too long')
 });
 
 export const userLoginSchema = z.object({
 	email: z.string().email('Invalid email format'),
-	password: z.string().min(1, 'Password is required'),
+	password: z.string().min(1, 'Password is required')
 });
 
 export const searchFiltersSchema = z.object({
@@ -96,60 +102,65 @@ export const searchFiltersSchema = z.object({
 	year: z.coerce.number().int().min(1900).max(new Date().getFullYear()).optional(),
 	rating: z.coerce.number().min(0).max(10).optional(),
 	sort: z.enum(['popularity', 'rating', 'release_date', 'title']).optional(),
-	order: z.enum(['asc', 'desc']).optional(),
+	order: z.enum(['asc', 'desc']).optional()
 });
 
 export const paginationWithFiltersSchema = z.object({
 	page: z.coerce.number().int().positive().default(1),
 	limit: z.coerce.number().int().positive().max(100).default(20),
-	filters: searchFiltersSchema.optional(),
+	filters: searchFiltersSchema.optional()
 });
 
 export const mediaIdentifierSchema = z.object({
 	id: z.string().min(1, 'Media ID is required'),
-	type: z.enum(['movie', 'tv', 'episode']).optional(),
+	type: z.enum(['movie', 'tv', 'episode']).optional()
 });
 
 export const userPreferencesSchema = z.object({
 	theme: z.enum(['light', 'dark', 'system']).optional(),
 	language: z.string().min(2).max(10).optional(),
-	notifications: z.boolean().optional(),
+	notifications: z.boolean().optional()
 });
 
 export const watchlistOperationSchema = z.object({
 	movieId: z.string().min(1, 'Movie ID is required'),
-	action: z.enum(['add', 'remove']),
+	action: z.enum(['add', 'remove'])
 });
 
 export const playbackUpdateSchema = z.object({
 	mediaId: z.string().min(1, 'Media ID is required'),
 	position: z.number().min(0).max(99999),
 	duration: z.number().positive().max(99999),
-	timestamp: z.number().positive().default(() => Date.now()),
+	timestamp: z
+		.number()
+		.positive()
+		.default(() => Date.now())
 });
 
 export const securitySettingsSchema = z.object({
 	enable2fa: z.boolean().optional(),
-	passwordChange: z.object({
-		currentPassword: z.string().min(1, 'Current password is required'),
-		newPassword: z.string().min(8, 'New password must be at least 8 characters'),
-		confirmPassword: z.string().min(1, 'Please confirm your new password'),
-	}).optional(),
+	passwordChange: z
+		.object({
+			currentPassword: z.string().min(1, 'Current password is required'),
+			newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+			confirmPassword: z.string().min(1, 'Please confirm your new password')
+		})
+		.optional()
 });
 
 export const searchPeopleSchema = z.object({
 	query: searchQuerySchema,
-	limit: z.coerce.number().int().positive().max(50).default(10),
+	limit: z.coerce.number().int().positive().max(50).default(10)
 });
 
 export const movieByPeopleSchema = z.object({
 	people: z.string().min(1, 'People parameter is required'),
-	limit: z.coerce.number().int().positive().max(50).default(20),
+	limit: z.coerce.number().int().positive().max(50).default(20)
 });
 
 export const searchHistoryItemSchema = z.object({
 	id: z.string().min(1, 'History item ID is required'),
-	userId: z.string().min(1, 'User ID is required'),
+	userId: z.string().min(1, 'User ID is required')
 });
 
 /**
@@ -166,19 +177,17 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context?
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			const errorDetails = error.flatten();
-			const validationError = new ValidationError(
-				`Invalid ${context || 'input'} data`,
-				{
-					issues: errorDetails.fieldErrors,
-					formErrors: errorDetails.formErrors,
-				}
-			);
+			const validationError = new ValidationError(`Invalid ${context || 'input'} data`, {
+				issues: errorDetails.fieldErrors,
+				formErrors: errorDetails.formErrors
+			});
 			throw validationError;
 		} else if (error instanceof Error) {
-			const validationError = new ValidationError(`Failed to validate ${context || 'input'} data: ${error.message}`);
+			const validationError = new ValidationError(
+				`Failed to validate ${context || 'input'} data: ${error.message}`
+			);
 			throw validationError;
 		}
-		// For unknown errors, create a generic validation error with empty details
 		const validationError = new ValidationError(`Failed to validate ${context || 'input'} data`);
 		throw validationError;
 	}
@@ -187,31 +196,31 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context?
 /**
  * Validate and sanitize user input for security
  */
-export function validateAndSanitizeInput<T>(schema: z.ZodSchema<T>, data: unknown, context?: string): T {
+export function validateAndSanitizeInput<T>(
+	schema: z.ZodSchema<T>,
+	data: unknown,
+	context?: string
+): T {
 	try {
-		// First validate the structure
 		const parsedData = schema.parse(data);
 
-		// Then sanitize string fields
 		const sanitizedData = deepSanitize(parsedData);
 
 		return sanitizedData;
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			const errorDetails = error.flatten();
-			const validationError = new ValidationError(
-				`Invalid ${context || 'input'} data`,
-				{
-					issues: errorDetails.fieldErrors,
-					formErrors: errorDetails.formErrors,
-				}
-			);
+			const validationError = new ValidationError(`Invalid ${context || 'input'} data`, {
+				issues: errorDetails.fieldErrors,
+				formErrors: errorDetails.formErrors
+			});
 			throw validationError;
 		} else if (error instanceof Error) {
-			const validationError = new ValidationError(`Failed to validate ${context || 'input'} data: ${error.message}`);
+			const validationError = new ValidationError(
+				`Failed to validate ${context || 'input'} data: ${error.message}`
+			);
 			throw validationError;
 		}
-		// For unknown errors, create a generic validation error with empty details
 		const validationError = new ValidationError(`Failed to validate ${context || 'input'} data`);
 		throw validationError;
 	}
@@ -226,7 +235,7 @@ function deepSanitize<T>(obj: T): T {
 	}
 
 	if (Array.isArray(obj)) {
-		return obj.map(item => deepSanitize(item)) as any;
+		return obj.map((item) => deepSanitize(item)) as any;
 	}
 
 	const sanitized: Record<string, any> = {};
@@ -276,7 +285,7 @@ export function validateContentType(contentType: string | null, expectedTypes: s
 		throw new ValidationError('Content-Type header is required');
 	}
 
-	const isValid = expectedTypes.some(expected =>
+	const isValid = expectedTypes.some((expected) =>
 		contentType.toLowerCase().includes(expected.toLowerCase())
 	);
 
@@ -308,7 +317,10 @@ export function validateRequestOrigin(origin: string | null, allowedOrigins: str
  * @param schema The Zod schema for query parameters
  * @param queryParams The URLSearchParams or record of query parameters
  */
-export function validateQueryParams<T>(schema: z.ZodSchema<T>, queryParams: URLSearchParams | Record<string, string>): T {
+export function validateQueryParams<T>(
+	schema: z.ZodSchema<T>,
+	queryParams: URLSearchParams | Record<string, string>
+): T {
 	const params: Record<string, string> = {};
 
 	if (queryParams instanceof URLSearchParams) {
@@ -349,5 +361,8 @@ export function isValidImdbId(value: unknown): value is string {
 }
 
 export function isValidUUID(value: unknown): value is string {
-	return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+	return (
+		typeof value === 'string' &&
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+	);
 }

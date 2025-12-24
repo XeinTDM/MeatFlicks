@@ -34,9 +34,12 @@ const readStorage = (): SearchHistoryItem[] => {
 
 		return parsed
 			.filter((item): item is SearchHistoryItem => {
-				return item && typeof item === 'object' &&
+				return (
+					item &&
+					typeof item === 'object' &&
 					typeof item.query === 'string' &&
-					typeof item.searchedAt === 'number';
+					typeof item.searchedAt === 'number'
+				);
 			})
 			.sort((a, b) => b.searchedAt - a.searchedAt);
 	} catch (error) {
@@ -78,7 +81,6 @@ function createSearchHistoryStore() {
 				const data = await response.json();
 				const serverHistory = data.searches || [];
 
-				// If server returns history, use it (authenticated user)
 				if (serverHistory.length > 0) {
 					store.update((state) => ({
 						...state,
@@ -88,7 +90,6 @@ function createSearchHistoryStore() {
 					}));
 					persist(serverHistory);
 				} else {
-					// Server returned empty array (unauthenticated user), use local storage
 					const stored = readStorage();
 					store.update((state) => ({
 						...state,
@@ -98,7 +99,6 @@ function createSearchHistoryStore() {
 					}));
 				}
 			} else {
-				// Fallback to local storage if server fails
 				const stored = readStorage();
 				store.update((state) => ({
 					...state,
@@ -109,7 +109,6 @@ function createSearchHistoryStore() {
 			}
 		} catch (error) {
 			console.error('[searchHistory][syncFromServer] Failed', error);
-			// Fallback to local storage if server fails
 			const stored = readStorage();
 			store.update((state) => ({
 				...state,
@@ -150,17 +149,13 @@ function createSearchHistoryStore() {
 			filters
 		};
 
-		// Optimistic update
 		store.update((state) => {
-			// Remove duplicate queries
-			const updated = state.history.filter(item => item.query !== newItem.query);
-			// Add new item at the beginning
-			const final = [newItem, ...updated].slice(0, 50); // Keep max 50 items
+			const updated = state.history.filter((item) => item.query !== newItem.query);
+			const final = [newItem, ...updated].slice(0, 50);
 			persist(final);
 			return { ...state, history: final, error: null };
 		});
 
-		// Try to sync with server (will succeed for authenticated users, fail silently for unauthenticated)
 		try {
 			await fetch('/api/search/history', {
 				method: 'POST',
@@ -170,21 +165,18 @@ function createSearchHistoryStore() {
 			});
 		} catch (error) {
 			console.error('[searchHistory][addSearch] sync failed', error);
-			// This is expected for unauthenticated users, so we don't revert
 		}
 	};
 
 	const deleteSearch = async (id: number) => {
 		const previousState = get(store).history;
 
-		// Optimistic update
 		store.update((state) => {
-			const updated = state.history.filter(item => item.id !== id);
+			const updated = state.history.filter((item) => item.id !== id);
 			persist(updated);
 			return { ...state, history: updated, error: null };
 		});
 
-		// Try to sync with server (will succeed for authenticated users, fail silently for unauthenticated)
 		try {
 			await fetch('/api/search/history', {
 				method: 'DELETE',
@@ -194,16 +186,13 @@ function createSearchHistoryStore() {
 			});
 		} catch (error) {
 			console.error('[searchHistory][deleteSearch] sync failed', error);
-			// This is expected for unauthenticated users, so we don't revert
 		}
 	};
 
 	const clearAll = async () => {
-		// Optimistic update
 		store.update((state) => ({ ...state, history: [], error: null }));
 		persist([]);
 
-		// Try to sync with server (will succeed for authenticated users, fail silently for unauthenticated)
 		try {
 			await fetch('/api/search/history', {
 				method: 'DELETE',
@@ -212,7 +201,6 @@ function createSearchHistoryStore() {
 			});
 		} catch (error) {
 			console.error('[searchHistory][clearAll] sync failed', error);
-			// This is expected for unauthenticated users, so we don't revert
 		}
 	};
 

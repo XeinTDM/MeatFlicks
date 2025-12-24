@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { Search, User, X, LoaderCircle } from '@lucide/svelte';
-	import { createEventDispatcher } from 'svelte';
-	import { onMount } from 'svelte';
 
 	interface PersonSearchResult {
 		id: number;
@@ -20,19 +18,18 @@
 		maxResults?: number;
 		selectedPeople?: PersonSearchResult[];
 		disabled?: boolean;
+		onPersonSelect: (person: PersonSearchResult) => void;
+		onPersonRemove: (person: PersonSearchResult) => void;
 	}
 
 	let {
 		placeholder = 'Search for actors, directors...',
 		maxResults = 5,
 		selectedPeople = [],
-		disabled = false
+		disabled = false,
+		onPersonSelect,
+		onPersonRemove
 	}: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		personselect: PersonSearchResult;
-		personremove: PersonSearchResult;
-	}>();
 
 	let query = $state('');
 	let results = $state<PersonSearchResult[]>([]);
@@ -80,9 +77,8 @@
 	}
 
 	function handlePersonSelect(person: PersonSearchResult) {
-		// Check if person is already selected
 		if (!selectedPeople.find((p) => p.id === person.id)) {
-			dispatch('personselect', person);
+			onPersonSelect(person);
 			query = '';
 			results = [];
 			isFocused = false;
@@ -90,7 +86,7 @@
 	}
 
 	function handleRemovePerson(person: PersonSearchResult) {
-		dispatch('personremove', person);
+		onPersonRemove(person);
 	}
 
 	function clearSearch() {
@@ -99,7 +95,6 @@
 		isLoading = false;
 	}
 
-	// Close on click outside
 	$effect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
 			if (containerRef && !containerRef.contains(e.target as Node)) {
@@ -116,7 +111,6 @@
 
 <div class="relative w-full" bind:this={containerRef}>
 	<div class="space-y-3">
-		<!-- Selected People -->
 		{#if selectedPeople.length > 0}
 			<div class="flex flex-wrap gap-2">
 				{#each selectedPeople as person (person.id)}
@@ -143,7 +137,6 @@
 			</div>
 		{/if}
 
-		<!-- Search Input -->
 		<div
 			class="group flex items-center gap-3 rounded-xl border border-border/40 bg-muted/40 px-3 py-2 transition-all duration-300 focus-within:border-primary/50 focus-within:bg-muted/60"
 		>
@@ -177,7 +170,6 @@
 		</div>
 	</div>
 
-	<!-- Search Results Dropdown -->
 	{#if isFocused && (results.length > 0 || isLoading)}
 		<div
 			class="absolute top-full right-0 left-0 z-[100] mt-2 rounded-xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"

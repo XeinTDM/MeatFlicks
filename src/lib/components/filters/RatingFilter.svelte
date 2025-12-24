@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Slider } from '$lib/components/ui/slider';
-	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Star } from '@lucide/svelte';
 
@@ -23,7 +22,6 @@
 		sliderValue = values;
 		const [min, max] = values;
 
-		// Only set if different from defaults
 		onMinRatingChange(min > 0 ? min : undefined);
 		onMaxRatingChange(max < 10 ? max : undefined);
 	}
@@ -37,7 +35,6 @@
 </script>
 
 <div class="space-y-4">
-	<!-- Current range display -->
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-2">
 			<Star class="h-4 w-4 fill-yellow-500 text-yellow-500" />
@@ -52,7 +49,6 @@
 		{/if}
 	</div>
 
-	<!-- Slider -->
 	<Slider
 		min={0}
 		max={10}
@@ -62,7 +58,6 @@
 		class="w-full"
 	/>
 
-	<!-- Quick presets -->
 	<div class="flex flex-wrap gap-2">
 		<button
 			onclick={() => setMinimumRating(7)}

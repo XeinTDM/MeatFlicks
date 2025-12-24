@@ -15,10 +15,12 @@ function getClientIp(event: any): string {
 	if (forwarded) {
 		return forwarded.split(',')[0].trim();
 	}
-	return headers.get('cf-connecting-ip') ||
-		   headers.get('x-real-ip') ||
-		   event.getClientAddress() ||
-		   'unknown';
+	return (
+		headers.get('cf-connecting-ip') ||
+		headers.get('x-real-ip') ||
+		event.getClientAddress() ||
+		'unknown'
+	);
 }
 
 async function validateSession(event: any) {
@@ -61,8 +63,7 @@ async function applyRateLimiting(event: any) {
 				}
 			});
 		}
-	}
-	else if (path.startsWith('/api/')) {
+	} else if (path.startsWith('/api/')) {
 		const result = await apiRateLimiter.checkLimit(`api:${ip}`);
 		if (!result.allowed) {
 			logger.warn(`Rate limit exceeded for API endpoint from IP: ${ip}`);

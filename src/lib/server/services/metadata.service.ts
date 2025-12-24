@@ -1,5 +1,12 @@
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres, people, moviePeople, collections } from '$lib/server/db/schema';
+import {
+	movies,
+	genres,
+	moviesGenres,
+	people,
+	moviePeople,
+	collections
+} from '$lib/server/db/schema';
 import { sql, eq, inArray, asc, desc, and, or, like, gte, lte } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import { withCache, buildCacheKey, CACHE_TTL_LONG_SECONDS } from '$lib/server/cache';
@@ -42,7 +49,6 @@ export async function enhanceMovieMetadata(
 	const { includeCast = true, includeTrailers = true } = options;
 
 	try {
-		// Get base movie data
 		const movieRows = await db.all(sql<MovieRow>`
 			SELECT * FROM movies WHERE id = ${movieId} LIMIT 1
 		`);
@@ -53,10 +59,9 @@ export async function enhanceMovieMetadata(
 
 		const baseMovie = (await mapRowsToSummaries(movieRows as MovieRow[]))[0];
 
-		// Create enhanced movie object
 		const enhancedMovie: LibraryMovie = {
 			...baseMovie,
-			trailerUrl: includeTrailers ? baseMovie.trailerUrl : undefined,
+			trailerUrl: includeTrailers ? baseMovie.trailerUrl : null,
 			imdbId: baseMovie.imdbId,
 			canonicalPath: baseMovie.canonicalPath,
 			addedAt: baseMovie.addedAt,
@@ -64,7 +69,6 @@ export async function enhanceMovieMetadata(
 			genres: baseMovie.genres || []
 		};
 
-		// Add cast information if requested
 		if (includeCast) {
 			const cast = await getMovieCast(movieId);
 			enhancedMovie.cast = cast;
@@ -90,7 +94,6 @@ export async function getEnhancedMovies(
 	} = options;
 
 	try {
-		// Get base movies data
 		const [movieRows, total] = await Promise.all([
 			db.all(sql`
 				SELECT * FROM movies
@@ -100,15 +103,14 @@ export async function getEnhancedMovies(
 			db.all(sql`SELECT COUNT(*) as count FROM movies`)
 		]);
 
-		const movies = await mapRowsToSummaries(movieRows);
-		const totalCount = total[0]?.count || 0;
+		const movies = await mapRowsToSummaries(movieRows as any[]);
+		const totalCount = (total[0] as any)?.count || 0;
 
-		// Enhance movies with additional metadata
 		const enhancedMovies = await Promise.all(
 			movies.map(async (movie) => {
 				const enhancedMovie: LibraryMovie = {
 					...movie,
-					trailerUrl: includeTrailers ? movie.trailerUrl : undefined,
+					trailerUrl: includeTrailers ? movie.trailerUrl : null,
 					imdbId: movie.imdbId,
 					canonicalPath: movie.canonicalPath,
 					addedAt: movie.addedAt,
@@ -124,7 +126,6 @@ export async function getEnhancedMovies(
 			})
 		);
 
-		// Get additional metadata for facets
 		const [genreFacets, collectionFacets] = await Promise.all([
 			includeGenres ? getGenreFacets() : Promise.resolve([]),
 			includeCollections ? getCollectionFacets() : Promise.resolve([])
@@ -154,7 +155,7 @@ async function getMovieCast(movieId: string): Promise<CastMember[]> {
 			LIMIT 10
 		`);
 
-		return castRows.map(row => ({
+		return castRows.map((row: any) => ({
 			id: row.id,
 			name: row.name,
 			character: row.character,
@@ -176,7 +177,7 @@ async function getGenreFacets(): Promise<GenreRecord[]> {
 			ORDER BY count DESC, g.name ASC
 		`);
 
-		return results.map(row => ({
+		return results.map((row: any) => ({
 			id: row.id,
 			name: row.name
 		}));
@@ -186,7 +187,9 @@ async function getGenreFacets(): Promise<GenreRecord[]> {
 	}
 }
 
-async function getCollectionFacets(): Promise<Array<{ id: number; name: string; slug: string; count: number }>> {
+async function getCollectionFacets(): Promise<
+	Array<{ id: number; name: string; slug: string; count: number }>
+> {
 	try {
 		const results = await db.all(sql`
 			SELECT c.id, c.name, c.slug, COUNT(*) as count
@@ -196,7 +199,7 @@ async function getCollectionFacets(): Promise<Array<{ id: number; name: string; 
 			ORDER BY count DESC, c.name ASC
 		`);
 
-		return results.map(row => ({
+		return results.map((row: any) => ({
 			id: row.id,
 			name: row.name,
 			slug: row.slug,
@@ -218,23 +221,11 @@ export async function getMoviesByMetadata(
 	},
 	options: { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' } = {}
 ): Promise<EnhancedMetadataResult> {
-	const {
-		mediaType,
-		hasTrailer,
-		hasImdbId,
-		genres = [],
-		collections = []
-	} = filters;
+	const { mediaType, hasTrailer, hasImdbId, genres = [], collections = [] } = filters;
 
-	const {
-		limit = 20,
-		offset = 0,
-		sortBy = 'rating',
-		sortOrder = 'desc'
-	} = options;
+	const { limit = 20, offset = 0, sortBy = 'rating', sortOrder = 'desc' } = options;
 
 	try {
-		// Build WHERE clauses
 		const whereClauses = [];
 		const params = [];
 
@@ -263,7 +254,6 @@ export async function getMoviesByMetadata(
 
 		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-		// Build ORDER BY clause
 		let orderByClause = '';
 		switch (sortBy) {
 			case 'title':
@@ -278,25 +268,23 @@ export async function getMoviesByMetadata(
 		}
 		orderByClause += ` ${sortOrder}`;
 
-		// Execute query
 		const [movieRows, total] = await Promise.all([
 			db.all(sql`
 				SELECT m.* FROM movies m
 				${whereClause}
 				${orderByClause}
 				LIMIT ${limit} OFFSET ${offset}
-			`, params),
+			`),
 			db.all(sql`
 				SELECT COUNT(*) as count FROM movies m
 				${whereClause}
-			`, params)
+			`)
 		]);
 
-		const movies = await mapRowsToSummaries(movieRows);
-		const totalCount = total[0]?.count || 0;
+		const movies = await mapRowsToSummaries(movieRows as any[]);
+		const totalCount = (total[0] as any)?.count || 0;
 
-		// Enhance movies with additional metadata
-		const enhancedMovies = movies.map(movie => ({
+		const enhancedMovies = movies.map((movie) => ({
 			...movie,
 			trailerUrl: movie.trailerUrl,
 			imdbId: movie.imdbId,
@@ -306,7 +294,6 @@ export async function getMoviesByMetadata(
 			genres: movie.genres || []
 		}));
 
-		// Get facets
 		const [genreFacets, collectionFacets] = await Promise.all([
 			getGenreFacets(),
 			getCollectionFacets()
@@ -364,7 +351,7 @@ export async function updateMovieMetadata(
 		}
 
 		if (updates.length === 0) {
-			return; // No updates needed
+			return;
 		}
 
 		params.push(movieId);
@@ -373,7 +360,7 @@ export async function updateMovieMetadata(
 			UPDATE movies
 			SET ${updates.join(', ')}
 			WHERE id = ?
-		`, params);
+		`);
 
 		logger.info({ movieId, metadata }, 'Updated movie metadata');
 	} catch (error) {
@@ -391,22 +378,27 @@ export async function getMetadataStatistics(): Promise<{
 	moviesWithCanonicalPath: number;
 }> {
 	try {
-		const [movieCount, genreCount, collectionCount, trailers, imdbIds, canonicalPaths] = await Promise.all([
-			db.all(sql`SELECT COUNT(*) as count FROM movies`),
-			db.all(sql`SELECT COUNT(*) as count FROM genres`),
-			db.all(sql`SELECT COUNT(*) as count FROM collections`),
-			db.all(sql`SELECT COUNT(*) as count FROM movies WHERE trailerUrl IS NOT NULL AND trailerUrl != ''`),
-			db.all(sql`SELECT COUNT(*) as count FROM movies WHERE imdbId IS NOT NULL AND imdbId != ''`),
-			db.all(sql`SELECT COUNT(*) as count FROM movies WHERE canonicalPath IS NOT NULL AND canonicalPath != ''`)
-		]);
+		const [movieCount, genreCount, collectionCount, trailers, imdbIds, canonicalPaths] =
+			await Promise.all([
+				db.all(sql`SELECT COUNT(*) as count FROM movies`),
+				db.all(sql`SELECT COUNT(*) as count FROM genres`),
+				db.all(sql`SELECT COUNT(*) as count FROM collections`),
+				db.all(
+					sql`SELECT COUNT(*) as count FROM movies WHERE trailerUrl IS NOT NULL AND trailerUrl != ''`
+				),
+				db.all(sql`SELECT COUNT(*) as count FROM movies WHERE imdbId IS NOT NULL AND imdbId != ''`),
+				db.all(
+					sql`SELECT COUNT(*) as count FROM movies WHERE canonicalPath IS NOT NULL AND canonicalPath != ''`
+				)
+			]);
 
 		return {
-			movieCount: movieCount[0]?.count || 0,
-			genreCount: genreCount[0]?.count || 0,
-			collectionCount: collectionCount[0]?.count || 0,
-			moviesWithTrailers: trailers[0]?.count || 0,
-			moviesWithImdbId: imdbIds[0]?.count || 0,
-			moviesWithCanonicalPath: canonicalPaths[0]?.count || 0
+			movieCount: (movieCount[0] as any)?.count || 0,
+			genreCount: (genreCount[0] as any)?.count || 0,
+			collectionCount: (collectionCount[0] as any)?.count || 0,
+			moviesWithTrailers: (trailers[0] as any)?.count || 0,
+			moviesWithImdbId: (imdbIds[0] as any)?.count || 0,
+			moviesWithCanonicalPath: (canonicalPaths[0] as any)?.count || 0
 		};
 	} catch (error) {
 		logger.error({ error }, 'Failed to get metadata statistics');

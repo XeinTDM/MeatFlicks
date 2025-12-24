@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres, collections, moviePeople, people } from '$lib/server/db/schema';
+import {
+	movies,
+	genres,
+	moviesGenres,
+	collections,
+	moviePeople,
+	people
+} from '$lib/server/db/schema';
 import { eq, sql, and, count as drizzleCount } from 'drizzle-orm';
 import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
@@ -91,13 +98,9 @@ export const upsertMovieWithGenres = async (
 				await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
 			}
 
-			// Sync person data (cast and crew) for this movie
-			// This will happen outside the transaction to avoid complexity
-			// but we'll wait for it to complete before returning
 			return movieId;
 		})
 		.then(async (movieId) => {
-			// Sync person data after the transaction completes
 			try {
 				await syncMovieCast(movieId, payload.tmdbId);
 				await syncMovieCrew(movieId, payload.tmdbId);

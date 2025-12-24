@@ -1,11 +1,9 @@
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres } from '$lib/server/db/schema';
-import { sql, desc, asc, and, or, like, gte, lte, eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
-import { withCache, buildCacheKey, CACHE_TTL_SHORT_SECONDS } from '$lib/server/cache';
+import { withCache, buildCacheKey, CACHE_TTL_SEARCH_SECONDS } from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
 import type { MovieSummary } from '$lib/server/db';
-import { createHash } from 'node:crypto';
 
 interface SearchOptions {
 	query?: string;
@@ -37,7 +35,6 @@ interface AutocompleteResult {
 }
 
 const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
 const AUTOCOMPLETE_LIMIT = 10;
 
 function normalizeQuery(query: string): string {
@@ -45,17 +42,10 @@ function normalizeQuery(query: string): string {
 }
 
 function createFuzzySearchQuery(term: string): string {
-	const cleaned = term.replace(/[^a-z0-9\s]/gi, ' ');
-	const tokens = cleaned.split(/\s+/).filter(Boolean);
-
-	if (tokens.length === 0) return '';
-
-	return tokens
-		.map(token => {
-			if (token.length <= 3) return token;
-			return `${token}* OR ${token.slice(0, -1)}* OR ${token}*${token.slice(-1)} OR ${token.slice(1)}${token[0]}*`;
-		})
-		.join(' OR ');
+	return term
+		.toLowerCase()
+		.replace(/[^\w\s]/g, ' ')
+		.trim();
 }
 
 function createAutocompleteQuery(term: string): string {
@@ -64,7 +54,9 @@ function createAutocompleteQuery(term: string): string {
 	return `${cleaned}* OR ${cleaned}*`;
 }
 
-async function getGenreFacets(genreIds: number[]): Promise<{ id: number; name: string; count: number }[]> {
+async function getGenreFacets(
+	genreIds: number[]
+): Promise<{ id: number; name: string; count: number }[]> {
 	if (genreIds.length === 0) return [];
 
 	try {
@@ -76,7 +68,7 @@ async function getGenreFacets(genreIds: number[]): Promise<{ id: number; name: s
 			ORDER BY count DESC, g.name ASC
 		`);
 
-		return results.map(row => ({
+		return results.map((row: any) => ({
 			id: row.id as number,
 			name: row.name as string,
 			count: row.count as number
@@ -87,7 +79,10 @@ async function getGenreFacets(genreIds: number[]): Promise<{ id: number; name: s
 	}
 }
 
-async function getYearFacets(minYear?: number, maxYear?: number): Promise<{ year: number; count: number }[]> {
+async function getYearFacets(
+	minYear?: number,
+	maxYear?: number
+): Promise<{ year: number; count: number }[]> {
 	try {
 		let yearFilter = sql`1 = 1`;
 		if (minYear && maxYear) {
@@ -108,11 +103,11 @@ async function getYearFacets(minYear?: number, maxYear?: number): Promise<{ year
 		`);
 
 		return results
-			.map(row => ({
+			.map((row: any) => ({
 				year: parseInt(row.year as string),
 				count: row.count as number
 			}))
-			.filter(item => !isNaN(item.year));
+			.filter((item) => !isNaN(item.year));
 	} catch (error) {
 		logger.error({ error }, 'Failed to get year facets');
 		return [];
@@ -137,7 +132,7 @@ async function getRatingFacets(): Promise<{ rating: number; count: number }[]> {
 			ORDER BY rating_range DESC
 		`);
 
-		return results.map(row => {
+		return results.map((row: any) => {
 			const range = row.rating_range as string;
 			let rating: number;
 
@@ -171,14 +166,17 @@ async function getSearchSuggestions(query: string, limit: number = 5): Promise<s
 			LIMIT ${limit}
 		`);
 
-		return results.map(row => row.title as string).filter(Boolean);
+		return results.map((row: any) => row.title as string).filter(Boolean);
 	} catch (error) {
 		logger.error({ error }, 'Failed to get search suggestions');
 		return [];
 	}
 }
 
-async function getAutocompletePeople(query: string, limit: number = 5): Promise<AutocompleteResult['people']> {
+async function getAutocompletePeople(
+	query: string,
+	limit: number = 5
+): Promise<AutocompleteResult['people']> {
 	if (!query || query.length < 2) return [];
 
 	try {
@@ -190,7 +188,7 @@ async function getAutocompletePeople(query: string, limit: number = 5): Promise<
 			LIMIT ${limit}
 		`);
 
-		return results.map(row => ({
+		return results.map((row: any) => ({
 			id: row.id as number,
 			name: row.name as string,
 			type: row.knownForDepartment?.toLowerCase().includes('act') ? 'actor' : 'director'
@@ -232,9 +230,8 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 		includeAdult
 	);
 
-	return withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
+	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
-			// Get base results
 			const [results, total] = await Promise.all([
 				performSearchQuery({
 					query: normalizedQuery,
@@ -260,9 +257,8 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 				})
 			]);
 
-			// Get facets in parallel
 			const [genreFacets, yearFacets, ratingFacets, suggestions] = await Promise.all([
-				getGenreFacets(genres.map(g => parseInt(g))),
+				getGenreFacets(genres.map((g) => parseInt(g))),
 				getYearFacets(minYear, maxYear),
 				getRatingFacets(),
 				normalizedQuery.length >= 2 ? getSearchSuggestions(normalizedQuery) : Promise.resolve([])
@@ -283,7 +279,9 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 	});
 }
 
-async function performSearchQuery(options: Omit<SearchOptions, 'offset'> & { offset: number }): Promise<MovieSummary[]> {
+async function performSearchQuery(
+	options: Omit<SearchOptions, 'offset'> & { offset: number }
+): Promise<MovieSummary[]> {
 	const {
 		query,
 		limit,
@@ -299,7 +297,6 @@ async function performSearchQuery(options: Omit<SearchOptions, 'offset'> & { off
 	} = options;
 
 	try {
-		// Build WHERE clauses
 		const whereClauses = [];
 		const params = [];
 
@@ -380,7 +377,7 @@ async function performSearchQuery(options: Omit<SearchOptions, 'offset'> & { off
 			LIMIT ${limit} OFFSET ${offset}
 		`;
 
-		const rows = await db.all(searchSql) as any[];
+		const rows = (await db.all(searchSql)) as any[];
 		return await mapRowsToSummaries(rows);
 	} catch (error) {
 		logger.error({ error, options }, 'Search query failed');
@@ -388,16 +385,10 @@ async function performSearchQuery(options: Omit<SearchOptions, 'offset'> & { off
 	}
 }
 
-async function getTotalCount(options: Omit<SearchOptions, 'limit' | 'offset' | 'sortBy' | 'sortOrder'>): Promise<number> {
-	const {
-		query,
-		genres = [],
-		minRating,
-		maxRating,
-		minYear,
-		maxYear,
-		includeAdult
-	} = options;
+async function getTotalCount(
+	options: Omit<SearchOptions, 'limit' | 'offset' | 'sortBy' | 'sortOrder'>
+): Promise<number> {
+	const { query, genres = [], minRating, maxRating, minYear, maxYear, includeAdult } = options;
 
 	try {
 		const whereClauses = [];
@@ -439,7 +430,7 @@ async function getTotalCount(options: Omit<SearchOptions, 'limit' | 'offset' | '
 		}
 
 		if (!includeAdult) {
-			whereClauses.push('m.is4K = 0'); // Simple adult content filter
+			whereClauses.push('m.is4K = 0');
 		}
 
 		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -450,7 +441,7 @@ async function getTotalCount(options: Omit<SearchOptions, 'limit' | 'offset' | '
 			${whereClause}
 		`;
 
-		const result = await db.all(countSql) as any[];
+		const result = (await db.all(countSql)) as any[];
 		return result[0]?.count || 0;
 	} catch (error) {
 		logger.error({ error, options }, 'Count query failed');
@@ -471,7 +462,7 @@ export async function autocompleteSearch(query: string): Promise<AutocompleteRes
 
 	const cacheKey = buildCacheKey('autocomplete', normalizedQuery);
 
-	return withCache(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
+	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
 			const [suggestions, movies, people] = await Promise.all([
 				getSearchSuggestions(normalizedQuery, AUTOCOMPLETE_LIMIT),
@@ -507,7 +498,7 @@ async function getAutocompleteMovies(query: string, limit: number): Promise<Movi
 			LIMIT ${limit}
 		`;
 
-		const rows = await db.all(searchSql) as any[];
+		const rows = (await db.all(searchSql)) as any[];
 		return await mapRowsToSummaries(rows);
 	} catch (error) {
 		logger.error({ error, query }, 'Autocomplete movies failed');
@@ -515,7 +506,9 @@ async function getAutocompleteMovies(query: string, limit: number): Promise<Movi
 	}
 }
 
-export async function getSearchHistory(userId?: string): Promise<Array<{ query: string; timestamp: number }>> {
+export async function getSearchHistory(
+	userId?: string
+): Promise<Array<{ query: string; timestamp: number }>> {
 	try {
 		if (userId) {
 			const results = await db.all(sql`
@@ -525,10 +518,10 @@ export async function getSearchHistory(userId?: string): Promise<Array<{ query: 
 				ORDER BY searchedAt DESC
 				LIMIT 10
 			`);
-		return results.map(row => ({
-			query: row.query as string,
-			timestamp: row.timestamp as number
-		}));
+			return results.map((row: any) => ({
+				query: row.query as string,
+				timestamp: row.timestamp as number
+			}));
 		} else {
 			const results = await db.all(sql`
 				SELECT query, COUNT(*) as count
@@ -537,10 +530,10 @@ export async function getSearchHistory(userId?: string): Promise<Array<{ query: 
 				ORDER BY count DESC
 				LIMIT 10
 			`);
-		return results.map(row => ({
-			query: row.query as string,
-			timestamp: Date.now()
-		}));
+			return results.map((row: any) => ({
+				query: row.query as string,
+				timestamp: Date.now()
+			}));
 		}
 	} catch (error) {
 		logger.error({ error, userId }, 'Failed to get search history');
@@ -562,7 +555,10 @@ export async function saveSearchHistory(userId: string, query: string): Promise<
 	}
 }
 
-export async function getPersonalizedRecommendations(userId: string, limit: number = 10): Promise<MovieSummary[]> {
+export async function getPersonalizedRecommendations(
+	userId: string,
+	limit: number = 10
+): Promise<MovieSummary[]> {
 	try {
 		const [watchHistory, watchlist] = await Promise.all([
 			db.all(sql`
@@ -585,7 +581,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 
 		for (const item of allMovies) {
 			try {
-				const movieData = JSON.parse(item.movieData as string);
+				const movieData = JSON.parse((item as any).movieData as string);
 				if (movieData.genres) {
 					for (const genre of movieData.genres) {
 						genrePreferences[genre.id] = (genrePreferences[genre.id] || 0) + 1;
@@ -602,13 +598,13 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 			.map(([id]) => parseInt(id));
 
 		if (preferredGenreIds.length === 0) {
-		const popularMovies = await db.all(sql`
+			const popularMovies = (await db.all(sql`
 			SELECT m.*
 			FROM movies m
 			ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 			LIMIT ${limit}
-		`) as any[];
-		return await mapRowsToSummaries(popularMovies);
+		`)) as any[];
+			return await mapRowsToSummaries(popularMovies);
 		}
 
 		const recommendedMovies = await db.all(sql`
@@ -620,7 +616,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 			LIMIT ${limit}
 		`);
 
-		return await mapRowsToSummaries(recommendedMovies);
+		return await mapRowsToSummaries(recommendedMovies as any[]);
 	} catch (error) {
 		logger.error({ error, userId }, 'Failed to get personalized recommendations');
 		const popularMovies = await db.all(sql`
@@ -629,6 +625,6 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 			ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 			LIMIT ${limit}
 		`);
-		return await mapRowsToSummaries(popularMovies);
+		return await mapRowsToSummaries(popularMovies as any[]);
 	}
 }

@@ -89,20 +89,20 @@
 		}
 	});
 
-	function handleActorSelect(e: CustomEvent<PersonSearchResult>) {
-		actors = [...actors, e.detail];
+	function handleActorSelect(person: PersonSearchResult) {
+		actors = [...actors, person];
 	}
 
-	function handleActorRemove(e: CustomEvent<PersonSearchResult>) {
-		actors = actors.filter((a) => a.id !== e.detail.id);
+	function handleActorRemove(person: PersonSearchResult) {
+		actors = actors.filter((a) => a.id !== person.id);
 	}
 
-	function handleDirectorSelect(e: CustomEvent<PersonSearchResult>) {
-		directors = [...directors, e.detail];
+	function handleDirectorSelect(person: PersonSearchResult) {
+		directors = [...directors, person];
 	}
 
-	function handleDirectorRemove(e: CustomEvent<PersonSearchResult>) {
-		directors = directors.filter((d) => d.id !== e.detail.id);
+	function handleDirectorRemove(person: PersonSearchResult) {
+		directors = directors.filter((d) => d.id !== person.id);
 	}
 </script>
 
@@ -127,10 +127,8 @@
 	</div>
 
 	<div class="grid gap-6 xl:grid-cols-2">
-		<!-- People Search Section -->
 		<div class="space-y-4 xl:col-span-2">
 			<div class="grid gap-4 sm:grid-cols-2">
-				<!-- Actors -->
 				<div class="space-y-2">
 					<p
 						class="flex items-center gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
@@ -141,12 +139,11 @@
 					<PersonSearch
 						placeholder="Search for actors..."
 						selectedPeople={actors}
-						on:personselect={handleActorSelect}
-						on:personremove={handleActorRemove}
+						onPersonSelect={handleActorSelect}
+						onPersonRemove={handleActorRemove}
 					/>
 				</div>
 
-				<!-- Directors -->
 				<div class="space-y-2">
 					<p
 						class="flex items-center gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
@@ -157,14 +154,13 @@
 					<PersonSearch
 						placeholder="Search for directors..."
 						selectedPeople={directors}
-						on:personselect={handleDirectorSelect}
-						on:personremove={handleDirectorRemove}
+						onPersonSelect={handleDirectorSelect}
+						onPersonRemove={handleDirectorRemove}
 					/>
 				</div>
 			</div>
 		</div>
 
-		<!-- Sort and Quality Section -->
 		<div class="space-y-4">
 			<div class="space-y-2">
 				<p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Sort by</p>
@@ -201,7 +197,6 @@
 			</div>
 		</div>
 
-		<!-- Metadata Section -->
 		<div class="space-y-2">
 			<p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Metadata</p>
 			<div

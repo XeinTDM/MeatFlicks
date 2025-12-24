@@ -107,7 +107,7 @@
 
 	const highlightMovie = $derived(
 		(() => {
-			if (useFilters) return null; // Don't show hero when filtering
+			if (useFilters) return null;
 			for (const movie of sortedByRating) {
 				if (movie?.backdropPath) {
 					return movie;
@@ -123,12 +123,10 @@
 	let currentSort = $state<SortOptions>({ field: 'popularity', order: 'desc' } as SortOptions);
 	let currentPagination = $state<PaginationParams>({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
 
-	// Update local state when data changes
 	$effect(() => {
 		currentFilters = filters;
 		currentSort = sort;
 		if (pagination) {
-			// Handle both PaginationMetadata (has currentPage) and PaginationParams (has page)
 			const page = 'currentPage' in pagination ? pagination.currentPage : pagination.page;
 			currentPagination = { page, pageSize: pagination.pageSize };
 		}
@@ -143,7 +141,7 @@
 
 	function handleFiltersChange(newFilters: MovieFilters) {
 		currentFilters = newFilters;
-		currentPagination = { ...currentPagination, page: 1 }; // Reset to page 1 on filter change
+		currentPagination = { ...currentPagination, page: 1 };
 		updateURL();
 	}
 

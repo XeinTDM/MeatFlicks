@@ -230,7 +230,7 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 				seasonCount: data.number_of_seasons || null,
 				episodeCount: data.number_of_episodes || null,
 				seasons: (data.seasons || [])
-					.filter((s) => s.season_number > 0) // Usually skip season 0 (specials) unless requested
+					.filter((s) => s.season_number > 0)
 					.map((s) => ({
 						id: s.id,
 						name: s.name,
@@ -448,7 +448,6 @@ export async function invalidateTmdbCaches(pattern?: string): Promise<number> {
 		return invalidateCachePattern(pattern);
 	}
 
-	// Default: invalidate all TMDB caches
 	return invalidateCachePrefix('tmdb:');
 }
 
@@ -474,7 +473,6 @@ export async function fetchTmdbRecommendations(
 	const cacheKey = buildCacheKey('tmdb', mediaType, tmdbId, 'recommendations', limit);
 
 	return withCache(cacheKey, LIST_TTL, async () => {
-		// Parallel fetch similar and recommended
 		const [similarRes, recommendRes] = await Promise.all([
 			tmdbRateLimiter.schedule(`tmdb-${mediaType}-similar`, () =>
 				api(`/${mediaType}/${tmdbId}/similar`, { query: { language: 'en-US', page: 1 } })
@@ -487,7 +485,6 @@ export async function fetchTmdbRecommendations(
 		const similar = TmdbRecommendationResponseSchema.parse(similarRes).results;
 		const recommended = TmdbRecommendationResponseSchema.parse(recommendRes).results;
 
-		// Combine and deduplicate
 		const combined = [...recommended, ...similar];
 		const unique = new Map<number, (typeof combined)[0]>();
 		for (const item of combined) {
@@ -512,7 +509,7 @@ export async function fetchTmdbRecommendations(
 					backdropPath: buildImageUrl(item.backdrop_path, env.TMDB_BACKDROP_SIZE),
 					releaseDate,
 					rating: item.vote_average || 0,
-					genres: [], // Lightweight summary doesn't need full genres often
+					genres: [],
 					media_type: isTv ? 'tv' : 'movie',
 					is4K: false,
 					isHD: true,
@@ -543,9 +540,8 @@ export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPers
 				...(data.combined_credits?.cast || []).map((c) => ({ ...c, job: 'Actor' })),
 				...(data.combined_credits?.crew || [])
 			]
-				.filter((c) => ('vote_average' in c ? c.vote_average && c.vote_average > 0 : true)) // Filter out noise from cast, keep crew
+				.filter((c) => ('vote_average' in c ? c.vote_average && c.vote_average > 0 : true))
 				.sort((a, b) => {
-					//Sort by popularity/votes or date? Let's sort by date descending safely
 					const dateA =
 						('release_date' in a ? a.release_date : '') ||
 						('first_air_date' in a ? a.first_air_date : '') ||

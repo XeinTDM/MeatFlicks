@@ -12,7 +12,6 @@ const tvSeasonPathParamsSchema = z.object({
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
-		// Validate path parameters
 		const pathParams = validatePathParams(tvSeasonPathParamsSchema, params);
 
 		const season = await fetchTmdbTvSeason(pathParams.id, pathParams.number);

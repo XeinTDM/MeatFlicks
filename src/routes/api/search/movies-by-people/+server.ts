@@ -50,7 +50,6 @@ const parseRoles = (value: string | null): string[] => {
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		// Validate query parameters using the schema
 		const queryParams = validateQueryParams(
 			z.object({
 				people: movieByPeopleSchema.shape.people,
@@ -68,7 +67,6 @@ export const GET: RequestHandler = async ({ url }) => {
 			return json({ error: 'Valid person IDs are required' }, { status: 400 });
 		}
 
-		// Create a hash for caching
 		const hash = createHash('sha1')
 			.update(`${personIds.join(',')}:${roles.join(',')}:${limit}`)
 			.digest('hex');
@@ -90,11 +88,9 @@ async function searchMoviesByPeople(
 	roles: string[],
 	limit: number
 ): Promise<LibraryMovie[]> {
-	// First try to use local database data
 	try {
 		const localResults = await personRepository.getMoviesByPeople(personIds, roles, limit);
 
-		// If we have local results, return them
 		if (localResults.length > 0) {
 			return localResults;
 		}
@@ -102,21 +98,15 @@ async function searchMoviesByPeople(
 		console.warn('Local person search failed, falling back to TMDB:', localError);
 	}
 
-	// If no local data, try to fetch from TMDB and sync
 	try {
-		// Sync the people first to ensure we have their data
 		await personRepository.syncPeople(personIds);
-
-		// Try local search again after sync
 		const syncedResults = await personRepository.getMoviesByPeople(personIds, roles, limit);
 
 		if (syncedResults.length > 0) {
 			return syncedResults;
 		}
 
-		// If still no results, we need to fetch movie data for these people from TMDB
-		// This would require implementing a more comprehensive TMDB integration
-		// For now, return empty array as fallback
+		// TODO: Implement TMDB movie fetch based on people
 		return [];
 	} catch (error) {
 		console.error('Error searching movies by people:', error);

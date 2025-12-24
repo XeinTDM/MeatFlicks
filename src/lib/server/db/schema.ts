@@ -204,7 +204,7 @@ export const watchHistory = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		movieId: text('movie_id').notNull(),
-		movieData: text('movie_data').notNull(), // JSON string of history entry
+		movieData: text('movie_data').notNull(),
 		watchedAt: integer('watched_at').notNull()
 	},
 	(table) => [
@@ -221,7 +221,7 @@ export const searchHistory = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		query: text('query').notNull(),
-		filters: text('filters'), // JSON string of applied filters
+		filters: text('filters'),
 		searchedAt: integer('searched_at')
 			.notNull()
 			.$defaultFn(() => Date.now())
@@ -240,9 +240,9 @@ export const playbackProgress = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		mediaId: text('media_id').notNull(),
-		mediaType: text('media_type').notNull(), // 'movie' | 'tv'
-		progress: integer('progress').notNull(), // seconds
-		duration: integer('duration').notNull(), // total seconds
+		mediaType: text('media_type').notNull(),
+		progress: integer('progress').notNull(),
+		duration: integer('duration').notNull(),
 		seasonNumber: integer('season_number'),
 		episodeNumber: integer('episode_number'),
 		updatedAt: integer('updated_at')
@@ -263,12 +263,12 @@ export const people = sqliteTable(
 		tmdbId: integer('tmdbId').notNull().unique(),
 		name: text('name').notNull(),
 		biography: text('biography'),
-		birthday: text('birthday'), // ISO date string
-		deathday: text('deathday'), // ISO date string
+		birthday: text('birthday'),
+		deathday: text('deathday'),
 		placeOfBirth: text('placeOfBirth'),
 		profilePath: text('profilePath'),
 		popularity: real('popularity'),
-		knownForDepartment: text('knownForDepartment'), // 'Acting', 'Directing', etc.
+		knownForDepartment: text('knownForDepartment'),
 		createdAt: integer('createdAt')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -293,10 +293,10 @@ export const moviePeople = sqliteTable(
 		personId: integer('personId')
 			.notNull()
 			.references(() => people.id, { onDelete: 'cascade' }),
-		role: text('role').notNull(), // 'actor', 'director', 'writer', 'producer', etc.
-		character: text('character'), // For actors
-		job: text('job'), // For crew (e.g., 'Director', 'Screenplay')
-		order: integer('order'), // For cast ordering
+		role: text('role').notNull(),
+		character: text('character'),
+		job: text('job'),
+		order: integer('order'),
 		createdAt: integer('createdAt')
 			.notNull()
 			.$defaultFn(() => Date.now())
@@ -353,8 +353,6 @@ export const moviePeopleRelations = relations(moviePeople, ({ one }) => ({
 	})
 }));
 
-// TV Show Tables for Enhanced Episode Tracking
-
 export const tvShows = sqliteTable(
 	'tv_shows',
 	{
@@ -370,7 +368,7 @@ export const tvShows = sqliteTable(
 		episodeRuntime: integer('episode_run_time'),
 		numberOfSeasons: integer('number_of_seasons'),
 		numberOfEpisodes: integer('number_of_episodes'),
-		status: text('status'), // 'Returning Series', 'Ended', 'Canceled', etc.
+		status: text('status'),
 		originCountry: text('origin_country'),
 		productionCompanies: text('production_companies'),
 		createdAt: integer('created_at')
@@ -434,8 +432,8 @@ export const episodes = sqliteTable(
 		runtimeMinutes: integer('runtime_minutes'),
 		tmdbId: integer('tmdb_id'),
 		imdbId: text('imdb_id'),
-		guestStars: text('guest_stars'), // JSON array of guest star objects
-		crew: text('crew'), // JSON array of crew objects
+		guestStars: text('guest_stars'),
+		crew: text('crew'),
 		createdAt: integer('created_at')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -464,9 +462,9 @@ export const episodeWatchStatus = sqliteTable(
 			.notNull()
 			.references(() => episodes.id, { onDelete: 'cascade' }),
 		watched: integer('watched', { mode: 'boolean' }).notNull().default(false),
-		watchTime: integer('watch_time').notNull().default(0), // seconds watched
-		totalTime: integer('total_time').notNull().default(0), // total episode duration in seconds
-		completedAt: integer('completed_at'), // timestamp when marked as completed
+		watchTime: integer('watch_time').notNull().default(0),
+		totalTime: integer('total_time').notNull().default(0),
+		completedAt: integer('completed_at'),
 		createdAt: integer('created_at')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -519,7 +517,7 @@ export const tvShowWatchStatus = sqliteTable(
 		tvShowId: integer('tv_show_id')
 			.notNull()
 			.references(() => tvShows.id, { onDelete: 'cascade' }),
-		status: text('status').notNull().default('watching'), // 'watching', 'completed', 'on_hold', 'dropped', 'plan_to_watch'
+		status: text('status').notNull().default('watching'),
 		seasonsCompleted: integer('seasons_completed').notNull().default(0),
 		totalSeasons: integer('total_seasons').notNull().default(0),
 		episodesWatched: integer('episodes_watched').notNull().default(0),
@@ -543,7 +541,6 @@ export const tvShowWatchStatus = sqliteTable(
 	]
 );
 
-// Relations for TV Show tables
 export const tvShowsRelations = relations(tvShows, ({ many }) => ({
 	seasons: many(seasons),
 	episodes: many(episodes),
@@ -604,7 +601,6 @@ export const tvShowWatchStatusRelations = relations(tvShowWatchStatus, ({ one })
 	})
 }));
 
-// Watchlist organization relations
 export const watchlistRelations = relations(watchlist, ({ one, many }) => ({
 	user: one(users, {
 		fields: [watchlist.userId],

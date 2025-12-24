@@ -232,14 +232,10 @@ export async function fetchHomeLibrary(
 	} catch (error) {
 		logger.error({ error }, '[library] Failed to fetch home library from source');
 		try {
-			result = await withCache(
-				HOME_LIBRARY_CACHE_KEY,
-				CACHE_TTL_MEDIUM_SECONDS,
-				async () => {
-					const fallback = await buildFallbackHomeLibrary(HOME_LIBRARY_MOVIES_LIMIT);
-					return fallback ?? { trendingMovies: [], collections: [], genres: [] };
-				}
-			);
+			result = await withCache(HOME_LIBRARY_CACHE_KEY, CACHE_TTL_MEDIUM_SECONDS, async () => {
+				const fallback = await buildFallbackHomeLibrary(HOME_LIBRARY_MOVIES_LIMIT);
+				return fallback ?? { trendingMovies: [], collections: [], genres: [] };
+			});
 		} catch (fallbackError) {
 			logger.error({ error: fallbackError }, '[library] Failed to build fallback library');
 			result = { trendingMovies: [], collections: [], genres: [] };

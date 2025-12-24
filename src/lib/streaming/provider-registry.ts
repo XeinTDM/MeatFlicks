@@ -56,7 +56,6 @@ export async function collectStreamingSources(
 	const results: ProviderResolution[] = [];
 
 	if (parallel && orderedProviders.length > 1) {
-		// Parallel execution with timeout
 		const promises = orderedProviders.map(async (provider) => {
 			try {
 				const source = await Promise.race([
@@ -94,11 +93,9 @@ export async function collectStreamingSources(
 			}
 		});
 
-		// Execute all providers in parallel
 		const settledResults = await Promise.all(promises);
 		return settledResults;
 	} else {
-		// Sequential execution (fallback)
 		for (const provider of orderedProviders) {
 			try {
 				const source = await provider.fetchSource(context);

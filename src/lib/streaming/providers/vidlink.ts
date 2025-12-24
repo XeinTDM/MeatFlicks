@@ -102,15 +102,12 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 			return fallbackSource(context, params);
 		}
 
-		// Extract quality information if requested
 		let qualities: VideoQuality[] | undefined;
 		let subtitles: SubtitleTrack[] | undefined;
 
 		if (context.includeQualities) {
-			// Try to extract multiple quality sources from the payload
 			const qualitySources: QualitySource[] = [];
 
-			// Check for different quality formats in the response
 			if (payload.sources && Array.isArray(payload.sources)) {
 				for (const source of payload.sources) {
 					if (source.url) {
@@ -141,7 +138,6 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 				}
 			}
 
-			// If we found multiple qualities, use them; otherwise create a single quality from the main stream
 			if (qualitySources.length > 1) {
 				qualities = extractQualities(qualitySources);
 			} else if (streamCandidate) {
@@ -150,7 +146,6 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 		}
 
 		if (context.includeSubtitles) {
-			// Try to extract subtitle information from the payload
 			const subtitleSources: SubtitleSource[] = [];
 
 			if (payload.subtitles && Array.isArray(payload.subtitles)) {
@@ -185,7 +180,6 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 			}
 		}
 
-		// Use preferred quality if specified
 		let finalStreamUrl = streamCandidate ?? embedCandidate!;
 		if (qualities && context.preferredQuality) {
 			const preferredUrl = qualities.find(

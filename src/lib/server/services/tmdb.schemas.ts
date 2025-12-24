@@ -128,13 +128,13 @@ export const TmdbFindResponseSchema = z.object({
 export const TmdbRecommendationResultSchema = z.object({
 	id: z.number(),
 	title: z.string().optional(),
-	name: z.string().optional(), // for TV
+	name: z.string().optional(),
 	poster_path: z.string().nullable().optional(),
 	backdrop_path: z.string().nullable().optional(),
 	vote_average: z.number().nullable().optional(),
 	release_date: z.string().nullable().optional(),
-	first_air_date: z.string().nullable().optional(), // for TV
-	media_type: z.string().optional() // sometimes returned, sometimes not
+	first_air_date: z.string().nullable().optional(),
+	media_type: z.string().optional()
 });
 
 export const TmdbRecommendationResponseSchema = z.object({

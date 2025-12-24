@@ -30,7 +30,7 @@ const envSchema = z.object({
 	HOST: z.string().default('0.0.0.0'),
 
 	SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters').optional(),
-	COOKIE_SECRET: z.string().min(32, 'COOKIE_SECRET must be at least 32 characters').optional(),
+	COOKIE_SECRET: z.string().min(32, 'COOKIE_SECRET must be at least 32 characters').optional()
 });
 
 export type ValidatedEnv = z.infer<typeof envSchema>;
@@ -50,7 +50,7 @@ export function validateEnvironment(): ValidatedEnv {
 			logger.error(
 				{
 					errors: errors.fieldErrors,
-					issues: result.error.issues.map(issue => ({
+					issues: result.error.issues.map((issue) => ({
 						path: issue.path.join('.'),
 						message: issue.message
 					}))

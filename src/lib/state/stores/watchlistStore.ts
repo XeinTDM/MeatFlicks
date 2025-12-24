@@ -21,7 +21,6 @@ export type Movie = {
 	durationMinutes?: number | null;
 	collectionId?: number | null;
 	addedAt: string;
-	// TV show specific fields
 	season?: number | null;
 	episode?: number | null;
 };
@@ -179,7 +178,6 @@ function createWatchlistStore() {
 					.map(sanitizeMovie)
 					.filter((movie: Movie | null): movie is Movie => Boolean(movie));
 
-				// If server returns movies, use them (authenticated user)
 				if (sanitized.length > 0) {
 					store.update((state) => ({
 						...state,
@@ -189,7 +187,6 @@ function createWatchlistStore() {
 					}));
 					persist(sanitized);
 				} else {
-					// Server returned empty array (unauthenticated user), use local storage
 					const stored = readStorage();
 					store.update((state) => ({
 						...state,
@@ -199,7 +196,6 @@ function createWatchlistStore() {
 					}));
 				}
 			} else {
-				// Fallback to local storage if server fails
 				const stored = readStorage();
 				store.update((state) => ({
 					...state,
@@ -210,7 +206,6 @@ function createWatchlistStore() {
 			}
 		} catch (error) {
 			console.error('[watchlist][syncFromServer] Failed', error);
-			// Fallback to local storage if server fails
 			const stored = readStorage();
 			store.update((state) => ({
 				...state,
@@ -250,7 +245,6 @@ function createWatchlistStore() {
 
 		const previousState = get(store).watchlist;
 
-		// Optimistic update
 		store.update((state) => {
 			const existing = state.watchlist.find((item) => item.id === sanitized.id);
 			const updatedEntry = existing ? { ...sanitized, addedAt: existing.addedAt } : sanitized;
@@ -272,7 +266,6 @@ function createWatchlistStore() {
 			});
 			if (!response.ok) throw new Error('Failed to sync with server');
 
-			// Notify success only if it was a new addition (simple check against previous state)
 			const wasAlreadyIn = previousState.some((i) => i.id === sanitized.id);
 			if (!wasAlreadyIn) {
 				notifications.movieAdded({
@@ -285,7 +278,6 @@ function createWatchlistStore() {
 			}
 		} catch (error) {
 			console.error('[watchlist][addToWatchlist] sync failed', error);
-			// Revert optimistic update
 			store.update((state) => {
 				persist(previousState);
 				return { ...state, watchlist: previousState, error: 'Failed to sync with server.' };
@@ -303,7 +295,6 @@ function createWatchlistStore() {
 		const previousState = get(store).watchlist;
 		const movieTitle = previousState.find((m) => m.id === movieId)?.title ?? 'Movie';
 
-		// Optimistic update
 		store.update((state) => {
 			const updated = state.watchlist.filter((movie) => movie.id !== movieId);
 			persist(updated);
@@ -322,7 +313,6 @@ function createWatchlistStore() {
 			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
 		} catch (error) {
 			console.error('[watchlist][removeFromWatchlist] sync failed', error);
-			// Revert optimistic update
 			store.update((state) => {
 				persist(previousState);
 				return { ...state, watchlist: previousState, error: 'Failed to sync removal with server.' };

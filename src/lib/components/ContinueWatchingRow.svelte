@@ -14,7 +14,6 @@
 			if (response.ok) {
 				const data = await response.json();
 				if (data.continueWatching && Array.isArray(data.continueWatching)) {
-					// Fetch movie details for each progress entry
 					const moviePromises = data.continueWatching.map(async (progress: any) => {
 						try {
 							const movieResponse = await fetch(`/api/movies/${progress.mediaId}`, {

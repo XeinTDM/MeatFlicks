@@ -4,7 +4,6 @@
 	import PlayerControls from './PlayerControls.svelte';
 	import type { VideoQuality, SubtitleTrack } from '$lib/streaming/types';
 
-	// Mock data for testing
 	const mockQualities: VideoQuality[] = [
 		{ label: 'Auto', resolution: 'Auto', url: 'https://example.com/auto.m3u8', isDefault: true },
 		{ label: '360p', resolution: '360p', url: 'https://example.com/360p.m3u8' },

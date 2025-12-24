@@ -11,7 +11,6 @@ import { eq } from 'drizzle-orm';
 
 export async function syncPersonFromTmdb(tmdbId: number) {
 	try {
-		// Check if person already exists
 		const existingPerson = await db
 			.select()
 			.from(people)
@@ -23,14 +22,12 @@ export async function syncPersonFromTmdb(tmdbId: number) {
 			return existingPerson;
 		}
 
-		// Fetch person details from TMDB
 		const tmdbPerson = await fetchTmdbPersonDetails(tmdbId);
 
 		if (!tmdbPerson) {
 			return null;
 		}
 
-		// Insert person into local database
 		const [insertedPerson] = await db
 			.insert(people)
 			.values({
@@ -60,21 +57,18 @@ export async function syncPersonFromTmdb(tmdbId: number) {
  */
 export async function syncMovieCast(movieId: string, tmdbMovieId: number) {
 	try {
-		// Get movie details with cast from TMDB
 		const tmdbPerson = await fetchTmdbPersonDetails(tmdbMovieId);
 
 		if (!tmdbPerson) {
 			return;
 		}
 
-		// First, ensure all cast members are in local database
 		const castPromises = (tmdbPerson as any).cast?.slice(0, 10).map(async (castMember: any) => {
 			return await syncPersonFromTmdb(castMember.id);
 		});
 
 		const syncedCast = await Promise.all(castPromises);
 
-		// Then create movie-people relationships
 		const relationships = syncedCast
 			.filter((person: any) => person !== null)
 			.map((person) => ({
@@ -110,20 +104,17 @@ export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 			return;
 		}
 
-		// Extract crew from knownFor (combine cast + crew for comprehensive view)
 		const crewMembers = [
-			...(tmdbPerson as any).cast?.slice(0, 10), // Top cast as crew
+			...(tmdbPerson as any).cast?.slice(0, 10),
 			...((tmdbPerson as any).knownFor || [])
 		];
 
-		// Sync all crew members first
 		const syncPromises = crewMembers.map(async (crewMember: any) => {
 			return await syncPersonFromTmdb(crewMember.id);
 		});
 
 		const syncedCrew = await Promise.all(syncPromises);
 
-		// Create relationships for directors and key crew roles
 		const relationships = syncedCrew
 			.filter((person: any) => person !== null)
 			.filter((person: any) => {
@@ -153,7 +144,6 @@ export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 }
 
 function determineCrewRole(personTmdbId: number, tmdbPerson: any): string | null {
-	// Find this person in the knownFor list to determine their role
 	const crewMember = (tmdbPerson as any).knownFor?.find(
 		(member: any) => member.id === personTmdbId
 	);
@@ -162,7 +152,6 @@ function determineCrewRole(personTmdbId: number, tmdbPerson: any): string | null
 		return null;
 	}
 
-	// Map TMDB departments to our role system
 	switch (crewMember.department?.toLowerCase()) {
 		case 'directing':
 			return 'director';

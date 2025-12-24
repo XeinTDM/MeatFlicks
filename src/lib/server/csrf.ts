@@ -2,14 +2,11 @@ import { randomBytes } from 'crypto';
 import { logger } from './logger';
 import { UnauthorizedError } from './error-handler';
 
-// Handle environment detection for both runtime and test environments
 const isDev = (() => {
 	try {
-		// Try to import from SvelteKit environment
 		const { dev } = require('$app/environment');
 		return dev;
 	} catch (error) {
-		// Fallback for test environment
 		return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 	}
 })();
@@ -22,11 +19,11 @@ const isDev = (() => {
  * Cross-Site Request Forgery attacks.
  */
 
-const CSRF_TOKEN_LENGTH = 32; // bytes (64 characters when hex encoded)
+const CSRF_TOKEN_LENGTH = 32;
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000;
-const CSRF_TOKEN_ROTATION_INTERVAL = 4 * 60 * 60 * 1000; // Rotate token every 4 hours
+const CSRF_TOKEN_ROTATION_INTERVAL = 4 * 60 * 60 * 1000;
 
 /**
  * Generate a new CSRF token
@@ -67,7 +64,7 @@ export function createCsrfCookie(token: string): {
 			sameSite: 'lax' as const,
 			path: '/',
 			maxAge: Math.floor(CSRF_TOKEN_EXPIRATION_MS / 1000),
-			partitioned: true // Enable partitioned cookies for enhanced privacy
+			partitioned: true
 		}
 	};
 }
@@ -75,7 +72,11 @@ export function createCsrfCookie(token: string): {
 /**
  * Create secure CSRF cookie with token and signature
  */
-export function createSecureCsrfCookie(tokenData: { token: string; signature: string; expires: number }): {
+export function createSecureCsrfCookie(tokenData: {
+	token: string;
+	signature: string;
+	expires: number;
+}): {
 	name: string;
 	value: string;
 	attributes: Record<string, any>;
@@ -182,9 +183,12 @@ export async function validateSecureCsrfToken(
 	}
 
 	try {
-		const tokenData = JSON.parse(csrfCookie) as { token: string; signature: string; expires: number };
+		const tokenData = JSON.parse(csrfCookie) as {
+			token: string;
+			signature: string;
+			expires: number;
+		};
 
-		// Check if token is expired
 		if (Date.now() > tokenData.expires) {
 			logger.warn('CSRF validation failed: Token expired');
 			return {
@@ -254,7 +258,6 @@ export function csrfMiddleware() {
 	return {
 		name: 'csrf',
 		async handle({ event, resolve }: { event: any; resolve: any }) {
-			// Check if CSRF token needs rotation
 			const csrfCookie = event.cookies.get(CSRF_COOKIE_NAME);
 			if (!csrfCookie) {
 				const csrfToken = generateCsrfToken();
@@ -262,17 +265,14 @@ export function csrfMiddleware() {
 
 				event.cookies.set(csrfCookie.name, csrfCookie.value, csrfCookie.attributes);
 			} else {
-				// Check if token needs rotation
 				try {
 					const tokenData = JSON.parse(csrfCookie);
 					if (tokenData.expires && Date.now() > tokenData.expires - CSRF_TOKEN_ROTATION_INTERVAL) {
-						// Rotate token
 						const newTokenData = generateSecureCsrfToken();
 						const newCsrfCookie = createSecureCsrfCookie(newTokenData);
 						event.cookies.set(newCsrfCookie.name, newCsrfCookie.value, newCsrfCookie.attributes);
 					}
 				} catch {
-					// If parsing fails, create new token
 					const csrfToken = generateCsrfToken();
 					const csrfCookie = createCsrfCookie(csrfToken);
 					event.cookies.set(csrfCookie.name, csrfCookie.value, csrfCookie.attributes);

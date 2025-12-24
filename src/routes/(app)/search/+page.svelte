@@ -127,7 +127,6 @@
 		error = null;
 
 		try {
-			// Build person IDs and roles for the API call
 			const actorIds = selectedActors.map((a: any) => a.id);
 			const directorIds = selectedDirectors.map((d: any) => d.id);
 			const allPersonIds = [...actorIds, ...directorIds];
@@ -167,7 +166,6 @@
 				searchHistoryItems = data.searches || [];
 			}
 		} catch (error) {
-			// Silently fail - search history is optional
 			console.error('Failed to load search history:', error);
 		}
 	}

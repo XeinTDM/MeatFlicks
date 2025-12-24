@@ -45,11 +45,11 @@ describe('CSRF Core Logic Tests', () => {
 			return unsafeMethods.includes(method.toUpperCase());
 		};
 
-		safeMethods.forEach(method => {
+		safeMethods.forEach((method) => {
 			expect(shouldValidate(method)).toBe(false);
 		});
 
-		unsafeMethods.forEach(method => {
+		unsafeMethods.forEach((method) => {
 			expect(shouldValidate(method)).toBe(true);
 		});
 	});
@@ -63,7 +63,7 @@ describe('CSRF Core Logic Tests', () => {
 			secure: !dev,
 			sameSite: 'lax' as const,
 			path: '/',
-			maxAge: Math.floor(24 * 60 * 60 * 1000 / 1000)
+			maxAge: Math.floor((24 * 60 * 60 * 1000) / 1000)
 		});
 
 		const attributes = createCookieAttributes();

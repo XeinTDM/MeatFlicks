@@ -21,10 +21,9 @@
 	let containerRef = $state<HTMLElement | null>(null);
 	let isLoadingHistory = $state(false);
 
-	// Get search history from store
 	$effect(() => {
 		const unsubscribe = searchHistory.subscribe(($searchHistory) => {
-			// No need to do anything here since we're using the store directly
+			// Ignore
 		});
 		return unsubscribe;
 	});
@@ -53,17 +52,14 @@
 	async function saveSearch(query: string) {
 		if (!query.trim()) return;
 		try {
-			// Use the search history store which handles both authenticated and unauthenticated users
 			await searchHistory.addSearch(query);
 		} catch (error) {
-			// Silently fail - saving history is optional
 			console.error('[global-search] error saving history', error);
 		}
 	}
 
 	async function deleteSearch(id: number) {
 		try {
-			// Use the search history store which handles both authenticated and unauthenticated users
 			await searchHistory.deleteSearch(id);
 		} catch (error) {
 			console.error('[global-search] error deleting history', error);
@@ -72,7 +68,6 @@
 
 	async function clearAllHistory() {
 		try {
-			// Use the search history store which handles both authenticated and unauthenticated users
 			await searchHistory.clearAll();
 		} catch (error) {
 			console.error('[global-search] error clearing history', error);
@@ -85,7 +80,7 @@
 	}
 
 	onMount(() => {
-		// The search history store automatically syncs on initialization
+		// Ignore
 	});
 
 	function handleInput(e: Event) {
@@ -126,7 +121,6 @@
 		}
 	}
 
-	// Close on click outside
 	$effect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
 			if (containerRef && !containerRef.contains(e.target as Node)) {
@@ -176,7 +170,6 @@
 			transition:slide={{ duration: 200 }}
 		>
 			{#if $searchHistory.history.length > 0 && !query.trim()}
-				<!-- Show search history when input is focused and empty -->
 				<div class="p-2">
 					<div
 						class="mb-2 flex items-center gap-2 px-2 text-xs font-semibold text-muted-foreground"

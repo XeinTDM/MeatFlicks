@@ -17,10 +17,7 @@ const genreQueryParamsSchema = z.object({
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	try {
-		// Validate path parameters
 		const pathParams = validatePathParams(genrePathParamsSchema, params);
-
-		// Validate query parameters
 		const queryParams = validateQueryParams(genreQueryParamsSchema, url.searchParams);
 
 		const movies = await libraryRepository.findGenreMovies(
@@ -30,7 +27,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		);
 
 		if (movies.length === 0) {
-			return json({ message: 'No movies found for genre: ' + pathParams.genreName }, { status: 404 });
+			return json(
+				{ message: 'No movies found for genre: ' + pathParams.genreName },
+				{ status: 404 }
+			);
 		}
 
 		return json(movies);

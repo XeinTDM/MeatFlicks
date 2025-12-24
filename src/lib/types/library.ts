@@ -18,7 +18,6 @@ export type LibraryMovie = MovieSummary & {
 	canonicalPath?: string | null;
 	addedAt?: number | null;
 	mediaType?: string | null;
-	// TV show specific fields
 	season?: number | null;
 	episode?: number | null;
 };

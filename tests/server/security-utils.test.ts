@@ -7,7 +7,7 @@ describe('Security Utilities', () => {
 			const token1 = securityUtils.generateSecureToken(32);
 			const token2 = securityUtils.generateSecureToken(32);
 
-			expect(token1).toHaveLength(64); // 32 bytes = 64 hex chars
+			expect(token1).toHaveLength(64);
 			expect(token2).toHaveLength(64);
 			expect(token1).not.toBe(token2);
 		});
@@ -43,7 +43,7 @@ describe('Security Utilities', () => {
 			const hash2 = securityUtils.createSecureHash('test-data');
 
 			expect(hash1).toBe(hash2);
-			expect(hash1).toHaveLength(64); // SHA-256 hash
+			expect(hash1).toHaveLength(64);
 		});
 	});
 
@@ -113,7 +113,9 @@ describe('Security Utilities', () => {
 		});
 
 		it('should validate API key format', () => {
-			expect(securityUtils.validateApiKeyFormat('mf_test12345678901234567890123456789012')).toBe(true);
+			expect(securityUtils.validateApiKeyFormat('mf_test12345678901234567890123456789012')).toBe(
+				true
+			);
 			expect(securityUtils.validateApiKeyFormat('invalid-key')).toBe(false);
 		});
 	});
@@ -148,7 +150,7 @@ describe('Security Utilities', () => {
 			const sanitized = securityUtils.sanitizeFileMetadata(metadata);
 			expect(sanitized.name).toBe('<script>test</script>');
 			expect(sanitized.description).toBe('Test & special chars');
-			expect(sanitized.invalid).toBeUndefined(); // Non-string values should be ignored
+			expect(sanitized.invalid).toBeUndefined();
 		});
 	});
 
@@ -159,8 +161,12 @@ describe('Security Utilities', () => {
 		});
 
 		it('should reject input with dangerous patterns', () => {
-			expect(() => securityUtils.validateUserInput('<script>alert("xss")</script>')).toThrow('Input contains potentially dangerous content');
-			expect(() => securityUtils.validateUserInput('onload=alert("xss")')).toThrow('Input contains potentially dangerous content');
+			expect(() => securityUtils.validateUserInput('<script>alert("xss")</script>')).toThrow(
+				'Input contains potentially dangerous content'
+			);
+			expect(() => securityUtils.validateUserInput('onload=alert("xss")')).toThrow(
+				'Input contains potentially dangerous content'
+			);
 		});
 
 		it('should sanitize valid input', () => {

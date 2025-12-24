@@ -25,7 +25,9 @@ export async function batchInsert<T>(
 			await db.transaction(async (tx) => {
 				for (const item of transformed) {
 					const columns = Object.keys(item).join(', ');
-					const placeholders = Object.keys(item).map(() => '?').join(', ');
+					const placeholders = Object.keys(item)
+						.map(() => '?')
+						.join(', ');
 					const values = Object.values(item);
 
 					const query = sql`INSERT INTO ${sql.raw(table)} (${sql.raw(columns)}) VALUES (${sql.raw(placeholders)})`;
@@ -70,7 +72,7 @@ export async function batchUpdate<T>(
 					delete transformed[keyColumn];
 
 					const setClause = Object.keys(transformed)
-						.map(col => `${col} = ?`)
+						.map((col) => `${col} = ?`)
 						.join(', ');
 					const values = [...Object.values(transformed), keyValue];
 
@@ -103,43 +105,46 @@ export async function batchUpsert<T>(
 		return { inserted: 0, updated: 0 };
 	}
 
-		try {
-			let insertedCount = 0;
-			let updatedCount = 0;
+	try {
+		let insertedCount = 0;
+		let updatedCount = 0;
 
-			for (let i = 0; i < data.length; i += batchSize) {
-				const batch = data.slice(i, i + batchSize);
+		for (let i = 0; i < data.length; i += batchSize) {
+			const batch = data.slice(i, i + batchSize);
 
-				await db.transaction(async (tx) => {
-					for (const item of batch) {
-						const transformed = transform(item);
-						const keyValue = transformed[keyColumn];
-						delete transformed[keyColumn];
+			await db.transaction(async (tx) => {
+				for (const item of batch) {
+					const transformed = transform(item);
+					const keyValue = transformed[keyColumn];
+					delete transformed[keyColumn];
 
-						const setClause = Object.keys(transformed)
-							.map(col => `${col} = ?`)
-							.join(', ');
-						const updateValues = [...Object.values(transformed), keyValue];
+					const setClause = Object.keys(transformed)
+						.map((col) => `${col} = ?`)
+						.join(', ');
+					const updateValues = [...Object.values(transformed), keyValue];
 
-						const updateQuery = sql`UPDATE ${sql.raw(table)} SET ${sql.raw(setClause)} WHERE ${sql.raw(keyColumn)} = ?`;
-						await tx.run(updateQuery);
-						updatedCount++;
-					}
-				});
-			}
+					const updateQuery = sql`UPDATE ${sql.raw(table)} SET ${sql.raw(setClause)} WHERE ${sql.raw(keyColumn)} = ?`;
+					await tx.run(updateQuery);
+					updatedCount++;
+				}
+			});
+		}
 
-			logger.info({
+		logger.info(
+			{
 				table,
 				inserted: insertedCount,
 				updated: updatedCount,
 				total: data.length
-			}, 'Batch upsert completed');
+			},
+			'Batch upsert completed'
+		);
 
-			return { inserted: insertedCount, updated: updatedCount };
-		} catch (error) {
-			logger.error({ error, table, count: data.length }, 'Batch upsert failed');
-			throw error;
-		}
+		return { inserted: insertedCount, updated: updatedCount };
+	} catch (error) {
+		logger.error({ error, table, count: data.length }, 'Batch upsert failed');
+		throw error;
+	}
 }
 
 /**
@@ -166,14 +171,17 @@ export async function executeInTransaction<T>(
 		} catch (error) {
 			lastError = error;
 			attempt++;
-			logger.warn({
-				attempt,
-				maxRetries,
-				error: error instanceof Error ? error.message : String(error)
-			}, 'Transaction failed, retrying...');
+			logger.warn(
+				{
+					attempt,
+					maxRetries,
+					error: error instanceof Error ? error.message : String(error)
+				},
+				'Transaction failed, retrying...'
+			);
 
 			if (attempt < maxRetries) {
-				await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+				await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
 			}
 		}
 	}
@@ -198,26 +206,35 @@ export async function monitorQuery<T>(
 		const duration = Date.now() - startTime;
 
 		if (logSlowQueries && duration > slowThresholdMs) {
-			logger.warn({
-				name,
-				duration,
-				threshold: slowThresholdMs
-			}, 'Slow database query detected');
+			logger.warn(
+				{
+					name,
+					duration,
+					threshold: slowThresholdMs
+				},
+				'Slow database query detected'
+			);
 		} else {
-			logger.debug({
-				name,
-				duration
-			}, 'Database query completed');
+			logger.debug(
+				{
+					name,
+					duration
+				},
+				'Database query completed'
+			);
 		}
 
 		return result;
 	} catch (error) {
 		const duration = Date.now() - startTime;
-		logger.error({
-			name,
-			duration,
-			error: error instanceof Error ? error.message : String(error)
-		}, 'Database query failed');
+		logger.error(
+			{
+				name,
+				duration,
+				error: error instanceof Error ? error.message : String(error)
+			},
+			'Database query failed'
+		);
 
 		throw error;
 	}

@@ -1,5 +1,5 @@
 import { db } from './client';
-import { movies, moviesGenres, genres } from './schema';
+import { moviesGenres, genres } from './schema';
 import { eq, inArray, asc } from 'drizzle-orm';
 import { mapMovieRows } from './mappers';
 import type { GenreRecord, MovieRecord, MovieRow, MovieSummary } from './types';
@@ -52,7 +52,5 @@ export const mapRowsToSummaries = async (rows: MovieRow[]): Promise<MovieSummary
 	return records.map(toMovieSummary);
 };
 
-// These constants are kept for backward compatibility if needed,
-// but Drizzle query builder is preferred.
 export const MOVIE_COLUMNS = '*';
 export const MOVIE_ORDER_BY = '';

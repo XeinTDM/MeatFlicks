@@ -7,12 +7,10 @@ import { logger } from '../logger';
 import { env } from '$lib/config/env';
 import { sql } from 'drizzle-orm';
 
-// Database connection management
 let clientInstance: Client | null = null;
 let dbInstance: LibSQLDatabase<typeof schema> | null = null;
 let connectionAttempts = 0;
 const MAX_CONNECTION_ATTEMPTS = 3;
-const CONNECTION_RETRY_DELAY = 1000;
 
 const resolveDatabasePath = () => {
 	const target = env.SQLITE_DB_PATH;
@@ -75,7 +73,6 @@ const createDatabaseClient = (): Client => {
 		const url = resolveDatabasePath();
 		ensureDirectory(url);
 
-		// Configure client with connection pooling and retry logic
 		const client = createClient({
 			url
 		});
@@ -92,14 +89,30 @@ const getDatabaseClient = (): Client => {
 		return clientInstance;
 	}
 
-	try {
-		clientInstance = createDatabaseClient();
-		runInitSql(clientInstance);
-		return clientInstance;
-	} catch (error) {
-		logger.error({ error }, 'Failed to get database client');
-		throw error;
+	let lastError: unknown;
+
+	while (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
+		try {
+			connectionAttempts++;
+			clientInstance = createDatabaseClient();
+			runInitSql(clientInstance);
+			connectionAttempts = 0;
+			return clientInstance;
+		} catch (error) {
+			lastError = error;
+			logger.warn(
+				{
+					attempt: connectionAttempts,
+					maxAttempts: MAX_CONNECTION_ATTEMPTS,
+					error: error instanceof Error ? error.message : String(error)
+				},
+				'Database client creation failed, retrying...'
+			);
+		}
 	}
+
+	logger.error({ error: lastError }, 'Failed to create database client after all retry attempts');
+	throw lastError;
 };
 
 const getDatabaseInstance = (): LibSQLDatabase<typeof schema> => {
@@ -117,7 +130,6 @@ const getDatabaseInstance = (): LibSQLDatabase<typeof schema> => {
 	}
 };
 
-// Enhanced database operations with retry logic
 export const executeWithRetry = async <T>(
 	operation: () => Promise<T>,
 	maxAttempts: number = 3,
@@ -136,7 +148,7 @@ export const executeWithRetry = async <T>(
 			);
 
 			if (attempt < maxAttempts) {
-				await new Promise(resolve => setTimeout(resolve, delay));
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
 	}
@@ -145,11 +157,9 @@ export const executeWithRetry = async <T>(
 	throw lastError;
 };
 
-// Database health check
 export const checkDatabaseHealth = async (): Promise<boolean> => {
 	try {
 		const db = getDatabaseInstance();
-		// Use a simple query to check database health
 		await db.all(sql`SELECT 1`);
 		return true;
 	} catch (error) {
@@ -158,7 +168,6 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
 	}
 };
 
-// Export the database instances
 export const client: Client = getDatabaseClient();
 export const db: LibSQLDatabase<typeof schema> = getDatabaseInstance();
 export const sqlite = client;

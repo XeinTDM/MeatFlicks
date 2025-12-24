@@ -7,8 +7,8 @@ export interface PlaybackProgressRecord {
 	userId: string;
 	mediaId: string;
 	mediaType: 'movie' | 'tv';
-	progress: number; // seconds
-	duration: number; // total seconds
+	progress: number;
+	duration: number;
 	seasonNumber: number | null;
 	episodeNumber: number | null;
 	updatedAt: number;
@@ -25,7 +25,6 @@ export const playbackProgressRepository = {
 		episodeNumber?: number
 	): Promise<void> {
 		try {
-			// Build where conditions
 			const conditions = [
 				eq(playbackProgress.userId, userId),
 				eq(playbackProgress.mediaId, mediaId),
@@ -44,7 +43,6 @@ export const playbackProgressRepository = {
 				conditions.push(isNull(playbackProgress.episodeNumber));
 			}
 
-			// Check if progress already exists
 			const existing = await db
 				.select()
 				.from(playbackProgress)
@@ -52,7 +50,6 @@ export const playbackProgressRepository = {
 				.limit(1);
 
 			if (existing.length > 0) {
-				// Update existing progress
 				await db
 					.update(playbackProgress)
 					.set({
@@ -62,7 +59,6 @@ export const playbackProgressRepository = {
 					})
 					.where(eq(playbackProgress.id, existing[0].id));
 			} else {
-				// Insert new progress
 				await db.insert(playbackProgress).values({
 					userId,
 					mediaId,
@@ -88,7 +84,6 @@ export const playbackProgressRepository = {
 		episodeNumber?: number
 	): Promise<PlaybackProgressRecord | null> {
 		try {
-			// Build where conditions
 			const conditions = [
 				eq(playbackProgress.userId, userId),
 				eq(playbackProgress.mediaId, mediaId),
@@ -135,7 +130,6 @@ export const playbackProgressRepository = {
 				.orderBy(desc(playbackProgress.updatedAt))
 				.limit(limit);
 
-			// Filter out completed items (progress >= 90% of duration) and cast mediaType
 			return results
 				.filter((record) => {
 					const progressPercent = (record.progress / record.duration) * 100;
@@ -159,7 +153,6 @@ export const playbackProgressRepository = {
 		episodeNumber?: number
 	): Promise<void> {
 		try {
-			// Build where conditions
 			const conditions = [
 				eq(playbackProgress.userId, userId),
 				eq(playbackProgress.mediaId, mediaId),

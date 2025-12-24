@@ -51,7 +51,6 @@ export class RateLimiter {
 	async checkLimit(key: string): Promise<RateLimitResult> {
 		const limiter = this.getLimiter(key);
 
-		// Check if key is in penalty box
 		const penalty = this.penaltyCache.get(key);
 		if (penalty && Date.now() < penalty.until) {
 			return {
@@ -65,7 +64,6 @@ export class RateLimiter {
 		const reservoir = (await limiter.currentReservoir()) ?? 0;
 
 		if (reservoir <= 0) {
-			// Apply penalty for exceeding rate limit
 			this.applyPenalty(key);
 
 			return {
@@ -91,18 +89,13 @@ export class RateLimiter {
 	private applyPenalty(key: string): void {
 		const penalty = this.penaltyCache.get(key) || { until: 0, count: 0 };
 
-		// Exponential backoff for repeated violations
-		const penaltyDuration = Math.min(
-			15 * 60 * 1000, // Max 15 minutes
-			Math.pow(2, penalty.count) * 30 * 1000 // 30s * 2^count
-		);
+		const penaltyDuration = Math.min(15 * 60 * 1000, Math.pow(2, penalty.count) * 30 * 1000);
 
 		penalty.until = Date.now() + penaltyDuration;
 		penalty.count++;
 
 		this.penaltyCache.set(key, penalty);
 
-		// Clean up old penalties
 		setTimeout(() => {
 			if (this.penaltyCache.get(key)?.until === penalty.until) {
 				this.penaltyCache.delete(key);
@@ -111,7 +104,6 @@ export class RateLimiter {
 	}
 
 	cleanup(): void {
-		// Clean up old limiters
 		const now = Date.now();
 		for (const [key, penalty] of this.penaltyCache) {
 			if (now > penalty.until) {
@@ -133,7 +125,6 @@ export const tmdbRateLimiter = new RateLimiter({
 	windowMs: 10000
 });
 
-// Enhanced rate limiters for different endpoint types
 export const apiRateLimiter = new RateLimiter({
 	maxRequests: 100,
 	windowMs: 60000,

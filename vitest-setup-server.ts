@@ -5,11 +5,11 @@ vi.mock('$lib/server/logger', () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
-		debug: vi.fn(),
-	},
+		debug: vi.fn()
+	}
 }));
 
 vi.mock('$app/environment', () => ({
 	dev: false,
-	prod: true,
+	prod: true
 }));

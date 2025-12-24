@@ -5,7 +5,7 @@
 		onLoadMore: () => void | Promise<void>;
 		hasMore: boolean;
 		isLoading?: boolean;
-		threshold?: number; // Distance from bottom in pixels before triggering load
+		threshold?: number;
 	}
 
 	let { onLoadMore, hasMore, isLoading = false, threshold = 200 }: Props = $props();
@@ -18,12 +18,10 @@
 			return;
 		}
 
-		// Clean up previous observer
 		if (observer) {
 			observer.disconnect();
 		}
 
-		// Create new intersection observer
 		observer = new IntersectionObserver(
 			(entries) => {
 				const entry = entries[0];

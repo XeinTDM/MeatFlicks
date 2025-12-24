@@ -20,31 +20,24 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			throw new Error('Unauthorized');
 		}
 
-		// Validate path parameters
 		const pathParams = validatePathParams(episodeProgressPathParamsSchema, params);
-
-		// Validate query parameters
 		const queryParams = validateQueryParams(episodeProgressQueryParamsSchema, url.searchParams);
 
-		// Get TV show from database
 		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
 		if (!tvShow) {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
 
-		// Get season
 		const season = await tvShowRepository.getSeasonByNumber(tvShow.id, queryParams.season);
 		if (!season) {
 			return json({ error: 'Season not found' }, { status: 404 });
 		}
 
-		// Get episode
 		const episode = await tvShowRepository.getEpisodeByNumber(season.id, pathParams.episodeNumber);
 		if (!episode) {
 			return json({ error: 'Episode not found' }, { status: 404 });
 		}
 
-		// Get episode watch status
 		const watchStatus = await tvShowRepository.getEpisodeWatchStatus(user.id, episode.id);
 
 		return json({
@@ -72,31 +65,25 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			throw new Error('Unauthorized');
 		}
 
-		// Validate path parameters
 		const pathParams = validatePathParams(episodeProgressPathParamsSchema, params);
 
-		// Validate request body
 		const body = validateRequestBody(episodeProgressUpdateSchema, await request.json());
 
-		// Get TV show from database
 		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
 		if (!tvShow) {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
 
-		// Get season
 		const season = await tvShowRepository.getSeasonByNumber(tvShow.id, body.season);
 		if (!season) {
 			return json({ error: 'Season not found' }, { status: 404 });
 		}
 
-		// Get episode
 		const episode = await tvShowRepository.getEpisodeByNumber(season.id, pathParams.episodeNumber);
 		if (!episode) {
 			return json({ error: 'Episode not found' }, { status: 404 });
 		}
 
-		// Update episode progress
 		const watchStatus = await tvShowRepository.updateEpisodeProgress(
 			user.id,
 			episode.id,
@@ -104,10 +91,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			body.totalTime
 		);
 
-		// Update season status
 		await tvShowRepository.updateSeasonWatchStatus(user.id, season.id);
 
-		// Update TV show status
 		await tvShowRepository.updateTVShowWatchStatus(user.id, tvShow.id);
 
 		return json({
@@ -132,39 +117,31 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			throw new Error('Unauthorized');
 		}
 
-		// Validate path parameters
 		const pathParams = validatePathParams(episodeProgressPathParamsSchema, params);
 
-		// Validate request body
 		const body = validateRequestBody(episodeWatchedUpdateSchema, await request.json());
 
-		// Get TV show from database
 		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
 		if (!tvShow) {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
 
-		// Get season
 		const season = await tvShowRepository.getSeasonByNumber(tvShow.id, body.season);
 		if (!season) {
 			return json({ error: 'Season not found' }, { status: 404 });
 		}
 
-		// Get episode
 		const episode = await tvShowRepository.getEpisodeByNumber(season.id, pathParams.episodeNumber);
 		if (!episode) {
 			return json({ error: 'Episode not found' }, { status: 404 });
 		}
 
-		// Mark episode as watched/unwatched
 		const watchStatus = body.watched
 			? await tvShowRepository.markEpisodeAsWatched(user.id, episode.id)
 			: await tvShowRepository.markEpisodeAsUnwatched(user.id, episode.id);
 
-		// Update season status
 		await tvShowRepository.updateSeasonWatchStatus(user.id, season.id);
 
-		// Update TV show status
 		await tvShowRepository.updateTVShowWatchStatus(user.id, tvShow.id);
 
 		return json({

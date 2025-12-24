@@ -75,7 +75,6 @@
 		const newValues = [...value];
 		newValues[activeThumbIndex] = newValue;
 
-		// Ensure thumbs don't cross
 		if (newValues.length === 2) {
 			if (activeThumbIndex === 0 && newValue > newValues[1]) {
 				newValues[0] = newValues[1];
@@ -103,7 +102,6 @@
 
 		const newValue = getValueFromPosition(event.clientX);
 
-		// Find closest thumb
 		if (value.length === 1) {
 			value = [newValue];
 			onValueChange?.([newValue]);
@@ -114,8 +112,6 @@
 
 			const newValues = [...value];
 			newValues[index] = newValue;
-
-			// Ensure order
 			newValues.sort((a, b) => a - b);
 
 			value = newValues;

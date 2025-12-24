@@ -64,7 +64,12 @@ export const watchlistFoldersRepository = {
 		}
 	},
 
-	async createFolder(userId: string, name: string, description?: string, color?: string): Promise<WatchlistFolder> {
+	async createFolder(
+		userId: string,
+		name: string,
+		description?: string,
+		color?: string
+	): Promise<WatchlistFolder> {
 		try {
 			const now = Date.now();
 			const [createdFolder] = await db
@@ -137,11 +142,7 @@ export const watchlistFoldersRepository = {
 
 	async deleteFolder(userId: string, folderId: number): Promise<boolean> {
 		try {
-			const result = await db
-				.delete(watchlistFolders)
-				.where(eq(watchlistFolders.id, folderId));
-
-			// For SQLite, we need to check if any rows were affected
+			const result = await db.delete(watchlistFolders).where(eq(watchlistFolders.id, folderId));
 			return result.rowsAffected > 0;
 		} catch (error) {
 			console.error('Error deleting watchlist folder:', error);

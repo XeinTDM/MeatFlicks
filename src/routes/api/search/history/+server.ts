@@ -10,7 +10,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 	const session = locals.session;
 	const user = locals.user;
 
-	// If authenticated, return server-side search history
 	if (session && user) {
 		try {
 			const limit = 10;
@@ -22,7 +21,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 		}
 	}
 
-	// If unauthenticated, return empty array - client will use localStorage
 	return json({ searches: [] });
 };
 
@@ -30,10 +28,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const session = locals.session;
 	const user = locals.user;
 
-	// If authenticated, save to server
 	if (session && user) {
 		try {
-			// Validate request body using centralized validation
 			const body = await request.json();
 			const validatedBody = validateRequestBody(
 				z.object({
@@ -54,7 +50,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
-	// Always return success - unauthenticated users will use localStorage
 	return json({ success: true });
 };
 
@@ -62,10 +57,8 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 	const session = locals.session;
 	const user = locals.user;
 
-	// If authenticated, delete from server
 	if (session && user) {
 		try {
-			// Validate request body using centralized validation
 			const body = await request.json().catch(() => ({}));
 			const validatedBody = validateRequestBody(
 				z.object({
@@ -85,6 +78,5 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
-	// Always return success - unauthenticated users will use localStorage
 	return json({ success: true });
 };

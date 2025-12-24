@@ -9,7 +9,6 @@
 	let canShare = $state(false);
 
 	onMount(() => {
-		// Check if Web Share API is available
 		canShare = typeof navigator !== 'undefined' && 'share' in navigator;
 	});
 
@@ -22,13 +21,11 @@
 					url
 				});
 			} catch (error) {
-				// User cancelled or error occurred
 				if ((error as Error).name !== 'AbortError') {
 					console.error('Error sharing:', error);
 				}
 			}
 		} else {
-			// Fallback to copy to clipboard
 			await copyToClipboard();
 		}
 	}

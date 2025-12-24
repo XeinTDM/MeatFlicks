@@ -32,11 +32,7 @@ export const personRepository = {
 		try {
 			const cacheKey = buildCacheKey('person', 'tmdb', tmdbId);
 			return await withCache<PersonRecord | null>(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
-				const results = await db
-					.select()
-					.from(people)
-					.where(eq(people.tmdbId, tmdbId))
-					.limit(1);
+				const results = await db.select().from(people).where(eq(people.tmdbId, tmdbId)).limit(1);
 
 				return results[0] ?? null;
 			});
@@ -53,11 +49,7 @@ export const personRepository = {
 		try {
 			const cacheKey = buildCacheKey('person', 'id', id);
 			return await withCache<PersonRecord | null>(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
-				const results = await db
-					.select()
-					.from(people)
-					.where(eq(people.id, id))
-					.limit(1);
+				const results = await db.select().from(people).where(eq(people.id, id)).limit(1);
 
 				return results[0] ?? null;
 			});
@@ -71,47 +63,30 @@ export const personRepository = {
 	 * Search for people in the local database
 	 */
 	async searchPeople(params: PersonSearchParams = {}): Promise<PersonSearchResult[]> {
-		const {
-			query = '',
-			limit = 10,
-			offset = 0,
-			department
-		} = params;
+		const { query = '', limit = 10, offset = 0, department } = params;
 
 		try {
 			const cacheKey = buildCacheKey('people', 'search', query, limit, offset, department);
 			return await withCache<PersonSearchResult[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				let queryBuilder = db
-					.select()
-					.from(people)
-					.limit(limit)
-					.offset(offset);
+				let queryBuilder = db.select().from(people).limit(limit).offset(offset);
 
 				if (query.trim()) {
 					const searchTerm = `%${query.trim()}%`;
 					queryBuilder = queryBuilder.where(
-						or(
-							like(people.name, searchTerm),
-							like(people.placeOfBirth, searchTerm)
-						)
+						or(like(people.name, searchTerm), like(people.placeOfBirth, searchTerm))
 					) as any;
 				}
 
 				if (department) {
-					queryBuilder = queryBuilder.where(
-						eq(people.knownForDepartment, department)
-					) as any;
+					queryBuilder = queryBuilder.where(eq(people.knownForDepartment, department)) as any;
 				}
 
-				queryBuilder = queryBuilder.orderBy(
-					desc(people.popularity),
-					asc(people.name)
-				) as any;
+				queryBuilder = queryBuilder.orderBy(desc(people.popularity), asc(people.name)) as any;
 
 				const results = await queryBuilder;
-				return results.map(person => ({
+				return results.map((person) => ({
 					...person,
-					score: 1.0 // Basic score for local results
+					score: 1.0
 				}));
 			});
 		} catch (error) {
@@ -136,13 +111,9 @@ export const personRepository = {
 					.where(eq(moviePeople.personId, personId))
 					.limit(limit)
 					.offset(offset)
-					.orderBy(
-						desc(movies.rating),
-						desc(movies.releaseDate),
-						asc(movies.title)
-					);
+					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title));
 
-				const movieRows = results.map(result => result.movie);
+				const movieRows = results.map((result) => result.movie);
 				return await mapRowsToSummaries(movieRows as MovieRow[]);
 			});
 		} catch (error) {
@@ -154,35 +125,42 @@ export const personRepository = {
 	/**
 	 * Get movies by multiple people IDs
 	 */
-	async getMoviesByPeople(personIds: number[], roles: string[] = [], limit = 20): Promise<LibraryMovie[]> {
+	async getMoviesByPeople(
+		personIds: number[],
+		roles: string[] = [],
+		limit = 20
+	): Promise<LibraryMovie[]> {
 		if (personIds.length === 0) {
 			return [];
 		}
 
 		try {
-			const cacheKey = buildCacheKey('movies', 'by-people', personIds.join(','), roles.join(','), limit);
+			const cacheKey = buildCacheKey(
+				'movies',
+				'by-people',
+				personIds.join(','),
+				roles.join(','),
+				limit
+			);
 			return await withCache<LibraryMovie[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				let query = db
+				const whereConditions: any =
+					roles.length > 0
+						? and(inArray(moviePeople.personId, personIds), inArray(moviePeople.role, roles))
+						: inArray(moviePeople.personId, personIds);
+
+				const query = db
 					.select({
 						movie: movies
 					})
 					.from(moviePeople)
 					.innerJoin(movies, eq(moviePeople.movieId, movies.id))
-					.where(inArray(moviePeople.personId, personIds))
+					.where(whereConditions)
 					.limit(limit)
 					.groupBy(movies.id)
-					.orderBy(
-						desc(movies.rating),
-						desc(movies.releaseDate),
-						asc(movies.title)
-					);
-
-				if (roles.length > 0) {
-					query = query.where(inArray(moviePeople.role, roles)) as any;
-				}
+					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title));
 
 				const results = await query;
-				const movieRows = results.map(result => result.movie);
+				const movieRows = results.map((result) => result.movie);
 				return await mapRowsToSummaries(movieRows as MovieRow[]);
 			});
 		} catch (error) {
@@ -197,18 +175,22 @@ export const personRepository = {
 	async getPersonWithMovies(personId: number, movieLimit = 10): Promise<PersonWithMovies | null> {
 		try {
 			const cacheKey = buildCacheKey('person', personId, 'with-movies', movieLimit);
-			return await withCache<PersonWithMovies | null>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const person = await this.findPersonById(personId);
-				if (!person) {
-					return null;
-				}
+			return await withCache<PersonWithMovies | null>(
+				cacheKey,
+				CACHE_TTL_MEDIUM_SECONDS,
+				async () => {
+					const person = await this.findPersonById(personId);
+					if (!person) {
+						return null;
+					}
 
-				const movies = await this.getMoviesByPerson(personId, movieLimit);
-				return {
-					...person,
-					movies
-				};
-			});
+					const movies = await this.getMoviesByPerson(personId, movieLimit);
+					return {
+						...person,
+						movies
+					};
+				}
+			);
 		} catch (error) {
 			console.error(`Error getting person with movies for ${personId}:`, error);
 			return null;
@@ -242,7 +224,7 @@ export const personRepository = {
 		}
 
 		try {
-			const syncPromises = tmdbIds.map(tmdbId => this.syncPerson(tmdbId));
+			const syncPromises = tmdbIds.map((tmdbId) => this.syncPerson(tmdbId));
 			const results = await Promise.all(syncPromises);
 			return results.filter((person): person is PersonRecord => person !== null);
 		} catch (error) {

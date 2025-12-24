@@ -12,8 +12,8 @@ export interface TVShow {
 	numberOfSeasons?: number | null;
 	numberOfEpisodes?: number | null;
 	status?: string | null;
-	originCountry?: string | null; // JSON array
-	productionCompanies?: string | null; // JSON array
+	originCountry?: string | null;
+	productionCompanies?: string | null;
 	createdAt: number;
 	updatedAt: number;
 }
@@ -43,8 +43,8 @@ export interface Episode {
 	runtimeMinutes?: number | null;
 	tmdbId?: number | null;
 	imdbId?: string | null;
-	guestStars?: string | null; // JSON array
-	crew?: string | null; // JSON array
+	guestStars?: string | null;
+	crew?: string | null;
 	createdAt: number;
 	updatedAt: number;
 }
@@ -54,8 +54,8 @@ export interface EpisodeWatchStatus {
 	userId: string;
 	episodeId: number;
 	watched: boolean;
-	watchTime: number; // seconds
-	totalTime: number; // total episode duration in seconds
+	watchTime: number;
+	totalTime: number;
 	completedAt?: number | null;
 	createdAt: number;
 	updatedAt: number;
@@ -120,7 +120,6 @@ export interface UserTVShowStats {
 	totalEpisodesWatched: number;
 }
 
-// TMDB API types (extended from existing)
 export interface TmdbTvEpisode {
 	id: number;
 	overview: string | null;

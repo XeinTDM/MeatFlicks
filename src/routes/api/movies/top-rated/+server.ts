@@ -12,10 +12,7 @@ const topRatedQueryParamsSchema = z.object({
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		// Validate query parameters
 		const queryParams = validateQueryParams(topRatedQueryParamsSchema, url.searchParams);
-
-		// Fetch top rated movies
 		const movies = await libraryRepository.findMoviesWithFilters(
 			{},
 			{ field: 'rating', order: 'desc' },

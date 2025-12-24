@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import type { SubtitleTrack } from '$lib/streaming/types';
-	import { Subtitles, Plus } from '@lucide/svelte';
+	import { Captions, Plus } from '@lucide/svelte';
 
 	interface Props {
 		subtitles: SubtitleTrack[];
@@ -14,21 +14,19 @@
 
 	let selectedSubtitleValue = $state(selectedSubtitle || 'off');
 
-	function handleSubtitleChange(value: string) {
-		selectedSubtitleValue = value;
-		if (value === 'off') {
+	$effect(() => {
+		if (selectedSubtitleValue === 'off') {
 			if (onSubtitleChange) {
 				onSubtitleChange(null);
 			}
 		} else {
-			const subtitle = subtitles.find((s) => s.id === value);
+			const subtitle = subtitles.find((s) => s.id === selectedSubtitleValue);
 			if (subtitle && onSubtitleChange) {
 				onSubtitleChange(subtitle);
 			}
 		}
-	}
+	});
 
-	// Sort subtitles: default first, then English, then alphabetically
 	const sortedSubtitles = $derived(
 		[...subtitles].sort((a, b) => {
 			if (a.isDefault && !b.isDefault) return -1;
@@ -39,7 +37,6 @@
 		})
 	);
 
-	// Get current selected subtitle object
 	const currentSubtitle = $derived(
 		selectedSubtitleValue === 'off'
 			? null
@@ -54,14 +51,13 @@
 		<Select bind:value={selectedSubtitleValue} type="single" {disabled}>
 			<SelectTrigger class="w-36 border-white/20 bg-black/80 text-white hover:bg-black/90">
 				<div class="flex items-center gap-2">
-					<Subtitles class="h-4 w-4" />
+					<Captions class="h-4 w-4" />
 					<span class="truncate">
 						{currentSubtitle ? currentSubtitle.label : 'Off'}
 					</span>
 				</div>
 			</SelectTrigger>
 			<SelectContent class="border-white/20 bg-black/95">
-				<!-- Off option -->
 				<SelectItem value="off" class="text-white hover:bg-white/10 focus:bg-white/10">
 					<div class="flex items-center gap-2">
 						<Plus class="h-3 w-3 rotate-45 opacity-60" />
@@ -89,7 +85,7 @@
 	</div>
 {:else}
 	<div class="flex items-center gap-2 rounded bg-black/40 px-3 py-1 text-sm text-white/60">
-		<Subtitles class="h-4 w-4" />
+		<Captions class="h-4 w-4" />
 		<span>No subtitles</span>
 	</div>
 {/if}

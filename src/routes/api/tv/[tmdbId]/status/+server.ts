@@ -9,7 +9,10 @@ const tvStatusPathParamsSchema = z.object({
 });
 
 const tvStatusQueryParamsSchema = z.object({
-	includeDetails: z.enum(['true', 'false']).transform(val => val === 'true').optional()
+	includeDetails: z
+		.enum(['true', 'false'])
+		.transform((val) => val === 'true')
+		.optional()
 });
 
 export const GET: RequestHandler = async ({ params, url, locals }) => {
@@ -19,10 +22,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			throw new Error('Unauthorized');
 		}
 
-		// Validate path parameters
 		const pathParams = validatePathParams(tvStatusPathParamsSchema, params);
-
-		// Validate query parameters
 		const queryParams = validateQueryParams(tvStatusQueryParamsSchema, url.searchParams);
 
 		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
@@ -91,10 +91,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			throw new Error('Unauthorized');
 		}
 
-		// Validate path parameters
 		const pathParams = validatePathParams(tvStatusPathParamsSchema, params);
 
-		// Validate request body
 		const body = validateRequestBody(tvStatusUpdateSchema, await request.json());
 
 		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
@@ -127,7 +125,6 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 			throw new Error('Unauthorized');
 		}
 
-		// Validate path parameters
 		const pathParams = validatePathParams(tvStatusPathParamsSchema, params);
 
 		const tvShow = await tvShowRepository.getTVShowByTmdbId(pathParams.tmdbId);
@@ -135,7 +132,6 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 			return json({ error: 'TV show not found' }, { status: 404 });
 		}
 
-		// Remove the watch status for this TV show by setting it to 'dropped'
 		await tvShowRepository.setTVShowStatus(user.id, tvShow.id, 'dropped');
 
 		return json({

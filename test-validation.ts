@@ -1,8 +1,7 @@
 import { ValidationError } from './src/lib/server/error-handler';
 
-// Test the ValidationError constructor
 try {
-    throw new ValidationError('Test message');
+	throw new ValidationError('Test message');
 } catch (error) {
-    console.log('Error:', error);
+	console.log('Error:', error);
 }

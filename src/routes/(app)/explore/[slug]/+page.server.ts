@@ -19,11 +19,8 @@ const CATEGORY_PRESETS: Record<string, { title: string; genres: string[] }> = {
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const { slug } = params;
-
-	// Parse filters, sort, and pagination from URL
 	const { filters, sort, pagination } = parseAllFromURL(url.searchParams);
 
-	// Check if filters are active (if so, use new filter system)
 	const hasActiveFilters =
 		filters.yearFrom ||
 		filters.yearTo ||
@@ -34,7 +31,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		filters.language ||
 		(filters.genres && filters.genres.length > 0);
 
-	// Determine category/genre context
 	const preset = CATEGORY_PRESETS[slug];
 	let categoryTitle = preset?.title ?? '';
 	let genresToFetch = preset?.genres ?? [];
@@ -45,7 +41,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		const match = genres.find((genre) => toSlug(genre.name) === slug);
 
 		if (!match) {
-			// If using filters, still try to return results
 			if (hasActiveFilters) {
 				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination);
 				const availableGenres = await libraryRepository.listGenres();
@@ -77,9 +72,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		singleGenreMode = true;
 	}
 
-	// If filters are active, use new filter system
 	if (hasActiveFilters) {
-		// Merge genre from slug into filters if it's a single genre page
 		const finalFilters: MovieFilters = { ...filters };
 		if (singleGenreMode && genresToFetch.length === 1) {
 			finalFilters.genres = [genresToFetch[0], ...(finalFilters.genres || [])];
@@ -101,7 +94,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		};
 	}
 
-	// Otherwise, use legacy genre-based approach
 	const genreData = await Promise.all(
 		genresToFetch.map(async (genreName) => ({
 			genre: genreName,

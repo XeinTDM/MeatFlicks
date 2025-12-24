@@ -1,8 +1,19 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { validateInput, validateAndSanitizeInput, validateAndExtractApiKey, validateContentType, validateRequestOrigin } from '$lib/server/validation';
+import {
+	validateInput,
+	validateAndSanitizeInput,
+	validateAndExtractApiKey,
+	validateContentType,
+	validateRequestOrigin
+} from '$lib/server/validation';
 import { securityUtils } from '$lib/server/security-utils';
-import { validateCsrfToken, validateSecureCsrfToken, generateSecureCsrfToken, createSecureCsrfCookie } from '$lib/server/csrf';
+import {
+	validateCsrfToken,
+	validateSecureCsrfToken,
+	generateSecureCsrfToken,
+	createSecureCsrfCookie
+} from '$lib/server/csrf';
 import { RateLimiter } from '$lib/server/rate-limiter';
 import { applySecurityHeaders, validateSecurityHeaders } from '$lib/server/security-headers';
 
@@ -31,10 +42,7 @@ describe('Security Enhancements', () => {
 
 		it('should throw validation error for invalid input', () => {
 			expect(() => {
-				validateInput(
-					z.object({ email: z.string().email() }),
-					{ email: 'invalid-email' }
-				);
+				validateInput(z.object({ email: z.string().email() }), { email: 'invalid-email' });
 			}).toThrow();
 		});
 	});
@@ -56,7 +64,9 @@ describe('Security Enhancements', () => {
 	describe('Content Type Validation', () => {
 		it('should validate content type headers', () => {
 			expect(() => validateContentType('application/json', ['application/json'])).not.toThrow();
-			expect(() => validateContentType('application/json; charset=utf-8', ['application/json'])).not.toThrow();
+			expect(() =>
+				validateContentType('application/json; charset=utf-8', ['application/json'])
+			).not.toThrow();
 		});
 
 		it('should throw error for invalid content types', () => {
@@ -67,7 +77,9 @@ describe('Security Enhancements', () => {
 
 	describe('Request Origin Validation', () => {
 		it('should validate allowed origins', () => {
-			expect(() => validateRequestOrigin('https://meatflicks.com', ['https://meatflicks.com'])).not.toThrow();
+			expect(() =>
+				validateRequestOrigin('https://meatflicks.com', ['https://meatflicks.com'])
+			).not.toThrow();
 		});
 
 		it('should throw error for disallowed origins', () => {
@@ -82,7 +94,7 @@ describe('Security Enhancements', () => {
 			const token1 = securityUtils.generateSecureToken(32);
 			const token2 = securityUtils.generateSecureToken(32);
 
-			expect(token1).toHaveLength(64); // 32 bytes = 64 hex chars
+			expect(token1).toHaveLength(64);
 			expect(token2).toHaveLength(64);
 			expect(token1).not.toBe(token2);
 		});
@@ -146,7 +158,6 @@ describe('Security Enhancements', () => {
 		});
 
 		it('should validate CSRF tokens', async () => {
-			// Mock event object
 			const mockEvent = {
 				request: {
 					method: 'POST',
@@ -155,16 +166,14 @@ describe('Security Enhancements', () => {
 					json: async () => ({})
 				},
 				cookies: {
-					get: (name: string) => name === 'csrf_token' ? 'test-token' : null
+					get: (name: string) => (name === 'csrf_token' ? 'test-token' : null)
 				}
 			};
 
-			// Test with header
 			mockEvent.request.headers.set('x-csrf-token', 'test-token');
 			const result = await validateCsrfToken(mockEvent);
 			expect(result.valid).toBe(true);
 
-			// Test with form data
 			mockEvent.request.headers.delete('x-csrf-token');
 			mockEvent.request.formData = async () => {
 				const formData = new FormData();
@@ -174,7 +183,6 @@ describe('Security Enhancements', () => {
 			const formResult = await validateCsrfToken(mockEvent);
 			expect(formResult.valid).toBe(true);
 
-			// Test with JSON
 			mockEvent.request.formData = async () => new FormData();
 			mockEvent.request.json = async () => ({ csrf_token: 'test-token' });
 			const jsonResult = await validateCsrfToken(mockEvent);
@@ -190,15 +198,13 @@ describe('Security Enhancements', () => {
 					json: async () => ({})
 				},
 				cookies: {
-					get: (name: string) => name === 'csrf_token' ? 'valid-token' : null
+					get: (name: string) => (name === 'csrf_token' ? 'valid-token' : null)
 				}
 			};
 
-			// No token in request
 			const noTokenResult = await validateCsrfToken(mockEvent);
 			expect(noTokenResult.valid).toBe(false);
 
-			// Mismatched tokens
 			mockEvent.request.headers.set('x-csrf-token', 'invalid-token');
 			const mismatchResult = await validateCsrfToken(mockEvent);
 			expect(mismatchResult.valid).toBe(false);
@@ -216,11 +222,9 @@ describe('Security Enhancements', () => {
 		it('should reject requests exceeding rate limit', async () => {
 			const limiter = new RateLimiter({ maxRequests: 2, windowMs: 1000 });
 
-			// First two requests should be allowed
 			await limiter.checkLimit('test-key');
 			await limiter.checkLimit('test-key');
 
-			// Third request should be rejected
 			const result = await limiter.checkLimit('test-key');
 			expect(result.allowed).toBe(false);
 			expect(result.remaining).toBe(0);
@@ -228,11 +232,7 @@ describe('Security Enhancements', () => {
 
 		it('should apply penalties for rate limit violations', async () => {
 			const limiter = new RateLimiter({ maxRequests: 1, windowMs: 1000, penaltyMs: 5000 });
-
-			// First request allowed
 			await limiter.checkLimit('test-key');
-
-			// Second request should trigger penalty
 			const result = await limiter.checkLimit('test-key');
 			expect(result.allowed).toBe(false);
 			expect(result.resetTime).toBeDefined();
@@ -248,8 +248,9 @@ describe('Security Enhancements', () => {
 
 			const securedResponse = applySecurityHeaders(mockEvent, response);
 
-			// Check that security headers are present
-			expect(securedResponse.headers.get('Content-Security-Policy')).toContain("default-src 'self'");
+			expect(securedResponse.headers.get('Content-Security-Policy')).toContain(
+				"default-src 'self'"
+			);
 			expect(securedResponse.headers.get('X-XSS-Protection')).toBe('0');
 			expect(securedResponse.headers.get('X-Content-Type-Options')).toBe('nosniff');
 			expect(securedResponse.headers.get('X-Frame-Options')).toBe('DENY');

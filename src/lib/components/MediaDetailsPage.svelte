@@ -8,8 +8,7 @@
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
-	import { PictureInPicture, Gauge } from '@lucide/svelte';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { PictureInPicture } from '@lucide/svelte';
 
 	type MediaType = 'movie' | 'tv';
 
@@ -127,6 +126,7 @@
 	let currentQualities = $state<VideoQuality[]>([]);
 	let currentSubtitles = $state<SubtitleTrack[]>([]);
 	let progressSaveInterval: ReturnType<typeof setInterval> | null = null;
+	let currentProgress = $state(0);
 
 	function stopProgressTracking() {
 		if (progressSaveInterval) {
@@ -136,13 +136,8 @@
 	}
 
 	$effect(() => {
-		// Track all reactive variables used in the interval
-		// This ensures the effect re-runs when any of these change
 		const currentDisplayPlayer = displayPlayer;
 		const currentMovie = movie;
-		const currentMediaType = mediaType;
-		const currentSelectedSeason = selectedSeason;
-		const currentSelectedEpisode = selectedEpisode;
 
 		if (currentDisplayPlayer && currentMovie) {
 			stopProgressTracking();
@@ -163,7 +158,7 @@
 							body: JSON.stringify({
 								mediaId: movie.id,
 								mediaType,
-								progress: Math.floor(duration * 0.1), // Placeholder - would be actual progress
+								progress: currentProgress,
 								duration,
 								seasonNumber: mediaType === 'tv' ? selectedSeason : undefined,
 								episodeNumber: mediaType === 'tv' ? selectedEpisode : undefined
@@ -250,6 +245,7 @@
 				case 'i':
 					if (currentDisplayPlayer && 'pictureInPictureEnabled' in document) {
 						event.preventDefault();
+						togglePictureInPicture();
 					}
 					break;
 			}
@@ -260,14 +256,6 @@
 			window.removeEventListener('keydown', handleKeyDown);
 		};
 	});
-
-	let primaryLabel = $derived(
-		primarySource
-			? (providerResolutions.find(
-					(r: ProviderResolution) => r.providerId === primarySource.providerId
-				)?.label ?? primarySource.providerId)
-			: null
-	);
 
 	const parseReleaseYear = (value: string | null) => {
 		if (!value) return 'N/A';
@@ -386,6 +374,40 @@
 		}
 	});
 
+	$effect(() => {
+		if (iframeElement && iframeElement.contentWindow && displayPlayer) {
+			iframeElement.contentWindow.postMessage(
+				{
+					type: 'playbackSpeedChange',
+					speed: playbackSpeed
+				},
+				'*'
+			);
+		}
+	});
+
+	$effect(() => {
+		function handleMessage(event: MessageEvent) {
+			if (!event.origin.includes(window.location.hostname) && event.origin !== 'null') {
+				return;
+			}
+
+			const data = event.data;
+			if (data && typeof data === 'object') {
+				if (data.type === 'progressUpdate' && typeof data.progress === 'number') {
+					currentProgress = data.progress;
+				}
+			}
+		}
+
+		if (typeof window !== 'undefined') {
+			window.addEventListener('message', handleMessage);
+			return () => {
+				window.removeEventListener('message', handleMessage);
+			};
+		}
+	});
+
 	async function requestProviderResolution(providerId: string) {
 		if (!movie?.tmdbId) return;
 
@@ -415,7 +437,6 @@
 
 			const payload = await response.json();
 
-			// Update qualities and subtitles from the response
 			if (payload.source) {
 				currentQualities = payload.source.qualities || [];
 				currentSubtitles = payload.source.subtitles || [];
@@ -495,11 +516,8 @@
 
 	function handleQualityChange(quality: VideoQuality) {
 		selectedQuality = quality.label;
-		// Update the stream URL if we have the same source
 		if (primarySource && currentQualities.some((q) => q.url === quality.url)) {
 			playbackUrl = quality.url;
-			// In a real implementation, we would communicate with the iframe
-			// to change the video source using postMessage
 			if (iframeElement && iframeElement.contentWindow) {
 				iframeElement.contentWindow.postMessage(
 					{
@@ -514,8 +532,6 @@
 
 	function handleSubtitleChange(subtitle: SubtitleTrack | null) {
 		selectedSubtitle = subtitle?.id || null;
-		// In a real implementation, we would communicate with the iframe
-		// to enable/disable subtitles using postMessage
 		if (iframeElement && iframeElement.contentWindow) {
 			iframeElement.contentWindow.postMessage(
 				{
@@ -533,8 +549,56 @@
 		}
 	}
 
+	function handleIframeLoad() {
+		if (iframeElement?.contentWindow) {
+			let qualityValue = 'auto';
+			if (selectedQuality !== 'auto') {
+				const quality = currentQualities.find((q) => q.label === selectedQuality);
+				if (quality) {
+					qualityValue = quality.url;
+				}
+			}
+			iframeElement.contentWindow.postMessage(
+				{
+					type: 'qualityChange',
+					quality: qualityValue
+				},
+				'*'
+			);
+
+			let subtitleValue = null;
+			if (selectedSubtitle) {
+				const subtitle = currentSubtitles.find((s) => s.id === selectedSubtitle);
+				if (subtitle) {
+					subtitleValue = {
+						url: subtitle.url,
+						language: subtitle.language,
+						label: subtitle.label
+					};
+				}
+			}
+			iframeElement.contentWindow.postMessage(
+				{
+					type: 'subtitleChange',
+					subtitle: subtitleValue
+				},
+				'*'
+			);
+		}
+	}
+
 	function toggleTheaterMode() {
 		isTheaterMode = !isTheaterMode;
+	}
+
+	function togglePictureInPicture() {
+		if (!iframeElement) return;
+
+		if (document.pictureInPictureElement) {
+			document.exitPictureInPicture();
+		} else if ('requestPictureInPicture' in iframeElement) {
+			(iframeElement as any).requestPictureInPicture();
+		}
 	}
 
 	function goToNextEpisode() {
@@ -546,15 +610,12 @@
 		if (selectedEpisode < currentSeasonData.episodeCount) {
 			handleEpisodeSelect(selectedEpisode + 1);
 		} else {
-			// Check next season
 			const nextSeason = movie.seasons.find((s) => s.seasonNumber === selectedSeason + 1);
 			if (nextSeason) {
 				selectedSeason = nextSeason.seasonNumber;
 				selectedEpisode = 1;
 				hasRequestedPlayback = false;
 				currentStreaming = { source: null, resolutions: [] };
-				// This needs to wait for reactive updates?
-				// Actually selectedProvider is state, so we can just request resolution
 				if (selectedProvider) {
 					requestProviderResolution(selectedProvider);
 				}
@@ -571,15 +632,12 @@
 	}
 
 	$effect(() => {
-		// Cleanup timers on changes
 		if (nextEpTimer) clearTimeout(nextEpTimer);
 		if (autoPlayTimer) clearTimeout(autoPlayTimer);
 		showNextOverlay = false;
 
 		if (displayPlayer && playbackUrl && movie?.durationMinutes && mediaType === 'tv') {
-			// Best-effort "nearing end" detection
 			const durationMs = movie.durationMinutes * 60 * 1000;
-			// Trigger overlay 30s before end
 			const triggerTime = Math.max(0, durationMs - 30000);
 
 			if (durationMs > 30000) {
@@ -720,6 +778,7 @@
 							class="h-full w-full border-none"
 							allowfullscreen
 							allow="autoplay; fullscreen; picture-in-picture"
+							onload={handleIframeLoad}
 						></iframe>
 					{:else}
 						<div class="flex h-full w-full items-center justify-center text-white">
@@ -780,6 +839,14 @@
 								<span>Auto-play Next</span>
 							</label>
 						{/if}
+						<button
+							onclick={togglePictureInPicture}
+							class="flex items-center gap-2 transition-colors hover:text-foreground"
+							disabled={!('pictureInPictureEnabled' in document)}
+						>
+							<PictureInPicture class="h-4 w-4" />
+							Picture-in-Picture
+						</button>
 						<button
 							onclick={toggleTheaterMode}
 							class="flex items-center gap-2 transition-colors hover:text-foreground"
@@ -940,9 +1007,16 @@
 
 				<div class="space-y-6">
 					<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
-						<h2 class="mb-4 text-2xl font-semibold">
-							About this {mediaType === 'tv' ? 'Series' : 'Movie'}
-						</h2>
+						<div class="mb-4 flex items-center justify-between">
+							<h2 class="text-2xl font-semibold">
+								About this {mediaType === 'tv' ? 'Series' : 'Movie'}
+							</h2>
+							<ShareButton
+								url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${mediaType}/${movie.id}`}
+								title={movie.title}
+								description={movie.overview || `Watch ${movie.title} on MeatFlicks`}
+							/>
+						</div>
 						<ul class="space-y-2 text-sm text-muted-foreground">
 							<li>
 								<span class="font-semibold text-foreground">TMDB Rating:</span>

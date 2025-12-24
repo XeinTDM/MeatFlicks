@@ -11,7 +11,6 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { onMount } from 'svelte';
 
-	// Register service worker for PWA
 	onMount(() => {
 		if ('serviceWorker' in navigator) {
 			navigator.serviceWorker

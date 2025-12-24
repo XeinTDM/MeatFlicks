@@ -16,15 +16,15 @@
 		selectedQuality || qualities.find((q) => q.isDefault)?.label || qualities[0]?.label || 'auto'
 	);
 
-	function handleQualityChange(value: string) {
-		selectedQualityValue = value;
-		const quality = qualities.find((q) => q.label === value || q.resolution === value);
+	$effect(() => {
+		const quality = qualities.find(
+			(q) => q.label === selectedQualityValue || q.resolution === selectedQualityValue
+		);
 		if (quality && onQualityChange) {
 			onQualityChange(quality);
 		}
-	}
+	});
 
-	// Sort qualities by resolution (highest first)
 	const sortedQualities = $derived(
 		[...qualities].sort((a, b) => {
 			const getResolutionValue = (resolution: string) => {
@@ -39,7 +39,6 @@
 		})
 	);
 
-	// Get display name for quality
 	const getQualityDisplayName = (quality: VideoQuality) => {
 		if (quality.label === 'Auto') return 'Auto';
 		if (quality.resolution.includes('4K')) return '4K Ultra HD';
@@ -50,7 +49,6 @@
 		return quality.label;
 	};
 
-	// Get current selected quality object
 	const currentQuality = $derived(
 		qualities.find(
 			(q) =>

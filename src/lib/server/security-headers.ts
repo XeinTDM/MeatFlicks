@@ -6,7 +6,6 @@ import { env } from '$lib/config/env';
  * Based on modern web security best practices
  */
 export const SECURITY_HEADERS = {
-	// Content Security Policy - Enhanced protective policy
 	'Content-Security-Policy': `
 		default-src 'self';
 		script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;
@@ -22,21 +21,14 @@ export const SECURITY_HEADERS = {
 		frame-ancestors 'none';
 		upgrade-insecure-requests;
 		block-all-mixed-content
-	`.replace(/\s+/g, ' ').trim(),
+	`
+		.replace(/\s+/g, ' ')
+		.trim(),
 
-	// XSS Protection - Disable legacy XSS auditor
 	'X-XSS-Protection': '0',
-
-	// Prevent MIME type sniffing
 	'X-Content-Type-Options': 'nosniff',
-
-	// Prevent clickjacking
 	'X-Frame-Options': 'DENY',
-
-	// Referrer Policy - More restrictive
 	'Referrer-Policy': 'strict-origin',
-
-	// Permissions Policy - More restrictive
 	'Permissions-Policy': `
 		geolocation=(),
 		microphone=(),
@@ -49,33 +41,17 @@ export const SECURITY_HEADERS = {
 		ambient-light-sensor=(),
 		battery=(),
 		screen-wake-lock=()
-	`.replace(/\s+/g, ' ').trim(),
-
-	// Strict Transport Security (in production)
+	`
+		.replace(/\s+/g, ' ')
+		.trim(),
 	'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-
-	// Cross-Origin Resource Policy
 	'Cross-Origin-Resource-Policy': 'same-origin',
-
-	// Cross-Origin Embedder Policy
 	'Cross-Origin-Embedder-Policy': 'require-corp',
-
-	// Cross-Origin Opener Policy
 	'Cross-Origin-Opener-Policy': 'same-origin',
-
-	// Origin-Agent-Cluster
 	'Origin-Agent-Cluster': '?1',
-
-	// Server header removal
-	'Server': '',
-
-	// X-Powered-By header removal
+	Server: '',
 	'X-Powered-By': '',
-
-	// X-Download-Options
 	'X-Download-Options': 'noopen',
-
-	// X-Permitted-Cross-Domain-Policies
 	'X-Permitted-Cross-Domain-Policies': 'none'
 };
 
@@ -83,10 +59,8 @@ export const SECURITY_HEADERS = {
  * Apply security headers to response
  */
 export function applySecurityHeaders(event: RequestEvent, response: Response): Response {
-	// Clone the response to modify headers
 	const headers = new Headers(response.headers);
 
-	// Apply security headers
 	for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
 		if (value) {
 			headers.set(key, value);
@@ -95,12 +69,10 @@ export function applySecurityHeaders(event: RequestEvent, response: Response): R
 		}
 	}
 
-	// In development, don't set HSTS header
 	if (import.meta.env.DEV) {
 		headers.delete('Strict-Transport-Security');
 	}
 
-	// Add dynamic CSP for TMDB resources
 	if (env.TMDB_IMAGE_BASE_URL) {
 		const currentCsp = headers.get('Content-Security-Policy') || '';
 		const updatedCsp = currentCsp.replace(
@@ -134,16 +106,16 @@ export function getContentSecurityHeaders(contentType: 'api' | 'html' | 'embed' 
 
 	switch (contentType) {
 		case 'api':
-			// More restrictive CSP for API responses
 			baseHeaders['Content-Security-Policy'] = `
 				default-src 'none';
 				connect-src 'self';
 				frame-ancestors 'none'
-			`.replace(/\s+/g, ' ').trim();
+			`
+				.replace(/\s+/g, ' ')
+				.trim();
 			break;
 
 		case 'embed':
-			// Less restrictive CSP for embed content
 			baseHeaders['Content-Security-Policy'] = `
 				default-src 'self';
 				script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;
@@ -157,7 +129,9 @@ export function getContentSecurityHeaders(contentType: 'api' | 'html' | 'embed' 
 				base-uri 'self';
 				form-action 'none';
 				frame-ancestors 'none'
-			`.replace(/\s+/g, ' ').trim();
+			`
+				.replace(/\s+/g, ' ')
+				.trim();
 			break;
 	}
 
@@ -177,7 +151,7 @@ export function validateSecurityHeaders(headers: Headers): { valid: boolean; mis
 		'Permissions-Policy'
 	];
 
-	const missingHeaders = requiredHeaders.filter(header => !headers.has(header));
+	const missingHeaders = requiredHeaders.filter((header) => !headers.has(header));
 
 	return {
 		valid: missingHeaders.length === 0,

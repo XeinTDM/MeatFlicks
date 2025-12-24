@@ -14,8 +14,14 @@ const streamingQueryParamsSchema = z.object({
 	language: z.string().optional(),
 	preferredQuality: z.string().optional(),
 	preferredSubtitleLanguage: z.string().optional(),
-	includeQualities: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
-	includeSubtitles: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
+	includeQualities: z
+		.enum(['true', 'false'])
+		.transform((val) => val === 'true')
+		.optional(),
+	includeSubtitles: z
+		.enum(['true', 'false'])
+		.transform((val) => val === 'true')
+		.optional(),
 	preferred: z.string().optional()
 });
 
@@ -24,7 +30,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		const queryParams = validateQueryParams(streamingQueryParamsSchema, url.searchParams);
 
 		const preferredProviders = queryParams.preferred
-			? queryParams.preferred.split(',').map(entry => entry.trim()).filter(Boolean)
+			? queryParams.preferred
+					.split(',')
+					.map((entry) => entry.trim())
+					.filter(Boolean)
 			: undefined;
 
 		const input = {
@@ -71,7 +80,6 @@ const streamingRequestBodySchema = z.object({
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		// Validate request body using centralized validation
 		const body = validateRequestBody(streamingRequestBodySchema, await request.json());
 
 		const input = {

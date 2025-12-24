@@ -16,10 +16,7 @@ const tvQueryParamsSchema = z.object({
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	try {
-		// Validate path parameters
 		const pathParams = validatePathParams(tvIdentifierSchema, params);
-
-		// Validate query parameters
 		const queryParams = validateQueryParams(tvQueryParamsSchema, url.searchParams);
 
 		const identifier = pathParams.id;

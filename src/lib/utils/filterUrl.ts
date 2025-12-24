@@ -1,18 +1,10 @@
-/**
- * URL state management utilities for filters, sorting, and pagination
- */
-
 import type { MovieFilters, SortOptions } from '$lib/types/filters';
 import type { PaginationParams } from '$lib/types/pagination';
 import { DEFAULT_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE } from '$lib/types/pagination';
 
-/**
- * Parse filters from URL search params
- */
 export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters {
 	const filters: MovieFilters = {};
 
-	// Year filters
 	const yearFrom = searchParams.get('yearFrom');
 	if (yearFrom) {
 		const year = parseInt(yearFrom, 10);
@@ -29,7 +21,6 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters
 		}
 	}
 
-	// Rating filters
 	const minRating = searchParams.get('minRating');
 	if (minRating) {
 		const rating = parseFloat(minRating);
@@ -46,7 +37,6 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters
 		}
 	}
 
-	// Runtime filters
 	const runtimeMin = searchParams.get('runtimeMin');
 	if (runtimeMin) {
 		const runtime = parseInt(runtimeMin, 10);
@@ -63,13 +53,11 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters
 		}
 	}
 
-	// Language filter
 	const language = searchParams.get('language');
 	if (language && language.trim()) {
 		filters.language = language.trim();
 	}
 
-	// Genre filters
 	const genres = searchParams.get('genres');
 	if (genres) {
 		filters.genres = genres
@@ -83,7 +71,6 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters
 		filters.genreMode = genreMode;
 	}
 
-	// Media type filter
 	const mediaType = searchParams.get('mediaType');
 	if (mediaType === 'movie' || mediaType === 'tv' || mediaType === 'all') {
 		filters.mediaType = mediaType;
@@ -92,9 +79,6 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters
 	return filters;
 }
 
-/**
- * Serialize filters to URL search params
- */
 export function serializeFiltersToURL(filters: MovieFilters): URLSearchParams {
 	const params = new URLSearchParams();
 
@@ -132,9 +116,6 @@ export function serializeFiltersToURL(filters: MovieFilters): URLSearchParams {
 	return params;
 }
 
-/**
- * Parse sort options from URL search params
- */
 export function parseSortFromURL(searchParams: URLSearchParams): SortOptions {
 	const field = searchParams.get('sort') || 'popularity';
 	const order = searchParams.get('order') || 'desc';
@@ -158,9 +139,6 @@ export function parseSortFromURL(searchParams: URLSearchParams): SortOptions {
 	};
 }
 
-/**
- * Serialize sort options to URL search params
- */
 export function serializeSortToURL(sort: SortOptions): URLSearchParams {
 	const params = new URLSearchParams();
 	if (sort.field !== 'popularity') {
@@ -172,9 +150,6 @@ export function serializeSortToURL(sort: SortOptions): URLSearchParams {
 	return params;
 }
 
-/**
- * Parse pagination params from URL search params
- */
 export function parsePaginationFromURL(searchParams: URLSearchParams): PaginationParams {
 	const page = parseInt(searchParams.get('page') || '1', 10);
 	const pageSize = parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE), 10);
@@ -185,9 +160,6 @@ export function parsePaginationFromURL(searchParams: URLSearchParams): Paginatio
 	};
 }
 
-/**
- * Serialize pagination params to URL search params
- */
 export function serializePaginationToURL(pagination: PaginationParams): URLSearchParams {
 	const params = new URLSearchParams();
 	if (pagination.page > 1) {
@@ -199,9 +171,6 @@ export function serializePaginationToURL(pagination: PaginationParams): URLSearc
 	return params;
 }
 
-/**
- * Combine all URL params (filters, sort, pagination) into a single URLSearchParams
- */
 export function combineURLParams(
 	filters: MovieFilters,
 	sort: SortOptions,
@@ -209,19 +178,16 @@ export function combineURLParams(
 ): URLSearchParams {
 	const params = new URLSearchParams();
 
-	// Add filters
 	const filterParams = serializeFiltersToURL(filters);
 	filterParams.forEach((value, key) => {
 		params.set(key, value);
 	});
 
-	// Add sort
 	const sortParams = serializeSortToURL(sort);
 	sortParams.forEach((value, key) => {
 		params.set(key, value);
 	});
 
-	// Add pagination
 	const paginationParams = serializePaginationToURL(pagination);
 	paginationParams.forEach((value, key) => {
 		params.set(key, value);
@@ -230,9 +196,6 @@ export function combineURLParams(
 	return params;
 }
 
-/**
- * Parse all params (filters, sort, pagination) from URL search params
- */
 export function parseAllFromURL(searchParams: URLSearchParams): {
 	filters: MovieFilters;
 	sort: SortOptions;

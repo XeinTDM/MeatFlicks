@@ -4,14 +4,13 @@ import { LRUCache } from 'lru-cache';
 import { logger } from './logger';
 import { env } from '$lib/config/env';
 
-// Cache TTL constants
 export const CACHE_TTL_SHORT_SECONDS = env.CACHE_TTL_SHORT;
 export const CACHE_TTL_MEDIUM_SECONDS = env.CACHE_TTL_MEDIUM;
 export const CACHE_TTL_LONG_SECONDS = env.CACHE_TTL_LONG;
+export const CACHE_TTL_SEARCH_SECONDS = 3600;
 
-// Cache stampede protection constants
-const CACHE_STAMPEDE_TIMEOUT_MS = 5000; // 5 seconds
-const CACHE_STAMPEDE_MAX_WAITERS = 10; // Maximum concurrent waiters for a cache key
+const CACHE_STAMPEDE_TIMEOUT_MS = 5000;
+const CACHE_STAMPEDE_MAX_WAITERS = 10;
 
 const store = new KeyvSqlite({ uri: `sqlite://${env.SQLITE_DB_PATH}`, table: 'cache_v2' });
 
@@ -21,7 +20,7 @@ const lruStore = new LRUCache<string, any>({
 	dispose: (value, key, reason) => {
 		if (reason === 'expire') {
 			cache.delete(key).catch(() => {
-				// Silent failure is acceptable
+				// Silent
 			});
 		}
 	}
@@ -34,7 +33,6 @@ const cache = new Keyv({
 
 cache.on('error', (err) => logger.error({ err }, 'Keyv Connection Error'));
 
-// Cache stampede protection
 interface CacheStampedeEntry {
 	promise: Promise<any>;
 	timestamp: number;
@@ -43,10 +41,8 @@ interface CacheStampedeEntry {
 
 const stampedeProtection = new Map<string, CacheStampedeEntry>();
 
-// Enhanced cache cleanup with more frequent LRU cleanup
 setInterval(async () => {
 	try {
-		// More frequent LRU cleanup (every 5 minutes)
 		let lruCleaned = 0;
 		for (const key of lruStore.keys()) {
 			const item = lruStore.peek(key);
@@ -56,7 +52,6 @@ setInterval(async () => {
 			}
 		}
 
-		// Less frequent SQLite cleanup (every hour)
 		let sqliteCleaned = 0;
 		try {
 			const sqliteStore = store as any;
@@ -77,7 +72,10 @@ setInterval(async () => {
 				}
 			} else if (db && typeof db.query === 'function') {
 				const currentTime = Date.now();
-				const result = await db.query('SELECT key FROM cache_v2 WHERE expire IS NOT NULL AND expire < ?', [currentTime]);
+				const result = await db.query(
+					'SELECT key FROM cache_v2 WHERE expire IS NOT NULL AND expire < ?',
+					[currentTime]
+				);
 				const expiredKeys = Array.isArray(result) ? result : result.rows || [];
 
 				for (const row of expiredKeys) {
@@ -93,18 +91,20 @@ setInterval(async () => {
 			logger.warn({ err: dbError }, 'Failed to clean up SQLite cache');
 		}
 
-		logger.debug({
-			lruCleaned,
-			sqliteCleaned,
-			lruSize: lruStore.size,
-			activeStampedeEntries: stampedeProtection.size
-		}, 'Cache cleanup completed');
+		logger.debug(
+			{
+				lruCleaned,
+				sqliteCleaned,
+				lruSize: lruStore.size,
+				activeStampedeEntries: stampedeProtection.size
+			},
+			'Cache cleanup completed'
+		);
 	} catch (error) {
 		logger.error({ err: error }, 'Cache cleanup failed');
 	}
-}, 300000); // 5 minutes for more frequent cleanup
+}, 300000);
 
-// Clean up old stampede protection entries
 setInterval(() => {
 	const now = Date.now();
 	for (const [key, entry] of stampedeProtection) {
@@ -173,24 +173,20 @@ export async function withCache<T>(
 		errorTtlSeconds = 60
 	} = options;
 
-	// Check cache first
 	const cached = await getCachedValue<T>(key);
 	if (cached !== undefined) {
 		return cached;
 	}
 
-	// Check for existing stampede protection entry
 	if (useStampedeProtection) {
 		const existingStampede = stampedeProtection.get(key);
 		if (existingStampede) {
-			// Limit the number of concurrent waiters to prevent memory issues
 			if (existingStampede.waiters >= CACHE_STAMPEDE_MAX_WAITERS) {
 				logger.warn(
 					{ key, waiters: existingStampede.waiters },
 					'Cache stampede protection: too many waiters, proceeding without protection'
 				);
 			} else {
-				// Increment waiter count
 				existingStampede.waiters++;
 				try {
 					return await existingStampede.promise;
@@ -201,13 +197,11 @@ export async function withCache<T>(
 		}
 	}
 
-	// Check for existing inflight request
 	const pending = inflight.get(key);
 	if (pending) {
 		return pending as Promise<T>;
 	}
 
-	// Create new stampede protection entry
 	let stampedeEntry: CacheStampedeEntry | undefined;
 	if (useStampedeProtection) {
 		const promise = (async () => {
@@ -231,14 +225,11 @@ export async function withCache<T>(
 
 	const task = (async () => {
 		try {
-			const value = stampedeEntry
-				? await stampedeEntry.promise
-				: await factory();
+			const value = stampedeEntry ? await stampedeEntry.promise : await factory();
 
 			if (value !== undefined) {
 				await setCachedValue(key, value, ttlSeconds);
 			} else if (cacheOnError) {
-				// Cache null values to prevent repeated failed attempts
 				await setCachedValue(key, null, errorTtlSeconds);
 			}
 			return value;
@@ -274,28 +265,24 @@ export async function withCacheRefresh<T>(
 ): Promise<T> {
 	const cached = await getCachedValue<T>(key);
 	if (cached !== undefined) {
-		// Return cached value immediately but refresh in background if stale
 		if (staleTtlSeconds > 0) {
 			try {
-				await getCachedValue<T>(key); // Check if still in cache
-				// Refresh in background with lower priority
+				await getCachedValue<T>(key);
 				setImmediate(() => {
-					withCache(key, staleTtlSeconds, factory, { stampedeProtection: true })
-						.catch(error => {
-							logger.debug(
-								{ key, error: error instanceof Error ? error.message : String(error) },
-								'Background cache refresh failed'
-							);
-						});
+					withCache(key, staleTtlSeconds, factory, { stampedeProtection: true }).catch((error) => {
+						logger.debug(
+							{ key, error: error instanceof Error ? error.message : String(error) },
+							'Background cache refresh failed'
+						);
+					});
 				});
 			} catch {
-				// Ignore background refresh errors
+				// Ignore
 			}
 		}
 		return cached;
 	}
 
-	// No cache hit, use regular cache
 	return withCache(key, ttlSeconds, factory, { stampedeProtection: true });
 }
 
@@ -316,24 +303,23 @@ export async function warmCache<T>(
 		const promise = withCache(key, ttlSeconds, () => factory(key), {
 			stampedeProtection: false,
 			cacheOnError: true
-		}).then(() => {
-			// Remove completed promise from active list
-			const index = activePromises.indexOf(promise);
-			if (index !== -1) {
-				activePromises.splice(index, 1);
-			}
-		}).catch(() => {
-			// Remove failed promise from active list
-			const index = activePromises.indexOf(promise);
-			if (index !== -1) {
-				activePromises.splice(index, 1);
-			}
-		});
+		})
+			.then(() => {
+				const index = activePromises.indexOf(promise);
+				if (index !== -1) {
+					activePromises.splice(index, 1);
+				}
+			})
+			.catch(() => {
+				const index = activePromises.indexOf(promise);
+				if (index !== -1) {
+					activePromises.splice(index, 1);
+				}
+			});
 
 		activePromises.push(promise);
 	}
 
-	// Wait for all active promises to complete
 	await Promise.all(activePromises);
 }
 
