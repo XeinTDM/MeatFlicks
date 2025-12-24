@@ -299,14 +299,12 @@ async function performSearchQuery(
 	try {
 		const whereClauses = [];
 		const params = [];
+		const ftsQuery = query ? createFuzzySearchQuery(query) : null;
 
-		if (query) {
-			const ftsQuery = createFuzzySearchQuery(query);
-			if (ftsQuery) {
-				whereClauses.push(`m.numericId IN (
-					SELECT rowid FROM movie_fts WHERE movie_fts MATCH ${ftsQuery}
-				)`);
-			}
+		if (ftsQuery) {
+			whereClauses.push(`m.numericId IN (
+				SELECT rowid FROM movie_fts WHERE movie_fts MATCH ${ftsQuery}
+			)`);
 		}
 
 		if (genres.length > 0) {
@@ -369,13 +367,28 @@ async function performSearchQuery(
 			orderByClause += ', m.title COLLATE NOCASE ASC';
 		}
 
-		const searchSql = sql`
-			SELECT m.*
-			FROM movies m
-			${whereClause}
-			${orderByClause}
-			LIMIT ${limit} OFFSET ${offset}
-		`;
+			// Optimize query by using more efficient JOIN order for FTS queries
+			let searchSql;
+			if (query && ftsQuery) {
+				// For FTS queries, start with FTS table to leverage indexing
+				searchSql = sql`
+					SELECT m.*
+					FROM movie_fts mf
+					JOIN movies m ON m.numericId = mf.rowid AND ${whereClause.replace('m.', '')}
+					WHERE mf MATCH ${ftsQuery}
+					${orderByClause.replace('m.', '').replace('ORDER BY', 'ORDER BY mf.rank,')}
+					LIMIT ${limit} OFFSET ${offset}
+				`;
+			} else {
+				// For non-FTS queries, use standard approach
+				searchSql = sql`
+					SELECT m.*
+					FROM movies m
+					${whereClause}
+					${orderByClause}
+					LIMIT ${limit} OFFSET ${offset}
+				`;
+			}
 
 		const rows = (await db.all(searchSql)) as any[];
 		return await mapRowsToSummaries(rows);

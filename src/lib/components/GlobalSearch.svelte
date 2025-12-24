@@ -97,7 +97,7 @@
 
 		searchTimeout = setTimeout(() => {
 			fetchResults(query);
-		}, 300);
+		}, 150);
 	}
 
 	function clearSearch() {

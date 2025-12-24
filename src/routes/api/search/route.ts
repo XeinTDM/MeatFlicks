@@ -32,7 +32,11 @@ const sanitizeForFts = (term: string): string => {
 	return term
 		.toLowerCase()
 		.replace(/[^\w\s]/g, ' ')
-		.trim();
+		.trim()
+		.split(/\s+/)
+		.filter(word => word.length > 0)
+		.map(word => `"${word}"*`)
+		.join(' OR ');
 };
 
 const searchQueryParamsSchema = z.object({

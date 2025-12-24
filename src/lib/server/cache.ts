@@ -7,7 +7,7 @@ import { env } from '$lib/config/env';
 export const CACHE_TTL_SHORT_SECONDS = env.CACHE_TTL_SHORT;
 export const CACHE_TTL_MEDIUM_SECONDS = env.CACHE_TTL_MEDIUM;
 export const CACHE_TTL_LONG_SECONDS = env.CACHE_TTL_LONG;
-export const CACHE_TTL_SEARCH_SECONDS = 3600;
+export const CACHE_TTL_SEARCH_SECONDS = 900;
 
 const CACHE_STAMPEDE_TIMEOUT_MS = 5000;
 const CACHE_STAMPEDE_MAX_WAITERS = 10;

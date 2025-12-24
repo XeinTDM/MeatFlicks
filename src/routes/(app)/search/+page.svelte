@@ -94,7 +94,7 @@
 
 		debounceTimeout = setTimeout(() => {
 			void performSearch(term);
-		}, 350);
+		}, 200);
 	}
 
 	$effect(() => {
