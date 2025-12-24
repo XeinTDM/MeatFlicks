@@ -34,8 +34,8 @@ const sanitizeForFts = (term: string): string => {
 		.replace(/[^\w\s]/g, ' ')
 		.trim()
 		.split(/\s+/)
-		.filter(word => word.length > 0)
-		.map(word => `"${word}"*`)
+		.filter((word) => word.length > 0)
+		.map((word) => `"${word}"*`)
 		.join(' OR ');
 };
 

@@ -367,11 +367,9 @@ async function performSearchQuery(
 			orderByClause += ', m.title COLLATE NOCASE ASC';
 		}
 
-			// Optimize query by using more efficient JOIN order for FTS queries
-			let searchSql;
-			if (query && ftsQuery) {
-				// For FTS queries, start with FTS table to leverage indexing
-				searchSql = sql`
+		let searchSql;
+		if (query && ftsQuery) {
+			searchSql = sql`
 					SELECT m.*
 					FROM movie_fts mf
 					JOIN movies m ON m.numericId = mf.rowid AND ${whereClause.replace('m.', '')}
@@ -379,16 +377,15 @@ async function performSearchQuery(
 					${orderByClause.replace('m.', '').replace('ORDER BY', 'ORDER BY mf.rank,')}
 					LIMIT ${limit} OFFSET ${offset}
 				`;
-			} else {
-				// For non-FTS queries, use standard approach
-				searchSql = sql`
+		} else {
+			searchSql = sql`
 					SELECT m.*
 					FROM movies m
 					${whereClause}
 					${orderByClause}
 					LIMIT ${limit} OFFSET ${offset}
 				`;
-			}
+		}
 
 		const rows = (await db.all(searchSql)) as any[];
 		return await mapRowsToSummaries(rows);

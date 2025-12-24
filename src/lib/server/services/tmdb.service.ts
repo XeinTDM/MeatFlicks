@@ -597,7 +597,13 @@ export async function searchTmdbMoviesByPeople(
 	roles: string[],
 	limit: number
 ): Promise<LibraryMovie[]> {
-	const cacheKey = buildCacheKey('tmdb', 'movies-by-people', personIds.join(','), roles.join(','), limit);
+	const cacheKey = buildCacheKey(
+		'tmdb',
+		'movies-by-people',
+		personIds.join(','),
+		roles.join(','),
+		limit
+	);
 
 	return withCache(cacheKey, LIST_TTL, async () => {
 		const params: Record<string, any> = {
@@ -606,15 +612,12 @@ export async function searchTmdbMoviesByPeople(
 			sort_by: 'popularity.desc'
 		};
 
-		// Add cast parameter if we have person IDs
 		if (personIds.length > 0) {
 			params.with_cast = personIds.join(',');
 		}
 
-		// Add crew parameter if we have specific roles
 		if (roles.length > 0) {
 			params.with_crew = personIds.join(',');
-			// TMDB doesn't have direct role filtering in discover, but we can filter later
 		}
 
 		const rawData = await tmdbRateLimiter.schedule('tmdb-movies-by-people', () =>
@@ -625,8 +628,6 @@ export async function searchTmdbMoviesByPeople(
 
 		const data = TmdbTrendingResponseSchema.parse(rawData);
 		const movies = data.results.slice(0, limit);
-
-		// Convert to LibraryMovie format
 		const libraryMovies: LibraryMovie[] = [];
 
 		for (const movie of movies) {
