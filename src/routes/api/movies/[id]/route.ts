@@ -326,7 +326,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			cast: extras.cast,
 			trailerUrl: extras.trailerUrl,
 			productionCompanies: extras.productionCompanies,
-			productionCountries: extras.productionCountries
+			productionCountries: extras.productionCountries,
+			voteCount: extras.voteCount
 		};
 
 		return json(payload);

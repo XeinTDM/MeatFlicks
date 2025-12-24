@@ -106,8 +106,14 @@ async function searchMoviesByPeople(
 			return syncedResults;
 		}
 
-		// TODO: Implement TMDB movie fetch based on people
-		return [];
+		try {
+			const { searchTmdbMoviesByPeople } = await import('$lib/server/services/tmdb.service');
+			const tmdbResults = await searchTmdbMoviesByPeople(personIds, roles, limit);
+			return tmdbResults;
+		} catch (tmdbError) {
+			console.error('TMDB search failed:', tmdbError);
+			return [];
+		}
 	} catch (error) {
 		console.error('Error searching movies by people:', error);
 		return [];

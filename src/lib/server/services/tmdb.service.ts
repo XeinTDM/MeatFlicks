@@ -33,6 +33,7 @@ export interface TmdbMovieExtras {
 	releaseDate: string | null;
 	productionCompanies: { id: number; name: string; logoPath: string | null }[];
 	productionCountries: { iso: string; name: string }[];
+	voteCount: number | null;
 }
 
 export interface TmdbMovieGenre {
@@ -329,6 +330,7 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 				posterPath: buildImageUrl(data.poster_path, env.TMDB_POSTER_SIZE),
 				backdropPath: buildImageUrl(data.backdrop_path, env.TMDB_BACKDROP_SIZE),
 				rating: data.vote_average || null,
+				voteCount: data.vote_count || null,
 				genres: data.genres || [],
 				productionCompanies: (data.production_companies || []).map((c) => ({
 					id: c.id,
@@ -412,7 +414,8 @@ export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExt
 		runtime: details.runtime,
 		releaseDate: details.releaseDate,
 		productionCompanies: details.productionCompanies,
-		productionCountries: details.productionCountries
+		productionCountries: details.productionCountries,
+		voteCount: details.voteCount
 	};
 }
 
@@ -586,5 +589,71 @@ export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPers
 			}
 			throw error;
 		}
+	});
+}
+
+export async function searchTmdbMoviesByPeople(
+	personIds: number[],
+	roles: string[],
+	limit: number
+): Promise<LibraryMovie[]> {
+	const cacheKey = buildCacheKey('tmdb', 'movies-by-people', personIds.join(','), roles.join(','), limit);
+
+	return withCache(cacheKey, LIST_TTL, async () => {
+		const params: Record<string, any> = {
+			language: 'en-US',
+			include_adult: 'false',
+			sort_by: 'popularity.desc'
+		};
+
+		// Add cast parameter if we have person IDs
+		if (personIds.length > 0) {
+			params.with_cast = personIds.join(',');
+		}
+
+		// Add crew parameter if we have specific roles
+		if (roles.length > 0) {
+			params.with_crew = personIds.join(',');
+			// TMDB doesn't have direct role filtering in discover, but we can filter later
+		}
+
+		const rawData = await tmdbRateLimiter.schedule('tmdb-movies-by-people', () =>
+			api('/discover/movie', {
+				query: params
+			})
+		);
+
+		const data = TmdbTrendingResponseSchema.parse(rawData);
+		const movies = data.results.slice(0, limit);
+
+		// Convert to LibraryMovie format
+		const libraryMovies: LibraryMovie[] = [];
+
+		for (const movie of movies) {
+			const title = movie.title || movie.original_title || 'Untitled';
+			const releaseDate = movie.release_date || null;
+
+			libraryMovies.push({
+				id: String(movie.id),
+				tmdbId: movie.id,
+				title,
+				overview: movie.overview || null,
+				posterPath: buildImageUrl(movie.poster_path, env.TMDB_POSTER_SIZE),
+				backdropPath: buildImageUrl(movie.backdrop_path, env.TMDB_BACKDROP_SIZE),
+				releaseDate,
+				rating: movie.vote_average || 0,
+				genres: [],
+				media_type: 'movie',
+				is4K: false,
+				isHD: true,
+				trailerUrl: null,
+				imdbId: null,
+				canonicalPath: `/movie/${movie.id}`,
+				addedAt: null,
+				mediaType: 'movie'
+			});
+		}
+
+		return libraryMovies;
 	});
 }

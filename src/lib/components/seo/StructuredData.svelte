@@ -20,6 +20,7 @@
 			imdbId?: string | null;
 			seasonCount?: number | null;
 			episodeCount?: number | null;
+			voteCount?: number | null;
 		};
 		mediaType: MediaType;
 		canonicalUrl?: string;
@@ -43,7 +44,7 @@
 					ratingValue: media.rating.toFixed(1),
 					bestRating: '10',
 					worstRating: '0',
-					ratingCount: 1000 // TODO: Replace with actual TMDB vote_count
+					ratingCount: media.voteCount || 1000
 				}
 			: null;
 

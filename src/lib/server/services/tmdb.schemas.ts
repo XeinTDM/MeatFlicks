@@ -40,6 +40,7 @@ export const TmdbMovieSchema = z.object({
 	poster_path: z.string().nullable().optional(),
 	backdrop_path: z.string().nullable().optional(),
 	vote_average: z.number().nullable().optional(),
+	vote_count: z.number().nullable().optional(),
 	release_date: z.string().nullable().optional(),
 	runtime: z.number().nullable().optional(),
 	genres: z.array(TmdbGenreSchema).optional(),
@@ -113,7 +114,14 @@ export const TmdbTvSchema = z.object({
 });
 
 export const TmdbTrendingResultSchema = z.object({
-	id: z.number()
+	id: z.number(),
+	title: z.string().optional(),
+	original_title: z.string().optional(),
+	release_date: z.string().nullable().optional(),
+	overview: z.string().nullable().optional(),
+	poster_path: z.string().nullable().optional(),
+	backdrop_path: z.string().nullable().optional(),
+	vote_average: z.number().nullable().optional()
 });
 
 export const TmdbTrendingResponseSchema = z.object({

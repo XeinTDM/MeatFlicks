@@ -45,6 +45,7 @@
 		productionCompanies?: { id: number; name: string; logoPath: string | null }[];
 		productionCountries?: { iso: string; name: string }[];
 		originCountry?: string[];
+		voteCount?: number | null;
 	};
 
 	type Episode = {
