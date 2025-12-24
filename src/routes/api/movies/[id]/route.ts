@@ -39,6 +39,18 @@ const MOVIE_CACHE_TTL_SECONDS = clampTtl(
 		CACHE_TTL_LONG_SECONDS
 );
 
+const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
+	if (/^tt\d{7,}$/i.test(identifier)) {
+		return 'imdb';
+	}
+
+	if (/^\d+$/.test(identifier)) {
+		return 'tmdb';
+	}
+
+	return 'id';
+};
+
 type MovieLookup = { kind: 'id'; value: string } | { kind: 'tmdb'; value: number };
 
 const loadMovie = async (lookup: MovieLookup): Promise<MovieRecord | null> => {
@@ -238,14 +250,19 @@ type MovieWithDetails = MovieRecord & {
 
 async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | null> {
 	if (!isValidTmdbId(tmdbId)) {
+		console.log(`[API] Invalid TMDB ID: ${tmdbId}`);
 		return null;
 	}
 
+	console.log(`[API] Fetching TMDB details for ID: ${tmdbId}`);
 	const details = await fetchTmdbMovieDetails(tmdbId);
 
 	if (!details.found) {
+		console.log(`[API] TMDB movie not found for ID: ${tmdbId}`);
 		return null;
 	}
+
+	console.log(`[API] TMDB movie found: ${details.title} (${tmdbId})`);
 
 	const releaseDate = details.releaseDate ? details.releaseDate.trim() : null;
 	const rating = details.rating ?? null;
@@ -294,7 +311,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	);
 
 	const movieIdentifier = pathParams.id;
-	const queryMode = (queryParams as { by?: 'id' | 'tmdb' | 'imdb' }).by ?? 'id';
+	const queryMode = (queryParams as { by?: 'id' | 'tmdb' | 'imdb' }).by ?? detectQueryMode(movieIdentifier);
+
+	console.log(`[API] Looking up movie: ${movieIdentifier}, detected mode: ${queryMode}`);
 
 	try {
 		const { movie, tmdbId } = await resolveMovieByIdentifier(movieIdentifier, queryMode);
@@ -304,30 +323,45 @@ export const GET: RequestHandler = async ({ params, url }) => {
 				? Number.parseInt(movieIdentifier, 10)
 				: null;
 
-		if (!movie || !isValidTmdbId(effectiveTmdbId)) {
+		if (!movie) {
+			// Movie not in DB at all - try fallback
+			console.log(`[API] Movie not found in DB, trying fallback for TMDB ID: ${effectiveTmdbId}`);
 			const fallbackMovie = isValidTmdbId(effectiveTmdbId)
 				? await resolveFallbackMovie(effectiveTmdbId)
 				: null;
 
 			if (!fallbackMovie) {
+				console.log(`[API] Fallback failed for TMDB ID: ${effectiveTmdbId}`);
 				throw new NotFoundError('Movie not found');
 			}
 
+			console.log(`[API] Fallback succeeded for TMDB ID: ${effectiveTmdbId}`);
 			return json(fallbackMovie);
 		}
 
-		const extras = await fetchTmdbMovieExtras(effectiveTmdbId);
+		// Movie exists in DB - return it even if TMDB data is unavailable
+		console.log(`[API] Returning movie from DB: ${movie.id} (TMDB ID: ${movie.tmdbId})`);
+
+		// Try to get TMDB extras, but don't fail if unavailable
+		let extras = null;
+		if (isValidTmdbId(effectiveTmdbId)) {
+			try {
+				extras = await fetchTmdbMovieExtras(effectiveTmdbId);
+			} catch (error) {
+				console.log(`[API] Failed to fetch TMDB extras for ${effectiveTmdbId}, using DB data only`);
+			}
+		}
 
 		const payload = {
 			...movie,
-			releaseDate: movie.releaseDate ?? (extras.releaseDate ? new Date(extras.releaseDate) : null),
-			durationMinutes: movie.durationMinutes ?? extras.runtime ?? null,
-			imdbId: extras.imdbId,
-			cast: extras.cast,
-			trailerUrl: extras.trailerUrl,
-			productionCompanies: extras.productionCompanies,
-			productionCountries: extras.productionCountries,
-			voteCount: extras.voteCount
+			releaseDate: movie.releaseDate ?? (extras?.releaseDate ? new Date(extras.releaseDate) : null),
+			durationMinutes: movie.durationMinutes ?? extras?.runtime ?? null,
+			imdbId: extras?.imdbId ?? movie.imdbId ?? null,
+			cast: extras?.cast ?? [],
+			trailerUrl: extras?.trailerUrl ?? movie.trailerUrl ?? null,
+			productionCompanies: extras?.productionCompanies ?? [],
+			productionCountries: extras?.productionCountries ?? [],
+			voteCount: extras?.voteCount ?? null
 		};
 
 		return json(payload);

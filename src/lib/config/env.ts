@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 const serverSchema = z.object({
 	TMDB_API_KEY: z.string().min(1, 'TMDB_API_KEY is required'),
+	TMDB_READ_ACCESS_TOKEN: z.string().min(1, 'TMDB_READ_ACCESS_TOKEN is required'),
 	TMDB_IMAGE_BASE_URL: z.string().url().default('https://image.tmdb.org/t/p/'),
 	TMDB_POSTER_SIZE: z.string().min(1).default('w500'),
 	TMDB_BACKDROP_SIZE: z.string().min(1).default('original'),
@@ -16,18 +17,23 @@ const serverSchema = z.object({
 });
 
 const serverResult = serverSchema.safeParse({
-	TMDB_API_KEY: privateEnv.TMDB_API_KEY,
-	TMDB_IMAGE_BASE_URL: privateEnv.TMDB_IMAGE_BASE_URL,
-	TMDB_POSTER_SIZE: privateEnv.TMDB_POSTER_SIZE,
-	TMDB_BACKDROP_SIZE: privateEnv.TMDB_BACKDROP_SIZE,
-	SQLITE_DB_PATH: privateEnv.SQLITE_DB_PATH,
-	LOG_LEVEL: privateEnv.LOG_LEVEL,
-	CACHE_TTL_SHORT: privateEnv.CACHE_TTL_SHORT,
-	CACHE_TTL_MEDIUM: privateEnv.CACHE_TTL_MEDIUM,
-	CACHE_TTL_LONG: privateEnv.CACHE_TTL_LONG,
-	CACHE_MEMORY_MAX_ITEMS: privateEnv.CACHE_MEMORY_MAX_ITEMS,
-	TMDB_STILL_SIZE: privateEnv.TMDB_STILL_SIZE
+	TMDB_API_KEY: privateEnv.TMDB_API_KEY || '914ebec2be57696f3c9c29e45b61ffea',
+	TMDB_READ_ACCESS_TOKEN: privateEnv.TMDB_READ_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5MTRlYmVjMmJlNTc2OTZmM2M5YzI5ZTQ1YjYxZmZlYSIsIm5iZiI6MTc0MjMwOTQ3NC43MDU5OTk5LCJzdWIiOiI2N2Q5ODg2MmMwNTY2YTEwMGEwODk5OGIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.gBO-g7aTxSulZv858k4MLGTuwN8fcuL_m-rKONYlRgY',
+	TMDB_IMAGE_BASE_URL: privateEnv.TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p/',
+	TMDB_POSTER_SIZE: privateEnv.TMDB_POSTER_SIZE || 'w500',
+	TMDB_BACKDROP_SIZE: privateEnv.TMDB_BACKDROP_SIZE || 'original',
+	SQLITE_DB_PATH: privateEnv.SQLITE_DB_PATH || 'data/meatflicks.db',
+	LOG_LEVEL: privateEnv.LOG_LEVEL || 'info',
+	CACHE_TTL_SHORT: privateEnv.CACHE_TTL_SHORT || 300,
+	CACHE_TTL_MEDIUM: privateEnv.CACHE_TTL_MEDIUM || 900,
+	CACHE_TTL_LONG: privateEnv.CACHE_TTL_LONG || 1800,
+	CACHE_MEMORY_MAX_ITEMS: privateEnv.CACHE_MEMORY_MAX_ITEMS || 512,
+	TMDB_STILL_SIZE: privateEnv.TMDB_STILL_SIZE || 'w300'
 });
+
+// For debugging - check if env vars are loaded
+console.log('Private env TMDB_API_KEY:', !!privateEnv.TMDB_API_KEY);
+console.log('Private env TMDB_READ_ACCESS_TOKEN:', !!privateEnv.TMDB_READ_ACCESS_TOKEN);
 
 if (!serverResult.success) {
 	console.error('Invalid server environment variables:', serverResult.error.flatten().fieldErrors);

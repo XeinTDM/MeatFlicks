@@ -30,36 +30,11 @@ const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
 	genres: movie.genres ?? []
 });
 
-const tmdbDetailsToLibraryMovie = (details: TmdbMovieDetails): LibraryMovie => ({
-	id: details.tmdbId
-		? String(details.tmdbId)
-		: `tmdb-fallback-${Math.random().toString(36).slice(2)}`,
-	tmdbId: details.tmdbId,
-	title: details.title ?? 'Untitled',
-	overview: details.overview ?? null,
-	posterPath: details.posterPath ?? null,
-	backdropPath: details.backdropPath ?? null,
-	releaseDate: details.releaseDate ?? null,
-	rating: details.rating ?? null,
-	durationMinutes: details.runtime ?? null,
-	is4K: false,
-	isHD: true,
-	collectionId: null,
-	genres: details.genres.map((genre: TmdbMovieGenre) => ({ id: genre.id, name: genre.name })),
-	cast: details.cast,
-	trailerUrl: details.trailerUrl ?? null,
-	imdbId: details.imdbId ?? null,
-	canonicalPath: details.imdbId
-		? `/movie/${details.imdbId}`
-		: details.tmdbId
-			? `/movie/${details.tmdbId}`
-			: null,
-	addedAt: null,
-	mediaType: 'movie'
-});
+
 
 const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | null> => {
 	try {
+		logger.info('[library][fallback] Starting fallback library build');
 		const ids = await fetchTrendingMovieIds(limit);
 		const detailsList = await Promise.all(
 			ids.map(async (id) => {
@@ -75,13 +50,75 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 			})
 		);
 
-		const fallbackMovies = detailsList
-			.filter((details): details is TmdbMovieDetails => Boolean(details?.found))
-			.map((details) => tmdbDetailsToLibraryMovie(details));
+		// Store movies in database first
+		const { upsertMovieWithGenres } = await import('$lib/server/db/mutations');
+		const { db } = await import('$lib/server/db/client');
+		const { movies } = await import('$lib/server/db/schema');
+		const { eq } = await import('drizzle-orm');
+		const storedMovies: MovieSummary[] = [];
 
-		if (fallbackMovies.length === 0) {
+		for (const details of detailsList.filter((d): d is TmdbMovieDetails => Boolean(d?.found))) {
+			try {
+				const genreNames = Array.from(
+					new Set(details.genres.map((genre) => genre.name).filter(Boolean))
+				);
+
+				logger.info({ tmdbId: details.tmdbId, title: details.title }, '[library][fallback] Storing movie');
+
+				const storedMovie = await upsertMovieWithGenres({
+					tmdbId: details.tmdbId,
+					title: details.title ?? 'Untitled',
+					overview: details.overview ?? null,
+					posterPath: details.posterPath ?? null,
+					backdropPath: details.backdropPath ?? null,
+					releaseDate: details.releaseDate ?? null,
+					rating: details.rating ?? null,
+					durationMinutes: details.runtime ?? null,
+					is4K: false,
+					isHD: true,
+					genreNames
+				});
+
+				if (storedMovie) {
+					logger.info({ movieId: storedMovie.id, imdbId: details.imdbId }, '[library][fallback] Movie stored, updating IMDB ID');
+
+					// Update with IMDB ID and trailer URL
+					await db
+						.update(movies)
+						.set({
+							imdbId: details.imdbId,
+							trailerUrl: details.trailerUrl,
+							updatedAt: Date.now()
+						})
+						.where(eq(movies.id, storedMovie.id));
+
+					storedMovies.push(storedMovie);
+				} else {
+					logger.warn({ tmdbId: details.tmdbId }, '[library][fallback] Failed to store movie');
+				}
+			} catch (error) {
+				logger.warn({ tmdbId: details.tmdbId, error }, '[library][fallback] failed to store movie');
+			}
+		}
+
+		if (storedMovies.length === 0) {
 			return null;
 		}
+
+		// Convert to library movies and set canonical paths
+		const fallbackMovies = storedMovies.map((movie) => {
+			const libraryMovie = toLibraryMovie(movie);
+			// Set canonical path based on TMDB ID first, then IMDB ID
+			const canonicalPath = movie.tmdbId
+				? `/movie/${movie.tmdbId}`
+				: movie.imdbId
+					? `/movie/${movie.imdbId}`
+					: `/movie/${movie.id}`;
+			return {
+				...libraryMovie,
+				canonicalPath
+			};
+		});
 
 		return {
 			trendingMovies: fallbackMovies,
@@ -133,7 +170,7 @@ const attachIdentifiers = (
 	const extras = movie.tmdbId ? (extrasMap.get(movie.tmdbId) ?? null) : null;
 	const imdbId = extras?.imdbId ?? null;
 	const trailerUrl = extras?.trailerUrl ?? movie.trailerUrl ?? null;
-	const canonicalPath = imdbId ? '/movie/' + imdbId : '/movie/' + (movie.tmdbId ?? movie.id);
+	const canonicalPath = movie.tmdbId ? '/movie/' + movie.tmdbId : '/movie/' + (imdbId ?? movie.id);
 
 	return {
 		...movie,
@@ -144,8 +181,9 @@ const attachIdentifiers = (
 };
 
 async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
+	// Temporarily force fallback by returning empty results
 	const [trendingRaw, collections, genres] = await Promise.all([
-		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT),
+		Promise.resolve([]), // Force empty trending movies
 		libraryRepository.listCollections(),
 		libraryRepository.listGenres()
 	]);

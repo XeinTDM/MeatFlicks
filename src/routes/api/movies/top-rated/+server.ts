@@ -4,6 +4,7 @@ import { libraryRepository } from '$lib/server';
 import { z } from 'zod';
 import { validateQueryParams } from '$lib/server/validation';
 import { errorHandler } from '$lib/server';
+import type { LibraryMovie } from '$lib/types/library';
 
 const topRatedQueryParamsSchema = z.object({
 	limit: z.coerce.number().int().positive().max(100).default(20),
@@ -19,7 +20,16 @@ export const GET: RequestHandler = async ({ url }) => {
 			{ page: Math.floor(queryParams.offset / queryParams.limit) + 1, pageSize: queryParams.limit }
 		);
 
-		return json({ movies: movies.items, total: movies.pagination.totalItems });
+		// Set canonical paths for consistency
+		const moviesWithPaths = movies.items.map((movie): LibraryMovie => ({
+			...movie,
+			canonicalPath: movie.tmdbId ? `/movie/${movie.tmdbId}` : `/movie/${movie.id}`,
+			releaseDate: movie.releaseDate ?? null,
+			durationMinutes: movie.durationMinutes ?? null,
+			genres: movie.genres ?? []
+		}));
+
+		return json({ movies: moviesWithPaths, total: movies.pagination.totalItems });
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);
 		return json(body, { status });
