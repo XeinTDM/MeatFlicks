@@ -71,7 +71,7 @@
 				</div>
 			</SelectTrigger>
 			<SelectContent class="border-white/20 bg-black/95">
-				{#each sortedQualities as quality}
+				{#each sortedQualities as quality (quality.label)}
 					<SelectItem value={quality.label} class="text-white hover:bg-white/10 focus:bg-white/10">
 						<div class="flex w-full items-center justify-between">
 							<span>{getQualityDisplayName(quality)}</span>

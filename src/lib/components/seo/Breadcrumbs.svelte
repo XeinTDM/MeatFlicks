@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import { ChevronRight, Home } from '@lucide/svelte';
 
 	type BreadcrumbItem = {
@@ -42,7 +41,7 @@
 		itemscope
 		itemtype="https://schema.org/BreadcrumbList"
 	>
-		{#each breadcrumbItems as item, index}
+		{#each breadcrumbItems as item, index (item.href)}
 			<li
 				itemprop="itemListElement"
 				itemscope

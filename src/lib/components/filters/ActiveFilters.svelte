@@ -97,7 +97,7 @@
 	<div class="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/30 p-3">
 		<span class="text-sm font-medium text-foreground">Active filters:</span>
 
-		{#each activeFilterChips as chip}
+		{#each activeFilterChips as chip (chip.key + chip.value)}
 			<Badge variant="secondary" class="gap-1.5 pr-1">
 				{chip.label}
 				<button

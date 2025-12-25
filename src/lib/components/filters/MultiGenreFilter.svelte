@@ -38,7 +38,7 @@
 	<!-- Selected genres display -->
 	{#if selectedGenres.length > 0}
 		<div class="flex flex-wrap items-center gap-2">
-			{#each selectedGenres as genre}
+			{#each selectedGenres as genre (genre)}
 				<Badge variant="secondary" class="gap-1.5 pr-1">
 					{genre}
 					<button
@@ -74,7 +74,7 @@
 
 	<!-- Genre grid -->
 	<div class="grid grid-cols-2 gap-2">
-		{#each availableGenres as genre}
+		{#each availableGenres as genre (genre.id)}
 			{@const selected = isGenreSelected(genre.name)}
 			<button
 				onclick={() => toggleGenre(genre.name)}

@@ -180,7 +180,7 @@
 				</div>
 			{:else if results.length > 0}
 				<ul class="space-y-1">
-					{#each results as person}
+					{#each results as person (person.id)}
 						<li>
 							<button
 								onclick={() => handlePersonSelect(person)}

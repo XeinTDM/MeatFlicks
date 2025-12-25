@@ -50,7 +50,7 @@
 			</span>
 		</SelectTrigger>
 		<SelectContent>
-			{#each sortOptions as option}
+			{#each sortOptions as option (option.value)}
 				<SelectItem value={option.value}>{option.label}</SelectItem>
 			{/each}
 		</SelectContent>

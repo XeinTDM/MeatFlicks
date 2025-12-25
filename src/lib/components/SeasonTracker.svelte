@@ -3,7 +3,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Progress } from '$lib/components/ui/progress';
-	import { ChevronDown, ChevronUp, Check, Clock, Play } from '@lucide/svelte';
+	import { ChevronDown, ChevronUp, Check, Clock } from '@lucide/svelte';
 	import EpisodeTracker from './EpisodeTracker.svelte';
 	import type { Season, SeasonWatchStatus, Episode, EpisodeWatchStatus } from '$lib/types/tv-show';
 
@@ -130,7 +130,7 @@
 	{#if expanded}
 		<CardContent class="pt-0">
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each episodes as episode}
+				{#each episodes as episode (episode.id)}
 					<EpisodeTracker
 						{episode}
 						watchStatus={episodeWatchStatuses[episode.id] || null}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Share2, Check, Copy } from '@lucide/svelte';
+	import { Share2, Check } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { onMount } from 'svelte';
 

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Clock } from '@lucide/svelte';
 	import { RUNTIME_PRESETS, type RuntimePreset } from '$lib/types/filters';
 
@@ -62,7 +61,7 @@
 
 	<!-- Preset buttons -->
 	<div class="grid grid-cols-1 gap-2">
-		{#each Object.entries(RUNTIME_PRESETS) as [key, preset]}
+		{#each Object.entries(RUNTIME_PRESETS) as [key, preset] (key)}
 			<Button
 				variant={selectedPreset === key ? 'default' : 'outline'}
 				size="sm"

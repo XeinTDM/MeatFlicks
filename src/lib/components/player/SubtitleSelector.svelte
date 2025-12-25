@@ -65,7 +65,7 @@
 					</div>
 				</SelectItem>
 
-				{#each sortedSubtitles as subtitle}
+				{#each sortedSubtitles as subtitle (subtitle.id)}
 					<SelectItem value={subtitle.id} class="text-white hover:bg-white/10 focus:bg-white/10">
 						<div class="flex w-full items-center justify-between">
 							<span>{subtitle.label}</span>

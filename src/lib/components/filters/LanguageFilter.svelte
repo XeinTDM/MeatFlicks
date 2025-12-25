@@ -45,7 +45,7 @@
 			<p class="text-sm">Select language</p>
 		</SelectTrigger>
 		<SelectContent>
-			{#each LANGUAGE_OPTIONS as lang}
+			{#each LANGUAGE_OPTIONS as lang (lang.code)}
 				<SelectItem value={lang.code}>
 					{lang.name}
 				</SelectItem>

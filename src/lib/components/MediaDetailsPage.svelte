@@ -2,13 +2,18 @@
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 	import type { StreamingSource, VideoQuality, SubtitleTrack } from '$lib/streaming';
 	import { Button } from '$lib/components/ui/button';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { Card } from '$lib/components/ui/card';
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MovieScrollContainer } from '$lib/components';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
-	import { PictureInPicture } from '@lucide/svelte';
+	import { PictureInPicture, RefreshCw, MonitorPlay } from '@lucide/svelte';
 
 	type MediaType = 'movie' | 'tv';
 
@@ -244,7 +249,11 @@
 					}
 					break;
 				case 'i':
-					if (currentDisplayPlayer && 'pictureInPictureEnabled' in document) {
+					if (
+						currentDisplayPlayer &&
+						typeof document !== 'undefined' &&
+						'pictureInPictureEnabled' in document
+					) {
 						event.preventDefault();
 						togglePictureInPicture();
 					}
@@ -505,9 +514,8 @@
 		}
 	}
 
-	function handleSeasonChange(e: Event) {
-		const target = e.target as HTMLSelectElement;
-		selectedSeason = Number(target.value);
+	function handleSeasonChange(value: string) {
+		selectedSeason = Number(value);
 		selectedEpisode = 1;
 		hasRequestedPlayback = false;
 		currentStreaming = { source: null, resolutions: [] };
@@ -593,7 +601,7 @@
 	}
 
 	function togglePictureInPicture() {
-		if (!iframeElement) return;
+		if (!iframeElement || typeof document === 'undefined') return;
 
 		if (document.pictureInPictureElement) {
 			document.exitPictureInPicture();
@@ -721,11 +729,48 @@
 					/>
 				{/if}
 				<div class="absolute inset-0 rounded-lg bg-gradient-to-t from-black to-transparent"></div>
+				{#if movie.trailerUrl}
+					<div class="absolute inset-0 flex items-center justify-center">
+						<button
+							onclick={() => window.open(movie.trailerUrl!, '_blank', 'noopener,noreferrer')}
+							class="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-all hover:scale-110 hover:bg-white/30"
+							aria-label="Play trailer"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="32"
+								height="32"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								class="text-white"
+							>
+								<path d="M8 5v14l11-7z" />
+							</svg>
+						</button>
+					</div>
+				{/if}
 				<div class="absolute bottom-4 left-4">
-					<h1 class="text-5xl font-bold text-foreground">{movie.title}</h1>
-					<p class="text-xl text-gray-300">
-						{releaseYear} | {runtimeLabel}
-					</p>
+					<div class="flex flex-col gap-2">
+						<h1 class="text-5xl font-bold text-foreground">{movie.title}</h1>
+						<div class="flex flex-wrap items-center gap-4">
+							<p class="text-xl text-gray-300">
+								{releaseYear} | {movie?.durationMinutes
+									? `${movie.durationMinutes} min`
+									: mediaType === 'tv'
+										? 'Runtime varies'
+										: 'N/A'}
+							</p>
+							{#if movie.genres?.length}
+								<div class="flex flex-wrap gap-2">
+									{#each movie.genres as genre (genre.id)}
+										<Badge variant="secondary">
+											{genre.name}
+										</Badge>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
 				</div>
 			</div>
 
@@ -826,84 +871,79 @@
 				</div>
 
 				{#if !isTheaterMode}
-					<div class="mb-6 flex items-center justify-end gap-6 text-sm text-muted-foreground">
-						{#if mediaType === 'tv'}
-							<label
-								class="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
-							>
-								<input
-									type="checkbox"
-									checked={isAutoPlay}
-									onchange={(e) => (isAutoPlay = e.currentTarget.checked)}
-									class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
-								/>
-								<span>Auto-play Next</span>
-							</label>
+					<div
+						class="mb-6 flex flex-wrap items-center justify-between gap-6 text-sm text-muted-foreground"
+					>
+						{#if providerResolutions.length}
+							<div class="flex flex-wrap gap-2">
+								{#each providerResolutions as resolution (resolution.providerId)}
+									<Button
+										variant={selectedProvider === resolution.providerId ? 'default' : 'outline'}
+										class="rounded-full"
+										onclick={() => handleProviderSelectionChange(resolution.providerId)}
+									>
+										{resolution.label}
+									</Button>
+								{/each}
+								{#if hasRequestedPlayback}
+									<Button
+										variant="outline"
+										size="icon"
+										onclick={handlePlayClick}
+										disabled={isResolving}
+										class="ml-auto"
+										title="Reload Player"
+									>
+										<RefreshCw class="h-5 w-5" />
+									</Button>
+								{/if}
+							</div>
 						{/if}
-						<button
-							onclick={togglePictureInPicture}
-							class="flex items-center gap-2 transition-colors hover:text-foreground"
-							disabled={!('pictureInPictureEnabled' in document)}
-						>
-							<PictureInPicture class="h-4 w-4" />
-							Picture-in-Picture
-						</button>
-						<button
-							onclick={toggleTheaterMode}
-							class="flex items-center gap-2 transition-colors hover:text-foreground"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><rect width="20" height="14" x="2" y="3" rx="2" /><path d="M8 21h8" /><path
-									d="M12 17v4"
-								/></svg
+						<div class="flex flex-wrap items-center gap-6">
+							{#if playbackUrl}
+								<Button variant="secondary" size="sm" onclick={handleOpenInNewTab}
+									>Open in New Tab</Button
+								>
+							{/if}
+							{#if mediaType === 'tv'}
+								<label
+									class="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
+								>
+									<Checkbox
+										bind:checked={isAutoPlay}
+										class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
+									/>
+									<span>Auto-play Next</span>
+								</label>
+							{/if}
+							<button
+								onclick={togglePictureInPicture}
+								class="flex items-center gap-2 transition-colors hover:text-foreground"
+								disabled={typeof document === 'undefined' ||
+									!('pictureInPictureEnabled' in document)}
 							>
-							Theater Mode
-						</button>
+								<PictureInPicture class="h-4 w-4" />
+								Picture-in-Picture
+							</button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={toggleTheaterMode}
+								class="flex items-center gap-2 transition-colors hover:text-foreground"
+							>
+								<MonitorPlay class="h-4 w-4" />
+								Theater Mode
+							</Button>
+						</div>
 					</div>
 				{/if}
 			{/if}
 
 			{#if providerResolutions.length}
 				<section class="mb-6">
-					<h3 class="mb-3 text-xl font-semibold">Choose Provider</h3>
-					<p class="mb-2 text-sm text-muted-foreground">
-						Pick a streaming API and then press play to load the player.
-					</p>
-
-					<div class="flex flex-wrap gap-2">
-						{#each providerResolutions as resolution}
-							<Button
-								variant={selectedProvider === resolution.providerId ? 'default' : 'outline'}
-								class="rounded-full"
-								onclick={() => handleProviderSelectionChange(resolution.providerId)}
-							>
-								{resolution.label}
-							</Button>
-						{/each}
-					</div>
-
 					{#if resolveError}
 						<p class="mt-2 text-sm text-destructive">{resolveError}</p>
 					{/if}
-
-					<div class="mt-4 flex items-center gap-3">
-						<Button onclick={handlePlayClick} disabled={isResolving}>
-							{isResolving ? 'Loading…' : hasRequestedPlayback ? 'Reload Player' : 'Play'}
-						</Button>
-
-						{#if playbackUrl}
-							<Button variant="secondary" onclick={handleOpenInNewTab}>Open in New Tab</Button>
-						{/if}
-					</div>
 				</section>
 			{/if}
 
@@ -911,28 +951,39 @@
 				<section class="mb-8">
 					<div class="mb-4 flex items-center justify-between">
 						<h3 class="text-xl font-semibold">Episodes</h3>
-						<select
-							class="rounded-md border border-border bg-background px-3 py-1 text-sm"
-							onchange={handleSeasonChange}
-							value={selectedSeason}
+						<Select
+							type="single"
+							value={selectedSeason.toString()}
+							onValueChange={handleSeasonChange}
 						>
-							{#each movie.seasons as season}
-								<option value={season.seasonNumber}>
-									{season.name} ({season.episodeCount} Episodes)
-								</option>
-							{/each}
-						</select>
+							<SelectTrigger class="w-48" aria-label="Select season">
+								<span data-slot="select-value">
+									{#if movie.seasons?.find((s) => s.seasonNumber === selectedSeason)}
+										{movie.seasons.find((s) => s.seasonNumber === selectedSeason)?.name} ({movie.seasons.find(
+											(s) => s.seasonNumber === selectedSeason
+										)?.episodeCount} Episodes)
+									{/if}
+								</span>
+							</SelectTrigger>
+							<SelectContent>
+								{#each movie.seasons as season (season.seasonNumber)}
+									<SelectItem value={season.seasonNumber.toString()}>
+										{season.name} ({season.episodeCount} Episodes)
+									</SelectItem>
+								{/each}
+							</SelectContent>
+						</Select>
 					</div>
 
 					{#if isLoadingEpisodes}
 						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 							{#each Array(5) as _}
-								<div class="aspect-video animate-pulse rounded-md bg-muted"></div>
+								<Skeleton class="aspect-video rounded-md" />
 							{/each}
 						</div>
 					{:else}
 						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-							{#each episodesList as episode}
+							{#each episodesList as episode (episode.id)}
 								<button
 									class="group relative aspect-video overflow-hidden rounded-md border transition-all hover:border-primary {selectedEpisode ===
 									episode.episodeNumber
@@ -962,50 +1013,48 @@
 				</section>
 			{/if}
 
-			<section class="grid gap-6 lg:grid-cols-[300px,1fr]">
+			<section class="grid gap-6 lg:grid-cols-[70%,30%]">
 				<div class="space-y-4">
-					{#if movie.posterPath}
-						<img src={movie.posterPath} alt={movie.title} class="w-full rounded-lg object-cover" />
-					{/if}
-
 					<div class="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4">
-						<h2 class="text-xl font-semibold">Overview</h2>
-						<p class="text-sm text-muted-foreground">
-							{movie.overview ?? 'No overview available.'}
-						</p>
+						<div class="flex flex-col gap-4 lg:flex-row">
+							<div class="flex-shrink-0 space-y-2 rounded-lg lg:w-[70%]">
+								{#if movie.cast?.length}
+									<h2 class="mb-4 text-xl font-semibold">Cast</h2>
+									<ul class="grid gap-3 md:grid-cols-2">
+										{#each movie.cast as member (member.id)}
+											<li
+												class="rounded-md border border-border/40 bg-background/80 px-3 py-2 transition-colors hover:bg-muted/50"
+											>
+												<a href={`/person/${member.id}`} class="block">
+													<p class="font-semibold text-foreground hover:underline">{member.name}</p>
+													<p class="text-xs text-muted-foreground">{member.character}</p>
+												</a>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+							<div class="flex flex-col items-center lg:w-[30%] lg:items-end">
+								{#if movie.posterPath}
+									<img
+										src={movie.posterPath}
+										alt={movie.title}
+										class="mb-4 w-full max-w-sm rounded-lg object-cover"
+									/>
+								{/if}
+								<div class="w-full max-w-sm">
+									<h2 class="text-xl font-semibold">Overview</h2>
+									<p class="text-sm text-muted-foreground">
+										{movie.overview ?? 'No overview available.'}
+									</p>
+								</div>
+							</div>
+						</div>
 					</div>
-
-					{#if movie.genres?.length}
-						<div class="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4">
-							<h2 class="text-xl font-semibold">Genres</h2>
-							<div class="flex flex-wrap gap-2">
-								{#each movie.genres as genre}
-									<span class="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-										{genre.name}
-									</span>
-								{/each}
-							</div>
-						</div>
-					{/if}
-
-					{#if movie.trailerUrl}
-						<div class="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4">
-							<h2 class="text-xl font-semibold">Trailer</h2>
-							<div class="aspect-video overflow-hidden rounded-lg">
-								<iframe
-									src={movie.trailerUrl}
-									title="Trailer"
-									frameborder="0"
-									allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-									loading="lazy"
-									referrerpolicy="strict-origin-when-cross-origin"
-									class="h-full w-full"
-								></iframe>
-							</div>
-						</div>
-					{/if}
 				</div>
+			</section>
 
+			<section class="mt-6">
 				<div class="space-y-6">
 					<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
 						<div class="mb-4 flex items-center justify-between">
@@ -1053,37 +1102,19 @@
 						</ul>
 					</div>
 
-					{#if movie.cast?.length}
-						<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
-							<h2 class="mb-4 text-2xl font-semibold">Cast</h2>
-							<ul class="grid gap-3 md:grid-cols-2">
-								{#each movie.cast as member}
-									<li
-										class="rounded-md border border-border/40 bg-background/80 px-3 py-2 transition-colors hover:bg-muted/50"
-									>
-										<a href={`/person/${member.id}`} class="block">
-											<p class="font-semibold text-foreground hover:underline">{member.name}</p>
-											<p class="text-xs text-muted-foreground">{member.character}</p>
-										</a>
-									</li>
-								{/each}
-							</ul>
-						</div>
-					{/if}
-
 					{#if movie.productionCompanies?.length}
 						<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
 							<h2 class="mb-4 text-xl font-semibold">Production Companies</h2>
 							<div class="flex flex-wrap gap-4">
-								{#each movie.productionCompanies as company}
-									<div
-										class="flex items-center gap-2 rounded-md border border-border/40 bg-background/80 px-3 py-2"
-									>
-										{#if company.logoPath}
-											<img src={company.logoPath} alt={company.name} class="h-6 object-contain" />
-										{/if}
-										<span class="text-sm font-medium">{company.name}</span>
-									</div>
+								{#each movie.productionCompanies as company (company.id)}
+									<Card class="p-3">
+										<div class="flex items-center gap-2">
+											{#if company.logoPath}
+												<img src={company.logoPath} alt={company.name} class="h-6 object-contain" />
+											{/if}
+											<span class="text-sm font-medium">{company.name}</span>
+										</div>
+									</Card>
 								{/each}
 							</div>
 						</div>
@@ -1094,17 +1125,17 @@
 							<h2 class="mb-4 text-xl font-semibold">Country of Origin</h2>
 							<ul class="flex flex-wrap gap-2">
 								{#if movie.productionCountries}
-									{#each movie.productionCountries as country}
-										<li class="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+									{#each movie.productionCountries as country (country.iso)}
+										<Badge variant="secondary">
 											{country.name}
-										</li>
+										</Badge>
 									{/each}
 								{/if}
 								{#if movie.originCountry}
-									{#each movie.originCountry as countryCode}
-										<li class="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+									{#each movie.originCountry as countryCode (countryCode)}
+										<Badge variant="secondary">
 											{countryCode}
-										</li>
+										</Badge>
 									{/each}
 								{/if}
 							</ul>

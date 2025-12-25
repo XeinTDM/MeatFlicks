@@ -136,7 +136,7 @@
 		></div>
 	</div>
 
-	{#each value as val, index}
+	{#each value as val, index (index)}
 		<button
 			type="button"
 			role="slider"

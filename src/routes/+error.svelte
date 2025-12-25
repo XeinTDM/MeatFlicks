@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 </script>
 
@@ -7,7 +7,7 @@
 	<div class="rounded-lg bg-card p-8 text-center shadow-xl">
 		<h1 class="mb-4 text-4xl font-bold text-destructive">Oops!</h1>
 		<p class="mb-6 text-lg text-muted-foreground">
-			{$page.error?.message ||
+			{page.error?.message ||
 				'Something went wrong. Please try again later or contact support if the problem persists.'}
 		</p>
 		<div class="flex justify-center gap-4">

@@ -81,7 +81,7 @@
 
 		<!-- Page numbers -->
 		<div class="flex items-center gap-1">
-			{#each pageNumbers as page}
+			{#each pageNumbers as page (page)}
 				{#if page === 'ellipsis'}
 					<div class="flex h-8 w-8 items-center justify-center">
 						<MoreHorizontal class="h-4 w-4 text-muted-foreground" />
