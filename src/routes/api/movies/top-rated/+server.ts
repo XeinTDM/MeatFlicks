@@ -21,13 +21,15 @@ export const GET: RequestHandler = async ({ url }) => {
 		);
 
 		// Set canonical paths for consistency
-		const moviesWithPaths = movies.items.map((movie): LibraryMovie => ({
-			...movie,
-			canonicalPath: movie.tmdbId ? `/movie/${movie.tmdbId}` : `/movie/${movie.id}`,
-			releaseDate: movie.releaseDate ?? null,
-			durationMinutes: movie.durationMinutes ?? null,
-			genres: movie.genres ?? []
-		}));
+		const moviesWithPaths = movies.items.map(
+			(movie): LibraryMovie => ({
+				...movie,
+				canonicalPath: movie.tmdbId ? `/movie/${movie.tmdbId}` : `/movie/${movie.id}`,
+				releaseDate: movie.releaseDate ?? null,
+				durationMinutes: movie.durationMinutes ?? null,
+				genres: movie.genres ?? []
+			})
+		);
 
 		return json({ movies: moviesWithPaths, total: movies.pagination.totalItems });
 	} catch (error) {

@@ -113,9 +113,9 @@ describe('Security Utilities', () => {
 		});
 
 		it('should validate API key format', () => {
-			expect(securityUtils.validateApiKeyFormat('mf_123456789012345678901234567890123456789012345678')).toBe(
-				true
-			);
+			expect(
+				securityUtils.validateApiKeyFormat('mf_123456789012345678901234567890123456789012345678')
+			).toBe(true);
 			expect(securityUtils.validateApiKeyFormat('invalid-key')).toBe(false);
 		});
 	});

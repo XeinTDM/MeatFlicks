@@ -254,9 +254,8 @@ export async function getMoviesByMetadata(
 			whereConditions.push(sql`m.collectionId IN (${collections.join(',')})`);
 		}
 
-		const whereClause = whereConditions.length > 0
-			? sql`WHERE ${whereConditions.join(' AND ')}`
-			: sql``;
+		const whereClause =
+			whereConditions.length > 0 ? sql`WHERE ${whereConditions.join(' AND ')}` : sql``;
 
 		let orderByClause = sql``;
 		switch (sortBy) {

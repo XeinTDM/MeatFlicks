@@ -30,8 +30,6 @@ const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
 	genres: movie.genres ?? []
 });
 
-
-
 const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | null> => {
 	try {
 		logger.info('[library][fallback] Starting fallback library build');
@@ -50,7 +48,6 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 			})
 		);
 
-		// Store movies in database first
 		const { upsertMovieWithGenres } = await import('$lib/server/db/mutations');
 		const { db } = await import('$lib/server/db/client');
 		const { movies } = await import('$lib/server/db/schema');
@@ -63,7 +60,10 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 					new Set(details.genres.map((genre) => genre.name).filter(Boolean))
 				);
 
-				logger.info({ tmdbId: details.tmdbId, title: details.title }, '[library][fallback] Storing movie');
+				logger.info(
+					{ tmdbId: details.tmdbId, title: details.title },
+					'[library][fallback] Storing movie'
+				);
 
 				const storedMovie = await upsertMovieWithGenres({
 					tmdbId: details.tmdbId,
@@ -80,9 +80,11 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 				});
 
 				if (storedMovie) {
-					logger.info({ movieId: storedMovie.id, imdbId: details.imdbId }, '[library][fallback] Movie stored, updating IMDB ID');
+					logger.info(
+						{ movieId: storedMovie.id, imdbId: details.imdbId },
+						'[library][fallback] Movie stored, updating IMDB ID'
+					);
 
-					// Update with IMDB ID and trailer URL
 					await db
 						.update(movies)
 						.set({
@@ -105,10 +107,8 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 			return null;
 		}
 
-		// Convert to library movies and set canonical paths
 		const fallbackMovies = storedMovies.map((movie) => {
 			const libraryMovie = toLibraryMovie(movie);
-			// Set canonical path based on TMDB ID first, then IMDB ID
 			const canonicalPath = movie.tmdbId
 				? `/movie/${movie.tmdbId}`
 				: movie.imdbId

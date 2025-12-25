@@ -37,9 +37,7 @@
 	}
 </script>
 
-<section
-	class="space-y-6 rounded-3xl p-6 sm:p-8"
->
+<section class="space-y-6 rounded-3xl p-6 sm:p-8">
 	<div class="space-y-3">
 		<span
 			class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary"

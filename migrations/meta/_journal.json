@@ -1,27 +1,27 @@
 {
-  "version": "7",
-  "dialect": "sqlite",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "6",
-      "when": 1766237708116,
-      "tag": "0000_first_captain_midlands",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1766493129273,
-      "tag": "0001_unique_ghost_rider",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1766582348080,
-      "tag": "0002_cynical_archangel",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "sqlite",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "6",
+			"when": 1766237708116,
+			"tag": "0000_first_captain_midlands",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "6",
+			"when": 1766493129273,
+			"tag": "0001_unique_ghost_rider",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "6",
+			"when": 1766582348080,
+			"tag": "0002_cynical_archangel",
+			"breakpoints": true
+		}
+	]
 }

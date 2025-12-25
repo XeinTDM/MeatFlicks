@@ -106,7 +106,7 @@ export async function batchUpsert<T>(
 	}
 
 	try {
-		let insertedCount = 0;
+		const insertedCount = 0;
 		let updatedCount = 0;
 
 		for (let i = 0; i < data.length; i += batchSize) {

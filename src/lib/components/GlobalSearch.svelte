@@ -1,17 +1,10 @@
 <script lang="ts">
 	import { Search as SearchIcon, X, LoaderCircle, Play, Clock } from '@lucide/svelte';
-	import { goto } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { searchHistory } from '$lib/state/stores/searchHistoryStore';
-
-	interface SearchHistoryItem {
-		id: number;
-		query: string;
-		searchedAt: number;
-	}
 
 	let query = $state('');
 	let results = $state<LibraryMovie[]>([]);
@@ -19,10 +12,9 @@
 	let isFocused = $state(false);
 	let searchTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
 	let containerRef = $state<HTMLElement | null>(null);
-	let isLoadingHistory = $state(false);
 
 	$effect(() => {
-		const unsubscribe = searchHistory.subscribe(($searchHistory) => {
+		const unsubscribe = searchHistory.subscribe(() => {
 			// Ignore
 		});
 		return unsubscribe;
@@ -108,7 +100,7 @@
 
 	function handleNavigate(movie: LibraryMovie) {
 		const path = movie.canonicalPath ?? `/movie/${movie.id}`;
-		goto(path);
+		window.location.href = path;
 		clearSearch();
 		isFocused = false;
 	}
@@ -116,7 +108,7 @@
 	async function handleGlobalSearch() {
 		if (query.trim()) {
 			await saveSearch(query);
-			goto(`/search?q=${encodeURIComponent(query)}`);
+			window.location.href = `/search?q=${encodeURIComponent(query)}`;
 			isFocused = false;
 		}
 	}
@@ -191,7 +183,7 @@
 				</div>
 			{:else if results.length > 0}
 				<ul class="space-y-1">
-					{#each results.slice(0, 5) as movie}
+					{#each results.slice(0, 5) as movie (movie.id)}
 						<li>
 							<button
 								onclick={() => handleNavigate(movie)}

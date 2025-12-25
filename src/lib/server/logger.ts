@@ -1,14 +1,7 @@
 import pino from 'pino';
 import { env } from '$lib/config/env';
 
-const isDev = (() => {
-	try {
-		const { dev } = require('$app/environment');
-		return dev;
-	} catch (error) {
-		return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
-	}
-})();
+const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 
 export const logger = pino({
 	level: env.LOG_LEVEL,

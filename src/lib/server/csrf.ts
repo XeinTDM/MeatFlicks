@@ -2,16 +2,7 @@ import { randomBytes } from 'crypto';
 import { logger } from './logger';
 import { UnauthorizedError } from './error-handler';
 
-const isDev = (() => {
-	try {
-		// Try to get from SvelteKit environment first
-		const { dev } = require('$app/environment');
-		return dev;
-	} catch (error) {
-		// Fallback to process.env for testing environments
-		return process.env.NODE_ENV === 'development';
-	}
-})();
+const isDev = process.env.NODE_ENV === 'development';
 
 /**
  * CSRF Token Management and Validation

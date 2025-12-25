@@ -308,7 +308,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	);
 
 	const movieIdentifier = pathParams.id;
-	const queryMode = (queryParams as { by?: 'id' | 'tmdb' | 'imdb' }).by ?? detectQueryMode(movieIdentifier);
+	const queryMode =
+		(queryParams as { by?: 'id' | 'tmdb' | 'imdb' }).by ?? detectQueryMode(movieIdentifier);
 
 	console.log(`[API] Looking up movie: ${movieIdentifier}, detected mode: ${queryMode}`);
 
