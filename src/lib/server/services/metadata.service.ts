@@ -233,47 +233,44 @@ export async function getMoviesByMetadata(
 	const { limit = 20, offset = 0, sortBy = 'rating', sortOrder = 'desc' } = options;
 
 	try {
-		const whereClauses = [];
-		const params = [];
-
+		// Build queries using Drizzle's template literals with direct interpolation
+		// This is the correct approach for Drizzle ORM
+		const whereConditions = [];
 		if (mediaType) {
-			whereClauses.push('m.mediaType = ?');
-			params.push(mediaType);
+			whereConditions.push(sql`m.mediaType = ${mediaType}`);
 		}
-
 		if (hasTrailer) {
-			whereClauses.push('m.trailerUrl IS NOT NULL AND m.trailerUrl != ""');
+			whereConditions.push(sql`m.trailerUrl IS NOT NULL AND m.trailerUrl != ""`);
 		}
-
 		if (hasImdbId) {
-			whereClauses.push('m.imdbId IS NOT NULL AND m.imdbId != ""');
+			whereConditions.push(sql`m.imdbId IS NOT NULL AND m.imdbId != ""`);
 		}
-
 		if (genres.length > 0) {
-			whereClauses.push(`m.id IN (
+			whereConditions.push(sql`m.id IN (
 				SELECT movieId FROM movies_genres WHERE genreId IN (${genres.join(',')})
 			)`);
 		}
-
 		if (collections.length > 0) {
-			whereClauses.push(`m.collectionId IN (${collections.join(',')})`);
+			whereConditions.push(sql`m.collectionId IN (${collections.join(',')})`);
 		}
 
-		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+		const whereClause = whereConditions.length > 0
+			? sql`WHERE ${whereConditions.join(' AND ')}`
+			: sql``;
 
-		let orderByClause = '';
+		let orderByClause = sql``;
 		switch (sortBy) {
 			case 'title':
-				orderByClause = 'ORDER BY m.title COLLATE NOCASE';
+				orderByClause = sql`ORDER BY m.title COLLATE NOCASE`;
 				break;
 			case 'releaseDate':
-				orderByClause = 'ORDER BY (m.releaseDate IS NULL) ASC, m.releaseDate';
+				orderByClause = sql`ORDER BY (m.releaseDate IS NULL) ASC, m.releaseDate`;
 				break;
 			case 'rating':
 			default:
-				orderByClause = 'ORDER BY (m.rating IS NULL) ASC, m.rating';
+				orderByClause = sql`ORDER BY (m.rating IS NULL) ASC, m.rating`;
 		}
-		orderByClause += ` ${sortOrder}`;
+		orderByClause = sql`${orderByClause} ${sql.raw(sortOrder)}`;
 
 		const [movieRows, total] = await Promise.all([
 			db.all(sql`
@@ -329,44 +326,33 @@ export async function updateMovieMetadata(
 	}
 ): Promise<void> {
 	try {
-		const updates = [];
-		const params = [];
-
+		// Build the update query using Drizzle's approach
+		// Use direct interpolation with sql template literals
+		const setParts = [];
 		if (metadata.trailerUrl !== undefined) {
-			updates.push('trailerUrl = ?');
-			params.push(metadata.trailerUrl);
+			setParts.push(sql`trailerUrl = ${metadata.trailerUrl}`);
 		}
-
 		if (metadata.imdbId !== undefined) {
-			updates.push('imdbId = ?');
-			params.push(metadata.imdbId);
+			setParts.push(sql`imdbId = ${metadata.imdbId}`);
 		}
-
 		if (metadata.canonicalPath !== undefined) {
-			updates.push('canonicalPath = ?');
-			params.push(metadata.canonicalPath);
+			setParts.push(sql`canonicalPath = ${metadata.canonicalPath}`);
 		}
-
 		if (metadata.addedAt !== undefined) {
-			updates.push('addedAt = ?');
-			params.push(metadata.addedAt);
+			setParts.push(sql`addedAt = ${metadata.addedAt}`);
 		}
-
 		if (metadata.mediaType !== undefined) {
-			updates.push('mediaType = ?');
-			params.push(metadata.mediaType);
+			setParts.push(sql`mediaType = ${metadata.mediaType}`);
 		}
 
-		if (updates.length === 0) {
+		if (setParts.length === 0) {
 			return;
 		}
 
-		params.push(movieId);
-
 		await db.run(sql`
 			UPDATE movies
-			SET ${updates.join(', ')}
-			WHERE id = ?
+			SET ${setParts.join(', ')}
+			WHERE id = ${movieId}
 		`);
 
 		logger.info({ movieId, metadata }, 'Updated movie metadata');

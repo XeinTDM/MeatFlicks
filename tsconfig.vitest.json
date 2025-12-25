@@ -1,0 +1,9 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": ["vitest/globals"],
+		"paths": {
+			"$env/dynamic/private": ["./src/mocks/env-dynamic-private.ts"]
+		}
+	}
+}

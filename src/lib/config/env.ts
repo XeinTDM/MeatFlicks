@@ -1,4 +1,22 @@
-import { env as privateEnv } from '$env/dynamic/private';
+const privateEnv = {
+	TMDB_API_KEY: process.env.TMDB_API_KEY,
+	TMDB_READ_ACCESS_TOKEN: process.env.TMDB_READ_ACCESS_TOKEN,
+	TMDB_IMAGE_BASE_URL: process.env.TMDB_IMAGE_BASE_URL,
+	TMDB_POSTER_SIZE: process.env.TMDB_POSTER_SIZE,
+	TMDB_BACKDROP_SIZE: process.env.TMDB_BACKDROP_SIZE,
+	SQLITE_DB_PATH: process.env.SQLITE_DB_PATH,
+	LOG_LEVEL: process.env.LOG_LEVEL,
+	CACHE_TTL_SHORT: process.env.CACHE_TTL_SHORT,
+	CACHE_TTL_MEDIUM: process.env.CACHE_TTL_MEDIUM,
+	CACHE_TTL_LONG: process.env.CACHE_TTL_LONG,
+	CACHE_MEMORY_MAX_ITEMS: process.env.CACHE_MEMORY_MAX_ITEMS,
+	TMDB_STILL_SIZE: process.env.TMDB_STILL_SIZE,
+	PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL,
+	PUBLIC_TMDB_API_KEY: process.env.PUBLIC_TMDB_API_KEY,
+	PUBLIC_TMDB_IMAGE_BASE_URL: process.env.PUBLIC_TMDB_IMAGE_BASE_URL,
+	PUBLIC_TMDB_POSTER_SIZE: process.env.PUBLIC_TMDB_POSTER_SIZE,
+	PUBLIC_TMDB_BACKDROP_SIZE: process.env.PUBLIC_TMDB_BACKDROP_SIZE
+};
 import { z } from 'zod';
 
 const serverSchema = z.object({

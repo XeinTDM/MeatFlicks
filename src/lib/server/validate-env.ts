@@ -1,4 +1,31 @@
-import { env as privateEnv } from '$env/dynamic/private';
+function getPrivateEnv() {
+	return {
+		DATABASE_URL: process.env.DATABASE_URL,
+		DATABASE_PATH: process.env.DATABASE_PATH,
+		TMDB_API_KEY: process.env.TMDB_API_KEY,
+		TMDB_READ_ACCESS_TOKEN: process.env.TMDB_READ_ACCESS_TOKEN,
+		VIDLINK_API_KEY: process.env.VIDLINK_API_KEY,
+		VIDSRC_API_KEY: process.env.VIDSRC_API_KEY,
+		VIDSRCXYZ_BASE_URL: process.env.VIDSRCXYZ_BASE_URL,
+		EMBEDSU_BASE_URL: process.env.EMBEDSU_BASE_URL,
+		TWOEMBED_BASE_URL: process.env.TWOEMBED_BASE_URL,
+		MAPPLETV_BASE_URL: process.env.MAPPLETV_BASE_URL,
+		PRIMEWIRE_BASE_URL: process.env.PRIMEWIRE_BASE_URL,
+		MULTIEMBED_BASE_URL: process.env.MULTIEMBED_BASE_URL,
+		VIDBINGE_BASE_URL: process.env.VIDBINGE_BASE_URL,
+		MOVIESAPI_BASE_URL: process.env.MOVIESAPI_BASE_URL,
+		AUTOEMBED_BASE_URL: process.env.AUTOEMBED_BASE_URL,
+		CACHE_TTL_MOVIE: process.env.CACHE_TTL_MOVIE,
+		CACHE_TTL_SHORT: process.env.CACHE_TTL_SHORT,
+		CACHE_TTL_MEDIUM: process.env.CACHE_TTL_MEDIUM,
+		CACHE_TTL_LONG: process.env.CACHE_TTL_LONG,
+		NODE_ENV: process.env.NODE_ENV,
+		PORT: process.env.PORT,
+		HOST: process.env.HOST,
+		SESSION_SECRET: process.env.SESSION_SECRET,
+		COOKIE_SECRET: process.env.COOKIE_SECRET
+	};
+}
 import { z } from 'zod';
 import { logger } from './logger';
 
@@ -39,11 +66,16 @@ export type ValidatedEnv = z.infer<typeof envSchema>;
 let validatedEnv: ValidatedEnv | null = null;
 
 export function validateEnvironment(): ValidatedEnv {
+	if (process.env.NODE_ENV === 'test' && validatedEnv) {
+		validatedEnv = null;
+	}
+
 	if (validatedEnv) {
 		return validatedEnv;
 	}
 
 	try {
+		const privateEnv = getPrivateEnv();
 		const result = envSchema.safeParse(privateEnv);
 
 		if (!result.success) {
@@ -61,7 +93,15 @@ export function validateEnvironment(): ValidatedEnv {
 
 			if (privateEnv.NODE_ENV !== 'production') {
 				logger.warn('Running with invalid environment variables in development mode');
-				validatedEnv = privateEnv as unknown as ValidatedEnv;
+				const fallbackEnv: ValidatedEnv = {
+					...privateEnv,
+					TMDB_API_KEY: privateEnv.TMDB_API_KEY || 'fallback_api_key',
+					TMDB_READ_ACCESS_TOKEN: privateEnv.TMDB_READ_ACCESS_TOKEN || 'fallback_token',
+					NODE_ENV: (privateEnv.NODE_ENV as any) || 'development',
+					PORT: privateEnv.PORT || '3000',
+					HOST: privateEnv.HOST || '0.0.0.0'
+				};
+				validatedEnv = fallbackEnv;
 				return validatedEnv;
 			}
 
@@ -72,10 +112,19 @@ export function validateEnvironment(): ValidatedEnv {
 		return validatedEnv;
 	} catch (error) {
 		logger.error({ error }, 'Environment validation failed');
+		const privateEnv = getPrivateEnv();
 		if (privateEnv.NODE_ENV === 'production') {
 			process.exit(1);
 		}
-		validatedEnv = privateEnv as unknown as ValidatedEnv;
+		const fallbackEnv: ValidatedEnv = {
+			...privateEnv,
+			TMDB_API_KEY: privateEnv.TMDB_API_KEY || 'fallback_api_key',
+			TMDB_READ_ACCESS_TOKEN: privateEnv.TMDB_READ_ACCESS_TOKEN || 'fallback_token',
+			NODE_ENV: (privateEnv.NODE_ENV as any) || 'development',
+			PORT: privateEnv.PORT || '3000',
+			HOST: privateEnv.HOST || '0.0.0.0'
+		};
+		validatedEnv = fallbackEnv;
 		return validatedEnv;
 	}
 }
@@ -112,12 +161,13 @@ export function getEnv<T extends keyof ValidatedEnv>(
  */
 export function validateApiKeys(): void {
 	const env = validateEnvironment();
+	const privateEnv = getPrivateEnv();
 
 	if (privateEnv.NODE_ENV === 'production') {
-		if (!env.TMDB_API_KEY) {
+		if (!env.TMDB_API_KEY || env.TMDB_API_KEY === 'fallback_api_key') {
 			throw new Error('TMDB_API_KEY is required in production');
 		}
-		if (!env.TMDB_READ_ACCESS_TOKEN) {
+		if (!env.TMDB_READ_ACCESS_TOKEN || env.TMDB_READ_ACCESS_TOKEN === 'fallback_token') {
 			throw new Error('TMDB_READ_ACCESS_TOKEN is required in production');
 		}
 	}

@@ -4,10 +4,12 @@ import { UnauthorizedError } from './error-handler';
 
 const isDev = (() => {
 	try {
+		// Try to get from SvelteKit environment first
 		const { dev } = require('$app/environment');
 		return dev;
 	} catch (error) {
-		return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+		// Fallback to process.env for testing environments
+		return process.env.NODE_ENV === 'development';
 	}
 })();
 

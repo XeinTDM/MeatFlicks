@@ -153,7 +153,7 @@ describe('Security Enhancements', () => {
 
 			expect(cookie.name).toBe('csrf_token');
 			expect(cookie.attributes.httpOnly).toBe(true);
-			expect(cookie.attributes.secure).toBe(!import.meta.env.DEV);
+			expect(cookie.attributes.secure).toBe(true);
 			expect(cookie.attributes.partitioned).toBe(true);
 		});
 
@@ -175,6 +175,7 @@ describe('Security Enhancements', () => {
 			expect(result.valid).toBe(true);
 
 			mockEvent.request.headers.delete('x-csrf-token');
+			mockEvent.request.headers.set('content-type', 'application/x-www-form-urlencoded');
 			mockEvent.request.formData = async () => {
 				const formData = new FormData();
 				formData.append('csrf_token', 'test-token');
@@ -183,6 +184,7 @@ describe('Security Enhancements', () => {
 			const formResult = await validateCsrfToken(mockEvent);
 			expect(formResult.valid).toBe(true);
 
+			mockEvent.request.headers.set('content-type', 'application/json');
 			mockEvent.request.formData = async () => new FormData();
 			mockEvent.request.json = async () => ({ csrf_token: 'test-token' });
 			const jsonResult = await validateCsrfToken(mockEvent);

@@ -77,7 +77,7 @@ export class RateLimiter {
 		await limiter.incrementReservoir(-1);
 		return {
 			allowed: true,
-			remaining: reservoir,
+			remaining: reservoir - 1,
 			limit: this.config.maxRequests
 		};
 	}
