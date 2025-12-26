@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CarouselContainer from '$lib/components/CarouselContainer.svelte';
+	import CarouselContainer from '$lib/components/home/CarouselContainer.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';

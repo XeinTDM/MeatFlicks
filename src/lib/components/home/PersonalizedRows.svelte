@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { watchlist } from '$lib/state/stores/watchlistStore';
-	import MovieScrollContainer from './MovieScrollContainer.svelte';
+	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 

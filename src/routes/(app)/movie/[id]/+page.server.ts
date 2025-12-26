@@ -30,7 +30,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			mediaType: 'movie' as const,
 			movie: null,
 			streaming: { source: null, resolutions: [] },
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		} as const;
 	}
 
@@ -38,13 +38,13 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const apiPath = `/api/movies/${identifier}${queryMode === 'id' ? '' : `?by=${queryMode}`}`;
 	const response = await fetch(apiPath);
 
-	if (!response.ok) {
+		if (!response.ok) {
 		if (response.status === 404) {
 			return {
 				mediaType: 'movie' as const,
 				movie: null,
 				streaming: { source: null, resolutions: [] },
-				csrfToken: getCsrfToken({ cookies })
+				csrfToken: getCsrfToken({ cookies }) ?? undefined
 			} as const;
 		}
 
@@ -58,7 +58,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			mediaType: 'movie' as const,
 			movie: null,
 			streaming: { source: null, resolutions: [] },
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		} as const;
 	}
 
@@ -88,7 +88,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			canonicalPath,
 			identifier,
 			queryMode,
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	} catch (error) {
 		console.error('[movie][load] Failed to resolve data', error);
@@ -100,7 +100,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			canonicalPath,
 			identifier,
 			queryMode,
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	}
 };

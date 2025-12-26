@@ -227,7 +227,7 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 	}
 }
 
-export const vidlinkProvider: StreamingProvider = {
+export const tertiaryProvider: StreamingProvider = {
 	id: 'vidlink',
 	label: 'Vidlink',
 	priority: 40,

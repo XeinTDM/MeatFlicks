@@ -7,7 +7,7 @@
 		CarouselNext,
 		CarouselPrevious
 	} from '$lib/components/ui/carousel';
-	import MovieCard from './MovieCard.svelte';
+	import MovieCard from '$lib/components/media/MovieCard.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
 	let {

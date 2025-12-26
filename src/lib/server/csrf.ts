@@ -253,8 +253,8 @@ export function csrfMiddleware() {
 		async handle({ event, resolve }: { event: any; resolve: any }) {
 			const csrfCookie = event.cookies.get(CSRF_COOKIE_NAME);
 			if (!csrfCookie) {
-				const csrfToken = generateCsrfToken();
-				const csrfCookie = createCsrfCookie(csrfToken);
+				const csrfToken = generateSecureCsrfToken();
+				const csrfCookie = createSecureCsrfCookie(csrfToken);
 
 				event.cookies.set(csrfCookie.name, csrfCookie.value, csrfCookie.attributes);
 			} else {
@@ -266,8 +266,8 @@ export function csrfMiddleware() {
 						event.cookies.set(newCsrfCookie.name, newCsrfCookie.value, newCsrfCookie.attributes);
 					}
 				} catch {
-					const csrfToken = generateCsrfToken();
-					const csrfCookie = createCsrfCookie(csrfToken);
+					const csrfToken = generateSecureCsrfToken();
+					const csrfCookie = createSecureCsrfCookie(csrfToken);
 					event.cookies.set(csrfCookie.name, csrfCookie.value, csrfCookie.attributes);
 				}
 			}

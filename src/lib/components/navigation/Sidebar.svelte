@@ -16,9 +16,9 @@
 		SidebarMenuItem,
 		SidebarMenuButton
 	} from '$lib/components/ui/sidebar';
-	import GlobalSearch from '$lib/components/GlobalSearch.svelte';
-	import SettingsDialog from '$lib/components/SettingsDialog.svelte';
-	import NavigationMenu from '$lib/components/NavigationMenu.svelte';
+	import GlobalSearch from '$lib/components/global/GlobalSearch.svelte';
+	import SettingsDialog from '$lib/components/global/SettingsDialog.svelte';
+	import NavigationMenu from '$lib/components/navigation/NavigationMenu.svelte';
 	import {
 		browseNav,
 		primaryNav,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CarouselContainer from '$lib/components/CarouselContainer.svelte';
+	import CarouselContainer from '$lib/components/home/CarouselContainer.svelte';
 	import type { PageData } from './$types';
 
 	let { data } = $props<{ data: PageData }>();

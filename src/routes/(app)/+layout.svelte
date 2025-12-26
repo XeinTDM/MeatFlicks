@@ -1,10 +1,10 @@
 <script lang="ts">
 	import '../../app.css';
 
-	import AppShell from '$lib/components/Sidebar.svelte';
-	import Footer from '$lib/components/Footer.svelte';
-	import GlobalErrorDisplay from '$lib/components/GlobalErrorDisplay.svelte';
-	import { NotificationPortal } from '$lib/components';
+	import AppShell from '$lib/components/navigation/Sidebar.svelte';
+	import Footer from '$lib/components/navigation/Footer.svelte';
+	import GlobalErrorDisplay from '$lib/components/global/GlobalErrorDisplay.svelte';
+	import { NotificationPortal } from '$lib/components/global';
 	import ThemeContext from '$lib/state/contexts/ThemeContext.svelte';
 	import WatchlistContext from '$lib/state/contexts/WatchlistContext.svelte';
 	import ErrorContext from '$lib/state/contexts/ErrorContext.svelte';

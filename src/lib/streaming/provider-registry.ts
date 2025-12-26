@@ -1,15 +1,15 @@
 import type { StreamingProvider, StreamingProviderContext, StreamingSource } from './types';
-import { embedSuProvider } from './providers/embedSu';
-import { twoEmbedProvider } from './providers/twoEmbed';
-import { vidlinkProvider } from './providers/vidlink';
-import { vidsrcProvider } from './providers/vidsrc';
+import { primaryProvider } from './providers/primary';
+import { secondaryProvider } from './providers/secondary';
+import { tertiaryProvider } from './providers/tertiary';
+import { quaternaryProvider } from './providers/quaternary';
 
 const providers: StreamingProvider[] = [
-	vidlinkProvider,
-	vidsrcProvider,
-	twoEmbedProvider,
-	embedSuProvider
-].sort((a, b) => b.priority - a.priority);
+	tertiaryProvider, // vidlink - priority 40
+	primaryProvider, // vidsrc - priority 30
+	secondaryProvider, // hnembed - priority 25
+	quaternaryProvider // embedSu - priority 15
+];
 
 function orderProviders(
 	context: StreamingProviderContext,

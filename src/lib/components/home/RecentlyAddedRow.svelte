@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MovieScrollContainer from './MovieScrollContainer.svelte';
+	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 

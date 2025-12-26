@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MovieCard from '$lib/components/MovieCard.svelte';
+	import MovieCard from '$lib/components/media/MovieCard.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 
 	const heroLines = Array.from({ length: 3 });

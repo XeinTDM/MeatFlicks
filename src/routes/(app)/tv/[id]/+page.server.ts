@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			mediaType: 'tv' as const,
 			movie: null,
 			streaming: { source: null, resolutions: [] },
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	}
 
@@ -62,7 +62,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 				mediaType: 'tv' as const,
 				movie: null,
 				streaming: { source: null, resolutions: [] },
-				csrfToken: getCsrfToken({ cookies })
+				csrfToken: getCsrfToken({ cookies }) ?? undefined
 			};
 		}
 
@@ -76,7 +76,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			mediaType: 'tv' as const,
 			movie: null,
 			streaming: { source: null, resolutions: [] },
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	}
 
@@ -106,7 +106,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			canonicalPath,
 			identifier,
 			queryMode,
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	} catch (error) {
 		console.error('[tv][load] Failed to resolve data', error);
@@ -118,7 +118,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			canonicalPath,
 			identifier,
 			queryMode,
-			csrfToken: getCsrfToken({ cookies })
+			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	}
 };

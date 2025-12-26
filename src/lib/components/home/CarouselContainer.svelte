@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TrendingMoviesSlider from './TrendingMoviesSlider.svelte';
-	import MovieScrollContainer from './MovieScrollContainer.svelte';
+	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
 	let {

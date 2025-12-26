@@ -10,7 +10,7 @@
 		Trash2
 	} from '@lucide/svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
-	import MovieCard from '$lib/components/MovieCard.svelte';
+	import MovieCard from '$lib/components/media/MovieCard.svelte';
 	import type { Movie } from '$lib/state/stores/watchlistStore';
 	import { watchlist } from '$lib/state/stores/watchlistStore';
 	import { Button, buttonVariants } from '$lib/components/ui/button';

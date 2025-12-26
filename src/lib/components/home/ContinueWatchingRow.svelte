@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MovieScrollContainer from './MovieScrollContainer.svelte';
+	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
@@ -39,6 +39,11 @@
 					const movies = await Promise.all(moviePromises);
 					continueWatchingMovies = movies.filter((m) => m !== null) as LibraryMovie[];
 				}
+			} else if (response.status === 401) {
+				// User is not authenticated, which is fine - just don't show continue watching
+				console.log('User not authenticated for continue watching');
+			} else {
+				console.error('Failed to fetch continue watching:', response.statusText);
 			}
 		} catch (error) {
 			console.error('Failed to fetch continue watching:', error);

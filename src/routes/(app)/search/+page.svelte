@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import MovieCard from '$lib/components/MovieCard.svelte';
-	import SearchHeader from '$lib/components/SearchHeader.svelte';
+	import MovieCard from '$lib/components/media/MovieCard.svelte';
+	import SearchHeader from '$lib/components/search/SearchHeader.svelte';
 	import AdvancedSearchFilters from '$lib/components/search/AdvancedSearchFilters.svelte';
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';

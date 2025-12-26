@@ -8,7 +8,7 @@ import {
 } from '../provider-helpers';
 import type { StreamingProvider } from '../types';
 
-const { twoEmbed } = streamingConfig;
+const { embedSu } = streamingConfig;
 
 function buildQuery(context: Parameters<StreamingProvider['fetchSource']>[0]): URLSearchParams {
 	const params = new URLSearchParams({
@@ -35,20 +35,20 @@ function fallbackSource(
 	context: Parameters<StreamingProvider['fetchSource']>[0],
 	params: URLSearchParams
 ) {
-	const embedUrl = `${twoEmbed.baseUrl}/embed/${context.mediaType}?${params.toString()}`;
+	const embedUrl = `${embedSu.baseUrl}/embed/${context.mediaType}?${params.toString()}`;
 
 	return {
-		providerId: '2embed',
+		providerId: 'embed-su',
 		streamUrl: embedUrl,
 		embedUrl,
-		reliabilityScore: 0.5,
-		notes: 'Fallback to 2Embed player; consider alternate providers for higher quality.'
+		reliabilityScore: 0.45,
+		notes: 'Fallback to embed.su player; consider alternative providers if unavailable.'
 	} as const;
 }
 
-async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSource']>[0]) {
+async function requestEmbedSu(context: Parameters<StreamingProvider['fetchSource']>[0]) {
 	const params = buildQuery(context);
-	const endpoint = `${twoEmbed.baseUrl}/api/${context.mediaType}`;
+	const endpoint = `${embedSu.baseUrl}/api/${context.mediaType}`;
 
 	try {
 		const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
@@ -57,7 +57,7 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 		});
 
 		if (!response.ok) {
-			throw new Error(`2Embed responded with status ${response.status}`);
+			throw new Error(`Embed.su responded with status ${response.status}`);
 		}
 
 		const contentType = response.headers.get('content-type') ?? '';
@@ -67,11 +67,11 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 
 		const payload = await response.json();
 		const streamCandidate = ensureAbsoluteUrl(
-			twoEmbed.baseUrl,
+			embedSu.baseUrl,
 			extractFirstUrl(payload, DEFAULT_STREAM_PATHS)
 		);
 		const embedCandidate = ensureAbsoluteUrl(
-			twoEmbed.baseUrl,
+			embedSu.baseUrl,
 			extractFirstUrl(payload, DEFAULT_EMBED_PATHS)
 		);
 
@@ -80,27 +80,27 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 		}
 
 		return {
-			providerId: '2embed',
+			providerId: 'embed-su',
 			streamUrl: streamCandidate ?? embedCandidate!,
 			embedUrl: embedCandidate ?? undefined,
-			reliabilityScore: streamCandidate ? 0.7 : 0.55,
+			reliabilityScore: streamCandidate ? 0.65 : 0.5,
 			notes: streamCandidate
-				? 'Direct stream resolved from 2Embed API.'
-				: 'Embed resolved from 2Embed API.'
+				? 'Direct stream resolved from embed.su API.'
+				: 'Embed resolved from embed.su API.'
 		} as const;
 	} catch (error) {
-		console.warn('[streaming][2embed]', error);
+		console.warn('[streaming][embed.su]', error);
 		return fallbackSource(context, params);
 	}
 }
 
-export const twoEmbedProvider: StreamingProvider = {
-	id: '2embed',
-	label: '2Embed',
-	priority: 25,
+export const quaternaryProvider: StreamingProvider = {
+	id: 'embed-su',
+	label: 'Embed.su',
+	priority: 15,
 	supportedMedia: ['movie', 'tv'],
 	async fetchSource(context) {
 		if (!context.tmdbId) return null;
-		return requestTwoEmbed(context);
+		return requestEmbedSu(context);
 	}
 };

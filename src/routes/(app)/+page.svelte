@@ -1,9 +1,10 @@
 <script lang="ts">
-	import Hero from '$lib/components/Hero.svelte';
-	import { TrendingMoviesSlider, MovieScrollContainer, PersonalizedRows } from '$lib/components';
-	import ContinueWatchingRow from '$lib/components/ContinueWatchingRow.svelte';
-	import RecentlyAddedRow from '$lib/components/RecentlyAddedRow.svelte';
-	import TopRatedRow from '$lib/components/TopRatedRow.svelte';
+	import Hero from '$lib/components/home/Hero.svelte';
+	import { TrendingMoviesSlider, PersonalizedRows } from '$lib/components/home';
+	import { MovieScrollContainer } from '$lib/components/media';
+	import ContinueWatchingRow from '$lib/components/home/ContinueWatchingRow.svelte';
+	import RecentlyAddedRow from '$lib/components/home/RecentlyAddedRow.svelte';
+	import TopRatedRow from '$lib/components/home/TopRatedRow.svelte';
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
