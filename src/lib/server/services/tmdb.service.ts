@@ -70,7 +70,6 @@ export interface TmdbTvDetails {
 
 	seasons: TmdbTvSeason[];
 	productionCompanies: { id: number; name: string; logoPath: string | null }[];
-	originCountry: string[];
 }
 
 export interface TmdbTvSeason {
@@ -254,8 +253,7 @@ export async function fetchTmdbTvDetails(tmdbId: number): Promise<TmdbTvDetails>
 					id: c.id,
 					name: c.name,
 					logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
-				})),
-				originCountry: data.origin_country || []
+				}))
 			};
 		} catch (error) {
 			console.error(`[fetchTmdbTvDetails] Error for tmdbId ${tmdbId}:`, error);

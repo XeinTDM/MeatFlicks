@@ -18,6 +18,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Spinner } from '$lib/components/ui/spinner/index';
 
 	type HeroProps = {
 		movie?: LibraryMovie | null;
@@ -391,7 +392,7 @@
 							title="Refresh spotlight picks"
 						>
 							{#if refreshing}
-								<LoaderCircle class="size-4 animate-spin" />
+								<Spinner />
 							{:else}
 								<RefreshCcw class="size-4" />
 							{/if}

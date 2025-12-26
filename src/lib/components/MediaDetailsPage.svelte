@@ -13,12 +13,17 @@
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
-	import { PictureInPicture, RefreshCw, MonitorPlay } from '@lucide/svelte';
+	import { PictureInPicture, RefreshCw, MonitorPlay, Star, Film } from '@lucide/svelte';
 
 	type MediaType = 'movie' | 'tv';
 
 	type MediaGenre = { id: number; name: string };
-	type MediaCastMember = { id: number; name: string; character: string };
+	type MediaCastMember = {
+		id: number;
+		name: string;
+		character: string;
+		profilePath?: string | null;
+	};
 
 	type MediaDetails = {
 		id: string;
@@ -49,7 +54,6 @@
 		}[];
 		productionCompanies?: { id: number; name: string; logoPath: string | null }[];
 		productionCountries?: { iso: string; name: string }[];
-		originCountry?: string[];
 		voteCount?: number | null;
 	};
 
@@ -74,6 +78,7 @@
 			streaming?: StreamingPayloadLike;
 			mediaType?: MediaType;
 			recommendations?: LibraryMovie[];
+			csrfToken?: string;
 		} & Record<string, unknown>;
 	} = $props();
 
@@ -438,7 +443,8 @@
 					preferredSubtitleLanguage: selectedSubtitle,
 					includeQualities: true,
 					includeSubtitles: true,
-					preferredProviders: providerId ? [providerId] : undefined
+					preferredProviders: providerId ? [providerId] : undefined,
+					csrf_token: data.csrfToken
 				}),
 				credentials: 'include'
 			});
@@ -751,7 +757,28 @@
 				{/if}
 				<div class="absolute bottom-4 left-4">
 					<div class="flex flex-col gap-2">
-						<h1 class="text-5xl font-bold text-foreground">{movie.title}</h1>
+						<div class="flex items-center gap-4">
+							<h1 class="text-5xl font-bold text-foreground">{movie.title}</h1>
+							{#if movie.rating}
+								<div
+									class="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1 backdrop-blur-sm"
+								>
+									<Star class="h-5 w-5 text-blue-500" />
+									<span class="font-semibold">{movie.rating.toFixed(1)}</span>
+								</div>
+							{/if}
+							{#if movie.imdbId}
+								<a
+									href={`https://www.imdb.com/title/${movie.imdbId}/`}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="flex h-10 w-10 items-center justify-center rounded-lg bg-black/20 backdrop-blur-sm transition-colors hover:bg-black/30"
+									title="View on IMDb"
+								>
+									<Film class="h-5 w-5 text-yellow-500" />
+								</a>
+							{/if}
+						</div>
 						<div class="flex flex-wrap items-center gap-4">
 							<p class="text-xl text-gray-300">
 								{releaseYear} | {movie?.durationMinutes
@@ -879,7 +906,7 @@
 								{#each providerResolutions as resolution (resolution.providerId)}
 									<Button
 										variant={selectedProvider === resolution.providerId ? 'default' : 'outline'}
-										class="rounded-full"
+										class="rounded-lg"
 										onclick={() => handleProviderSelectionChange(resolution.providerId)}
 									>
 										{resolution.label}
@@ -1019,19 +1046,61 @@
 						<div class="flex flex-col gap-4 lg:flex-row">
 							<div class="flex-shrink-0 space-y-2 rounded-lg lg:w-[70%]">
 								{#if movie.cast?.length}
-									<h2 class="mb-4 text-xl font-semibold">Cast</h2>
-									<ul class="grid gap-3 md:grid-cols-2">
+									<ul class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 										{#each movie.cast as member (member.id)}
 											<li
-												class="rounded-md border border-border/40 bg-background/80 px-3 py-2 transition-colors hover:bg-muted/50"
+												class="rounded-lg border border-border/40 bg-background/80 p-4 transition-colors hover:bg-muted/50"
 											>
-												<a href={`/person/${member.id}`} class="block">
-													<p class="font-semibold text-foreground hover:underline">{member.name}</p>
-													<p class="text-xs text-muted-foreground">{member.character}</p>
+												<a href={`/person/${member.id}`} class="flex items-center gap-3">
+													{#if member.profilePath}
+														<img
+															src={member.profilePath.startsWith('http')
+																? member.profilePath
+																: `https://image.tmdb.org/t/p/w185${member.profilePath}`}
+															alt={member.name}
+															class="h-16 w-12 rounded-md object-cover"
+															width="48"
+															height="64"
+														/>
+													{:else}
+														<div
+															class="flex h-16 w-12 items-center justify-center rounded-md bg-muted"
+														>
+															<span class="text-xs text-muted-foreground">No Image</span>
+														</div>
+													{/if}
+													<div class="flex-1">
+														<p class="font-semibold text-foreground hover:underline">
+															{member.name}
+														</p>
+														<p class="text-sm text-muted-foreground">{member.character}</p>
+													</div>
 												</a>
 											</li>
 										{/each}
 									</ul>
+								{/if}
+
+								{#if movie.productionCompanies?.length}
+									<div class="mt-6">
+										<h2 class="mb-4 text-xl font-semibold">Production Companies</h2>
+										<div class="flex flex-wrap gap-4">
+											{#each movie.productionCompanies as company (company.id)}
+												<Card class="p-3">
+													<div class="flex items-center gap-2">
+														{#if company.logoPath}
+															<img
+																src={company.logoPath}
+																alt={company.name}
+																class="h-6 object-contain"
+															/>
+														{/if}
+														<span class="text-sm font-medium">{company.name}</span>
+													</div>
+												</Card>
+											{/each}
+										</div>
+									</div>
 								{/if}
 							</div>
 							<div class="flex flex-col items-center lg:w-[30%] lg:items-end">
@@ -1051,96 +1120,6 @@
 							</div>
 						</div>
 					</div>
-				</div>
-			</section>
-
-			<section class="mt-6">
-				<div class="space-y-6">
-					<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
-						<div class="mb-4 flex items-center justify-between">
-							<h2 class="text-2xl font-semibold">
-								About this {mediaType === 'tv' ? 'Series' : 'Movie'}
-							</h2>
-							<ShareButton
-								url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${mediaType}/${movie.id}`}
-								title={movie.title}
-								description={movie.overview || `Watch ${movie.title} on MeatFlicks`}
-							/>
-						</div>
-						<ul class="space-y-2 text-sm text-muted-foreground">
-							<li>
-								<span class="font-semibold text-foreground">TMDB Rating:</span>
-								{movie.rating ? movie.rating.toFixed(1) : 'N/A'}
-							</li>
-							<li>
-								<span class="font-semibold text-foreground">Release:</span>
-								{movie.releaseDate ? new Date(movie.releaseDate).toLocaleDateString() : 'TBA'}
-							</li>
-							{#if mediaType === 'tv'}
-								<li>
-									<span class="font-semibold text-foreground">Seasons:</span>
-									{movie.seasonCount ?? 'N/A'}
-								</li>
-								<li>
-									<span class="font-semibold text-foreground">Episodes:</span>
-									{movie.episodeCount ?? 'N/A'}
-								</li>
-							{/if}
-							{#if movie.imdbId}
-								<li>
-									<span class="font-semibold text-foreground">IMDb:</span>
-									<a
-										href={`https://www.imdb.com/title/${movie.imdbId}/`}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="text-primary underline"
-									>
-										{movie.imdbId}
-									</a>
-								</li>
-							{/if}
-						</ul>
-					</div>
-
-					{#if movie.productionCompanies?.length}
-						<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
-							<h2 class="mb-4 text-xl font-semibold">Production Companies</h2>
-							<div class="flex flex-wrap gap-4">
-								{#each movie.productionCompanies as company (company.id)}
-									<Card class="p-3">
-										<div class="flex items-center gap-2">
-											{#if company.logoPath}
-												<img src={company.logoPath} alt={company.name} class="h-6 object-contain" />
-											{/if}
-											<span class="text-sm font-medium">{company.name}</span>
-										</div>
-									</Card>
-								{/each}
-							</div>
-						</div>
-					{/if}
-
-					{#if movie.productionCountries?.length || movie.originCountry?.length}
-						<div class="rounded-lg border border-border/50 bg-muted/20 p-6">
-							<h2 class="mb-4 text-xl font-semibold">Country of Origin</h2>
-							<ul class="flex flex-wrap gap-2">
-								{#if movie.productionCountries}
-									{#each movie.productionCountries as country (country.iso)}
-										<Badge variant="secondary">
-											{country.name}
-										</Badge>
-									{/each}
-								{/if}
-								{#if movie.originCountry}
-									{#each movie.originCountry as countryCode (countryCode)}
-										<Badge variant="secondary">
-											{countryCode}
-										</Badge>
-									{/each}
-								{/if}
-							</ul>
-						</div>
-					{/if}
 				</div>
 			</section>
 

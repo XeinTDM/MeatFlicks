@@ -311,8 +311,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	const queryMode =
 		(queryParams as { by?: 'id' | 'tmdb' | 'imdb' }).by ?? detectQueryMode(movieIdentifier);
 
-	console.log(`[API] Looking up movie: ${movieIdentifier}, detected mode: ${queryMode}`);
-
 	try {
 		const { movie, tmdbId } = await resolveMovieByIdentifier(movieIdentifier, queryMode);
 		const effectiveTmdbId = isValidTmdbId(tmdbId)
@@ -322,7 +320,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 				: null;
 
 		if (!movie) {
-			// Movie not in DB at all - try fallback
 			console.log(`[API] Movie not found in DB, trying fallback for TMDB ID: ${effectiveTmdbId}`);
 			const fallbackMovie = isValidTmdbId(effectiveTmdbId)
 				? await resolveFallbackMovie(effectiveTmdbId)
@@ -337,10 +334,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			return json(fallbackMovie);
 		}
 
-		// Movie exists in DB - return it even if TMDB data is unavailable
-		console.log(`[API] Returning movie from DB: ${movie.id} (TMDB ID: ${movie.tmdbId})`);
-
-		// Try to get TMDB extras, but don't fail if unavailable
 		let extras = null;
 		if (isValidTmdbId(effectiveTmdbId)) {
 			try {

@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Progress } from '$lib/components/ui/progress';
+	import { Spinner } from '$lib/components/ui/spinner/index';
 	import { Check, Play, Clock } from '@lucide/svelte';
 	import type { Episode, EpisodeWatchStatus } from '$lib/types/tv-show';
 
@@ -184,9 +185,7 @@
 						class="min-w-24"
 					>
 						{#if isLoading}
-							<div
-								class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-							></div>
+							<Spinner />
 						{:else if isWatched}
 							<Check class="mr-2 h-4 w-4" />
 							Mark Unwatched

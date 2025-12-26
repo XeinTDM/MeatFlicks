@@ -369,7 +369,6 @@ export const tvShows = sqliteTable(
 		numberOfSeasons: integer('number_of_seasons'),
 		numberOfEpisodes: integer('number_of_episodes'),
 		status: text('status'),
-		originCountry: text('origin_country'),
 		productionCompanies: text('production_companies'),
 		createdAt: integer('created_at')
 			.notNull()

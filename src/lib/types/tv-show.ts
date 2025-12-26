@@ -12,7 +12,6 @@ export interface TVShow {
 	numberOfSeasons?: number | null;
 	numberOfEpisodes?: number | null;
 	status?: string | null;
-	originCountry?: string | null;
 	productionCompanies?: string | null;
 	createdAt: number;
 	updatedAt: number;
@@ -159,7 +158,6 @@ export interface TmdbTvDetails {
 	seasonCount: number | null;
 	episodeCount: number | null;
 	status: string | null;
-	originCountry: string[] | null;
 	productionCompanies: { id: number; name: string; logoPath: string | null }[] | null;
 	seasons: TmdbTvSeason[];
 	imdbId?: string | null;

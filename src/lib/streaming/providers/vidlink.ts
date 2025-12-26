@@ -50,7 +50,14 @@ function fallbackSource(
 	context: Parameters<StreamingProvider['fetchSource']>[0],
 	params: URLSearchParams
 ) {
-	const embedUrl = `${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
+	let embedUrl;
+	if (context.mediaType === 'movie') {
+		embedUrl = `${vidlink.baseUrl}/movie/${context.tmdbId}`;
+	} else if (context.mediaType === 'tv') {
+		embedUrl = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}`;
+	} else {
+		embedUrl = `${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
+	}
 
 	return {
 		providerId: 'vidlink',
@@ -94,9 +101,20 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 			extractFirstUrl(payload, DEFAULT_STREAM_PATHS)
 		);
 
-		const embedCandidate =
-			ensureAbsoluteUrl(vidlink.baseUrl, extractFirstUrl(payload, DEFAULT_EMBED_PATHS)) ??
-			`${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
+		let embedCandidate = ensureAbsoluteUrl(
+			vidlink.baseUrl,
+			extractFirstUrl(payload, DEFAULT_EMBED_PATHS)
+		);
+
+		if (!embedCandidate) {
+			if (context.mediaType === 'movie') {
+				embedCandidate = `${vidlink.baseUrl}/movie/${context.tmdbId}`;
+			} else if (context.mediaType === 'tv') {
+				embedCandidate = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}`;
+			} else {
+				embedCandidate = `${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
+			}
+		}
 
 		if (!streamCandidate && !embedCandidate) {
 			return fallbackSource(context, params);

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LoaderCircle } from '@lucide/svelte';
+	import { Spinner } from '$lib/components/ui/spinner/index';
 
 	interface Props {
 		onLoadMore: () => void | Promise<void>;
@@ -48,7 +48,7 @@
 	<div bind:this={sentinelRef} class="flex items-center justify-center py-8">
 		{#if isLoading}
 			<div class="flex items-center gap-2 text-muted-foreground">
-				<LoaderCircle class="size-5 animate-spin" />
+				<Spinner class="size-5" />
 				<span class="text-sm">Loading more...</span>
 			</div>
 		{/if}

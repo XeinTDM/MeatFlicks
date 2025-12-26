@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
+	import { Spinner } from '$lib/components/ui/spinner/index';
 	import {
 		Search as SearchIcon,
 		LoaderCircle,
@@ -69,7 +70,7 @@
 		</div>
 		<Button type="submit" class="h-12 min-w-[120px] rounded-2xl text-base font-semibold">
 			{#if loading}
-				<LoaderCircle class="mr-2 size-4 animate-spin" />
+				<Spinner class="mr-2" />
 			{/if}
 			Search
 		</Button>

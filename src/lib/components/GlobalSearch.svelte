@@ -5,6 +5,7 @@
 	import type { LibraryMovie } from '$lib/types/library';
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { searchHistory } from '$lib/state/stores/searchHistoryStore';
+	import { Spinner } from '$lib/components/ui/spinner/index';
 
 	let query = $state('');
 	let results = $state<LibraryMovie[]>([]);
@@ -179,7 +180,7 @@
 				</div>
 			{:else if isLoading}
 				<div class="flex items-center justify-center p-8">
-					<LoaderCircle class="size-6 animate-spin text-primary" />
+					<Spinner class="size-6" />
 				</div>
 			{:else if results.length > 0}
 				<ul class="space-y-1">

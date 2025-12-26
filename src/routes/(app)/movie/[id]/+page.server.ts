@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type { MovieRecord } from '$lib/server/db';
-import { resolveStreaming } from '$lib/server';
+import { resolveStreaming, getCsrfToken } from '$lib/server';
 import { fetchTmdbRecommendations } from '$lib/server/services/tmdb.service';
 
 type MovieWithDetails = MovieRecord & {
@@ -22,14 +22,15 @@ const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
 	return 'id';
 };
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const { id: identifier } = params;
 
 	if (!identifier) {
 		return {
 			mediaType: 'movie' as const,
 			movie: null,
-			streaming: { source: null, resolutions: [] }
+			streaming: { source: null, resolutions: [] },
+			csrfToken: getCsrfToken({ cookies })
 		} as const;
 	}
 
@@ -42,7 +43,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			return {
 				mediaType: 'movie' as const,
 				movie: null,
-				streaming: { source: null, resolutions: [] }
+				streaming: { source: null, resolutions: [] },
+				csrfToken: getCsrfToken({ cookies })
 			} as const;
 		}
 
@@ -55,7 +57,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		return {
 			mediaType: 'movie' as const,
 			movie: null,
-			streaming: { source: null, resolutions: [] }
+			streaming: { source: null, resolutions: [] },
+			csrfToken: getCsrfToken({ cookies })
 		} as const;
 	}
 
@@ -84,7 +87,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			recommendations,
 			canonicalPath,
 			identifier,
-			queryMode
+			queryMode,
+			csrfToken: getCsrfToken({ cookies })
 		};
 	} catch (error) {
 		console.error('[movie][load] Failed to resolve data', error);
@@ -95,7 +99,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			recommendations: [],
 			canonicalPath,
 			identifier,
-			queryMode
+			queryMode,
+			csrfToken: getCsrfToken({ cookies })
 		};
 	}
 };

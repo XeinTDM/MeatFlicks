@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { resolveStreaming } from '$lib/server';
+import { resolveStreaming, getCsrfToken } from '$lib/server';
 import { fetchTmdbRecommendations } from '$lib/server/services/tmdb.service';
 
 type TvWithDetails = {
@@ -40,14 +40,15 @@ const detectQueryMode = (identifier: string): 'tmdb' | 'imdb' => {
 	return 'tmdb';
 };
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const { id: identifier } = params;
 
 	if (!identifier) {
 		return {
 			mediaType: 'tv' as const,
 			movie: null,
-			streaming: { source: null, resolutions: [] }
+			streaming: { source: null, resolutions: [] },
+			csrfToken: getCsrfToken({ cookies })
 		};
 	}
 
@@ -60,7 +61,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			return {
 				mediaType: 'tv' as const,
 				movie: null,
-				streaming: { source: null, resolutions: [] }
+				streaming: { source: null, resolutions: [] },
+				csrfToken: getCsrfToken({ cookies })
 			};
 		}
 
@@ -73,7 +75,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		return {
 			mediaType: 'tv' as const,
 			movie: null,
-			streaming: { source: null, resolutions: [] }
+			streaming: { source: null, resolutions: [] },
+			csrfToken: getCsrfToken({ cookies })
 		};
 	}
 
@@ -102,7 +105,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			recommendations,
 			canonicalPath,
 			identifier,
-			queryMode
+			queryMode,
+			csrfToken: getCsrfToken({ cookies })
 		};
 	} catch (error) {
 		console.error('[tv][load] Failed to resolve data', error);
@@ -113,7 +117,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			recommendations: [],
 			canonicalPath,
 			identifier,
-			queryMode
+			queryMode,
+			csrfToken: getCsrfToken({ cookies })
 		};
 	}
 };
