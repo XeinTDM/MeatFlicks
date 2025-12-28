@@ -4,15 +4,19 @@ import { tmdbRateLimiter } from '$lib/server/rate-limiter';
 import { loadMovieByTmdb } from '$lib/server/db/mutations';
 import {
     discoverMovieIds,
+    discoverTvIds,
     fetchPopularMovieIds,
+    fetchPopularTvIds,
     fetchTrendingMovieIds,
-    fetchTmdbMovieDetails
+    fetchTrendingTvIds,
+    fetchTmdbMovieDetails,
+    fetchTmdbTvDetails
 } from '$lib/server/services/tmdb.service';
 
 const STATE_VERSION = 1;
 const STATE_PATH = 'data/home-library-state.json';
 
-type RefreshTaskKey = 'trending' | 'popular' | 'genrePools' | 'highRated';
+type RefreshTaskKey = 'trending' | 'popular' | 'genrePools' | 'highRated' | 'trendingTv' | 'popularTv' | 'genrePoolsTv' | 'anime' | 'animeTv';
 
 interface RefreshState {
     version: number;
@@ -22,6 +26,8 @@ interface RefreshState {
 interface IngestOptions {
     label: string;
     minRating?: number;
+    mediaType: 'movie' | 'tv' | 'anime';
+    tmdbMediaType?: 'movie' | 'tv';
 }
 
 const DEFAULT_STATE: RefreshState = {
@@ -30,7 +36,12 @@ const DEFAULT_STATE: RefreshState = {
         trending: null,
         popular: null,
         genrePools: null,
-        highRated: null
+        highRated: null,
+        trendingTv: null,
+        popularTv: null,
+        genrePoolsTv: null,
+        anime: null,
+        animeTv: null
     }
 };
 
@@ -40,7 +51,12 @@ const REFRESH_WINDOWS: Record<RefreshTaskKey, number> = {
     trending: DAY,
     popular: DAY,
     genrePools: DAY,
-    highRated: DAY * 7
+    highRated: DAY * 7,
+    trendingTv: DAY,
+    popularTv: DAY,
+    genrePoolsTv: DAY,
+    anime: DAY,
+    animeTv: DAY
 };
 
 const GENRE_TARGETS: Array<{ id: number; name: string }> = [
@@ -50,6 +66,14 @@ const GENRE_TARGETS: Array<{ id: number; name: string }> = [
     { id: 27, name: 'Horror' },
     { id: 10749, name: 'Romance' },
     { id: 878, name: 'Science Fiction' }
+];
+
+const TV_GENRE_TARGETS: Array<{ id: number; name: string }> = [
+    { id: 10759, name: 'Action & Adventure' },
+    { id: 16, name: 'Animation' },
+    { id: 35, name: 'Comedy' },
+    { id: 18, name: 'Drama' },
+    { id: 10765, name: 'Sci-Fi & Fantasy' }
 ];
 
 let refreshPromise: Promise<void> | null = null;
@@ -71,7 +95,12 @@ const loadState = async (): Promise<RefreshState> => {
                 trending: parsed.lastRun.trending ?? null,
                 popular: parsed.lastRun.popular ?? null,
                 genrePools: parsed.lastRun.genrePools ?? null,
-                highRated: parsed.lastRun.highRated ?? null
+                highRated: parsed.lastRun.highRated ?? null,
+                trendingTv: (parsed.lastRun as any).trendingTv ?? null,
+                popularTv: (parsed.lastRun as any).popularTv ?? null,
+                genrePoolsTv: (parsed.lastRun as any).genrePoolsTv ?? null,
+                anime: (parsed.lastRun as any).anime ?? null,
+                animeTv: (parsed.lastRun as any).animeTv ?? null
             }
         };
     } catch (error) {
@@ -91,20 +120,41 @@ const isTaskDue = (state: RefreshState, task: RefreshTaskKey): boolean => {
     return Date.now() - lastRun >= windowMs;
 };
 
-const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
-    const { label, minRating } = options;
+const ingestMedia = async (tmdbIds: number[], options: IngestOptions) => {
+    const { label, minRating, mediaType } = options;
     const payloads: any[] = [];
 
     for (const tmdbId of tmdbIds) {
         try {
             const existing = await loadMovieByTmdb(tmdbId);
-            if (existing) {
+            if (existing && existing.mediaType === mediaType) {
                 continue;
             }
 
-            const details = await tmdbRateLimiter.schedule(`ingest-${label}`, () =>
-                fetchTmdbMovieDetails(tmdbId)
-            );
+            const tmdbMediaType = options.tmdbMediaType ?? (mediaType === 'anime' ? 'tv' : mediaType);
+
+            let details;
+            if (tmdbMediaType === 'movie') {
+                details = await tmdbRateLimiter.schedule(`ingest-${label}`, () =>
+                    fetchTmdbMovieDetails(tmdbId)
+                );
+            } else {
+                const tvDetails = await tmdbRateLimiter.schedule(`ingest-${label}`, () =>
+                    fetchTmdbTvDetails(tmdbId)
+                );
+                details = {
+                    found: tvDetails.found,
+                    title: tvDetails.name,
+                    overview: tvDetails.overview,
+                    posterPath: tvDetails.posterPath,
+                    backdropPath: tvDetails.backdropPath,
+                    releaseDate: tvDetails.firstAirDate,
+                    rating: tvDetails.rating,
+                    runtime: tvDetails.episodeRuntime,
+                    genres: tvDetails.genres
+                };
+            }
+
             if (!details.found) {
                 continue;
             }
@@ -118,7 +168,7 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
                 new Set(details.genres.map((genre) => genre.name).filter(Boolean))
             );
 
-            logger.debug({ tmdbId, title: details.title, label }, '[home-library] Preparing ingestion');
+            logger.debug({ tmdbId, title: details.title, label, mediaType }, '[home-library] Preparing ingestion');
 
             payloads.push({
                 tmdbId,
@@ -131,10 +181,11 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
                 durationMinutes: details.runtime ?? null,
                 is4K: false,
                 isHD: true,
-                genreNames
+                genreNames,
+                mediaType
             });
         } catch (error) {
-            logger.error({ tmdbId, label, error }, '[home-library] Failed to fetch TMDB movie for ingestion');
+            logger.error({ tmdbId, label, error, mediaType }, '[home-library] Failed to fetch TMDB data for ingestion');
         }
     }
 
@@ -142,23 +193,23 @@ const ingestMovies = async (tmdbIds: number[], options: IngestOptions) => {
         try {
             const { bulkUpsertMovies } = await import('$lib/server/db/mutations');
             await bulkUpsertMovies(payloads);
-            logger.info({ count: payloads.length, label }, '[home-library] Bulk ingestion completed');
+            logger.info({ count: payloads.length, label, mediaType }, '[home-library] Bulk ingestion completed');
         } catch (error) {
-            logger.error({ label, error }, '[home-library] Bulk ingestion failed');
+            logger.error({ label, error, mediaType }, '[home-library] Bulk ingestion failed');
         }
     }
 };
 
 const runTrendingTask = async () => {
     logger.info('[home-library] Running trending movies refresh task');
-    const ids = await fetchTrendingMovieIds(40);
-    await ingestMovies(ids, { label: 'trending' });
+    const ids = await fetchTrendingMovieIds(100);
+    await ingestMedia(ids, { label: 'trending', mediaType: 'movie' });
 };
 
 const runPopularTask = async () => {
     logger.info('[home-library] Running popular movies refresh task');
-    const ids = await fetchPopularMovieIds(40);
-    await ingestMovies(ids, { label: 'popular' });
+    const ids = await fetchPopularMovieIds(100);
+    await ingestMedia(ids, { label: 'popular', mediaType: 'movie' });
 };
 
 const runGenrePoolsTask = async () => {
@@ -167,12 +218,12 @@ const runGenrePoolsTask = async () => {
         try {
             const ids = await discoverMovieIds({
                 genreId: genre.id,
-                limit: 30,
-                minVoteAverage: 6.5,
-                minVoteCount: 200,
+                limit: 50,
+                minVoteAverage: 6.0,
+                minVoteCount: 100,
                 sortBy: 'popularity.desc'
             });
-            await ingestMovies(ids, { label: `genre:${genre.name}`, minRating: 6 });
+            await ingestMedia(ids, { label: `genre:${genre.name}`, minRating: 5.5, mediaType: 'movie' });
         } catch (error) {
             logger.error({ genre: genre.name, error }, '[home-library] Failed to refresh genre pool');
         }
@@ -182,30 +233,79 @@ const runGenrePoolsTask = async () => {
 const runHighRatedTask = async () => {
     logger.info('[home-library] Running high-rated movies refresh task');
     const ids = await discoverMovieIds({
-        limit: 60,
+        limit: 100,
         minVoteAverage: 7.5,
         minVoteCount: 500,
         sortBy: 'vote_average.desc'
     });
-    await ingestMovies(ids, { label: 'high-rated', minRating: 7 });
+    await ingestMedia(ids, { label: 'high-rated', minRating: 7, mediaType: 'movie' });
 };
 
-const TASK_ORDER: RefreshTaskKey[] = ['trending', 'popular', 'genrePools', 'highRated'];
+const runTrendingTvTask = async () => {
+    logger.info('[home-library] Running trending TV refresh task');
+    const ids = await fetchTrendingTvIds(100);
+    await ingestMedia(ids, { label: 'trending-tv', mediaType: 'tv' });
+};
+
+const runPopularTvTask = async () => {
+    logger.info('[home-library] Running popular TV refresh task');
+    const ids = await fetchPopularTvIds(100);
+    await ingestMedia(ids, { label: 'popular-tv', mediaType: 'tv' });
+};
+
+const runGenrePoolsTvTask = async () => {
+    logger.info('[home-library] Running genre pools TV refresh task');
+    for (const genre of TV_GENRE_TARGETS) {
+        try {
+            const ids = await discoverTvIds({
+                genreId: genre.id,
+                limit: 50,
+                minVoteAverage: 6.0,
+                minVoteCount: 100,
+                sortBy: 'popularity.desc'
+            });
+            await ingestMedia(ids, { label: `tv-genre:${genre.name}`, minRating: 5.5, mediaType: 'tv' });
+        } catch (error) {
+            logger.error({ genre: genre.name, error }, '[home-library] Failed to refresh TV genre pool');
+        }
+    }
+};
+
+const runAnimeTask = async () => {
+    logger.info('[home-library] Running anime movies refresh task');
+    const ids = await discoverMovieIds({
+        genreId: 16, // Animation
+        limit: 100,
+        minVoteAverage: 6.0,
+        sortBy: 'popularity.desc'
+    });
+    await ingestMedia(ids, { label: 'anime-movies', mediaType: 'anime', tmdbMediaType: 'movie' });
+};
+
+const runAnimeTvTask = async () => {
+    logger.info('[home-library] Running anime TV refresh task');
+    const ids = await discoverTvIds({
+        genreId: 16, // Animation
+        limit: 100,
+        minVoteAverage: 6.0,
+        sortBy: 'popularity.desc'
+    });
+    await ingestMedia(ids, { label: 'anime-tv', mediaType: 'anime', tmdbMediaType: 'tv' });
+};
+
+const TASK_ORDER: RefreshTaskKey[] = ['trending', 'popular', 'genrePools', 'highRated', 'trendingTv', 'popularTv', 'genrePoolsTv', 'anime', 'animeTv'];
 
 const runTask = async (task: RefreshTaskKey) => {
     switch (task) {
-        case 'trending':
-            await runTrendingTask();
-            break;
-        case 'popular':
-            await runPopularTask();
-            break;
-        case 'genrePools':
-            await runGenrePoolsTask();
-            break;
-        case 'highRated':
-            await runHighRatedTask();
-            break;
+        case 'trending': await runTrendingTask(); break;
+        case 'popular': await runPopularTask(); break;
+        case 'genrePools': await runGenrePoolsTask(); break;
+        case 'highRated': await runHighRatedTask(); break;
+        case 'trendingTv': await runTrendingTvTask(); break;
+        case 'popularTv': await runPopularTvTask(); break;
+        case 'genrePoolsTv': await runGenrePoolsTvTask(); break;
+        case 'anime': await runAnimeTask(); break;
+        case 'animeTv': await runAnimeTvTask(); break;
     }
 };
 

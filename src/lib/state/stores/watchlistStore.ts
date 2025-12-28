@@ -13,6 +13,7 @@ export type Movie = {
 	genres: string[];
 	trailerUrl?: string | null;
 	media_type?: string;
+	mediaType?: string;
 	is4K?: boolean;
 	isHD?: boolean;
 	tmdbId?: number;
@@ -100,6 +101,7 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
 		genres: Array.isArray(payload.genres) ? payload.genres.map(String) : [],
 		trailerUrl: typeof payload.trailerUrl === 'string' ? payload.trailerUrl : null,
 		media_type: typeof payload.media_type === 'string' ? payload.media_type : undefined,
+		mediaType: typeof payload.mediaType === 'string' ? payload.mediaType : undefined,
 		is4K: payload.is4K === true,
 		isHD: typeof payload.isHD === 'boolean' ? payload.isHD : undefined,
 		tmdbId: typeof payload.tmdbId === 'number' ? payload.tmdbId : undefined,

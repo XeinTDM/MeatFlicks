@@ -449,7 +449,7 @@ export async function invalidateCachePrefix(prefix: string): Promise<number> {
  */
 export async function invalidateTmdbId(
 	tmdbId: number,
-	mediaType?: 'movie' | 'tv'
+	mediaType?: 'movie' | 'tv' | 'anime'
 ): Promise<number> {
 	const patterns: string[] = [];
 
@@ -458,6 +458,7 @@ export async function invalidateTmdbId(
 	} else {
 		patterns.push(`tmdb:movie:${tmdbId}:*`);
 		patterns.push(`tmdb:tv:${tmdbId}:*`);
+		patterns.push(`tmdb:anime:${tmdbId}:*`);
 	}
 
 	let totalInvalidated = 0;
@@ -478,7 +479,7 @@ export async function invalidateTmdbId(
  */
 export async function invalidateStreamingSource(
 	tmdbId: number,
-	mediaType: 'movie' | 'tv',
+	mediaType: 'movie' | 'tv' | 'anime',
 	season?: number,
 	episode?: number
 ): Promise<number> {

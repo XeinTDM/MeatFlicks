@@ -14,6 +14,10 @@ const CATEGORY_PRESETS: Record<string, { title: string; genres: string[] }> = {
 	'tv-shows': {
 		title: 'TV Shows',
 		genres: ['Animation', 'Documentary', 'Family', 'Kids', 'Mystery', 'Reality']
+	},
+	anime: {
+		title: 'Anime',
+		genres: ['Action', 'Adventure', 'Comedy', 'Fantasy', 'Sci-Fi', 'Shounen']
 	}
 };
 
@@ -42,7 +46,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 		if (!match) {
 			if (hasActiveFilters) {
-				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination);
+				const mediaType = slug === 'tv-shows' ? 'tv' : slug === 'anime' ? 'anime' : 'movie';
+				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination, mediaType);
 				const availableGenres = await libraryRepository.listGenres();
 				return {
 					categoryTitle: fromSlug(slug),
@@ -78,7 +83,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			finalFilters.genres = [genresToFetch[0], ...(finalFilters.genres || [])];
 		}
 
-		const result = await libraryRepository.findMoviesWithFilters(finalFilters, sort, pagination);
+		const mediaType = slug === 'tv-shows' ? 'tv' : slug === 'anime' ? 'anime' : 'movie';
+		const result = await libraryRepository.findMoviesWithFilters(finalFilters, sort, pagination, mediaType);
 		const availableGenres = await libraryRepository.listGenres();
 
 		return {
@@ -98,7 +104,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		genresToFetch.map(async (genreName) => ({
 			genre: genreName,
 			slug: toSlug(genreName),
-			movies: await libraryRepository.findGenreMovies(genreName)
+			movies: await libraryRepository.findGenreMovies(genreName, undefined, undefined, slug === 'tv-shows' ? 'tv' : slug === 'anime' ? 'anime' : 'movie')
 		}))
 	);
 

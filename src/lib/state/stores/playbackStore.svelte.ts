@@ -2,7 +2,7 @@ import type { LibraryMovie } from '$lib/types/library';
 
 export type PlaybackProgress = {
     mediaId: string;
-    mediaType: 'movie' | 'tv';
+    mediaType: 'movie' | 'tv' | 'anime';
     progress: number;
     duration: number;
     seasonNumber?: number;
@@ -38,7 +38,7 @@ export class PlaybackStore {
     progress = $state<Record<string, PlaybackProgress>>(hasStorage ? readStorage() : {});
 
     saveProgress = (p: PlaybackProgress) => {
-        const key = `${p.mediaType}:${p.mediaId}${p.mediaType === 'tv' ? `:s${p.seasonNumber}e${p.episodeNumber}` : ''
+        const key = `${p.mediaType}:${p.mediaId}${p.mediaType !== 'movie' ? `:s${p.seasonNumber}e${p.episodeNumber}` : ''
             }`;
         this.progress[key] = { ...p, updatedAt: Date.now() };
         persist(this.progress);
@@ -46,11 +46,11 @@ export class PlaybackStore {
 
     getProgress = (
         mediaId: string,
-        mediaType: 'movie' | 'tv',
+        mediaType: 'movie' | 'tv' | 'anime',
         season?: number,
         episode?: number
     ) => {
-        const key = `${mediaType}:${mediaId}${mediaType === 'tv' ? `:s${season}e${episode}` : ''
+        const key = `${mediaType}:${mediaId}${mediaType !== 'movie' ? `:s${season}e${episode}` : ''
             }`;
         return this.progress[key] || null;
     };

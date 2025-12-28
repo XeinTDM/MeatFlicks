@@ -39,7 +39,7 @@
 
 	function getRuntimeLabel() {
 		if (durationMinutes === null || durationMinutes === undefined) {
-			return mediaType === 'tv' ? 'Runtime varies' : 'N/A';
+			return mediaType === 'tv' || mediaType === 'anime' ? 'Runtime varies' : 'N/A';
 		}
 		return `${durationMinutes} min`;
 	}

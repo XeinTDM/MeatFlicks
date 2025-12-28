@@ -31,16 +31,16 @@ const normalizeOffset = (value: number | undefined): number => {
 export type CollectionWithMovies = CollectionRecord & { movies: MovieSummary[] };
 
 export const libraryRepository = {
-	async findTrendingMovies(limit = 20): Promise<MovieSummary[]> {
+	async findTrendingMovies(limit = 20, mediaType: 'movie' | 'tv' | 'anime' = 'movie'): Promise<MovieSummary[]> {
 		const take = toPositiveInteger(limit, 20);
 
 		try {
-			const cacheKey = buildCacheKey('movies', 'trending', take);
+			const cacheKey = buildCacheKey('movies', 'trending', mediaType, take);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_SHORT_SECONDS, async () => {
 				const rows = await db
 					.select()
 					.from(movies)
-					.where(isNotNull(movies.rating))
+					.where(and(isNotNull(movies.rating), eq(movies.mediaType, mediaType)))
 					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 					.limit(take);
 				return await mapRowsToSummaries(rows as MovieRow[]);
@@ -173,21 +173,22 @@ export const libraryRepository = {
 	async findGenreMovies(
 		genreName: string,
 		limit?: number,
-		offset?: number
+		offset?: number,
+		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
 	): Promise<MovieSummary[]> {
 		const take = typeof limit === 'number' ? toPositiveInteger(limit, 20) : 20;
 		const skip = normalizeOffset(offset);
 		const normalizedGenre = genreName.trim();
 
 		try {
-			const cacheKey = buildCacheKey('movies', 'genre', normalizedGenre.toLowerCase(), take, skip);
+			const cacheKey = buildCacheKey('movies', 'genre', mediaType, normalizedGenre.toLowerCase(), take, skip);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 				const rows = await db
 					.select({ movies })
 					.from(movies)
 					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
 					.innerJoin(genres, eq(genres.id, moviesGenres.genreId))
-					.where(eq(genres.name, normalizedGenre))
+					.where(and(eq(genres.name, normalizedGenre), eq(movies.mediaType, mediaType)))
 					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 					.limit(take)
 					.offset(skip);
@@ -207,11 +208,12 @@ export const libraryRepository = {
 	async findMoviesWithFilters(
 		filters: MovieFilters,
 		sort: SortOptions,
-		pagination: PaginationParams
+		pagination: PaginationParams,
+		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
 	): Promise<PaginatedResult<MovieSummary>> {
 		try {
 			const offset = calculateOffset(pagination.page, pagination.pageSize);
-			const conditions: any[] = [];
+			const conditions: any[] = [eq(movies.mediaType, mediaType)];
 
 			if (filters.yearFrom) {
 				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
@@ -272,7 +274,7 @@ export const libraryRepository = {
 			const orderByClause = this.buildOrderByClause(sort);
 			query = query.orderBy(...orderByClause) as any;
 
-			const totalItems = await this.countMoviesWithFilters(filters);
+			const totalItems = await this.countMoviesWithFilters(filters, mediaType);
 
 			query = query.limit(pagination.pageSize).offset(offset) as any;
 
@@ -299,9 +301,12 @@ export const libraryRepository = {
 	/**
 	 * Count movies matching filters (for pagination)
 	 */
-	async countMoviesWithFilters(filters: MovieFilters): Promise<number> {
+	async countMoviesWithFilters(
+		filters: MovieFilters,
+		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+	): Promise<number> {
 		try {
-			const conditions: any[] = [];
+			const conditions: any[] = [eq(movies.mediaType, mediaType)];
 
 			if (filters.yearFrom) {
 				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));

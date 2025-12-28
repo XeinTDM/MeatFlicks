@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { LibraryMovie } from '$lib/types/library';
-
-	type MediaType = 'movie' | 'tv';
+	import type { MediaType } from '$lib/streaming/types';
 
 	type StructuredDataProps = {
 		media: {

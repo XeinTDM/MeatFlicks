@@ -8,6 +8,8 @@ export interface ResolveStreamingInput {
 	mediaType: MediaType;
 	tmdbId: number;
 	imdbId?: string;
+	malId?: number;
+	subOrDub?: 'sub' | 'dub';
 	season?: number;
 	episode?: number;
 	language?: string;
@@ -51,6 +53,8 @@ export async function resolveStreaming(
 			mediaType: input.mediaType,
 			tmdbId: input.tmdbId,
 			imdbId: input.imdbId,
+			malId: input.malId,
+			subOrDub: input.subOrDub,
 			season: input.season,
 			episode: input.episode,
 			language: input.language,
@@ -96,7 +100,7 @@ export async function invalidateStreamingCache(pattern?: string): Promise<number
  */
 export async function invalidateStreamingSource(
 	tmdbId: number,
-	mediaType: 'movie' | 'tv',
+	mediaType: MediaType,
 	season?: number,
 	episode?: number
 ): Promise<number> {

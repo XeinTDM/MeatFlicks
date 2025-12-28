@@ -100,7 +100,7 @@ export class PlayerService {
 
     startProgressTracking = (
         mediaId: string,
-        mediaType: 'movie' | 'tv',
+        mediaType: 'movie' | 'tv' | 'anime',
         durationMinutes: number | null,
         seasonNumber: number | null,
         episodeNumber: number | null,

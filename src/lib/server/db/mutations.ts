@@ -41,6 +41,7 @@ type UpsertMoviePayload = {
 	isHD: boolean;
 	genreNames: string[];
 	collectionId?: number | null;
+	mediaType?: 'movie' | 'tv' | 'anime';
 };
 
 export const upsertMovieWithGenres = async (
@@ -74,10 +75,11 @@ export const bulkUpsertMovies = async (
 				genreIds.push(result[0].id);
 			}
 
+			const mediaType = payload.mediaType || 'movie';
 			const existingMovies = await tx
 				.select()
 				.from(movies)
-				.where(eq(movies.tmdbId, payload.tmdbId))
+				.where(and(eq(movies.tmdbId, payload.tmdbId), eq(movies.mediaType, mediaType)))
 				.limit(1);
 			const existingMovie = existingMovies[0];
 			const movieId = existingMovie?.id ?? randomUUID();
@@ -95,6 +97,7 @@ export const bulkUpsertMovies = async (
 				is4K: payload.is4K,
 				isHD: payload.isHD,
 				collectionId: payload.collectionId ?? (existingMovie?.collectionId || null),
+				mediaType: payload.mediaType ?? (existingMovie?.mediaType || 'movie'),
 				updatedAt: Date.now()
 			};
 

@@ -850,3 +850,48 @@ export async function searchTmdbMoviesByPeople(
 		return libraryMovies;
 	});
 }
+
+/**
+ * Fetches MAL ID for a given title and optional release year using Jikan API.
+ */
+export async function fetchMalId(title: string, year?: string): Promise<number | null> {
+	const cacheKey = buildCacheKey('mal', 'search', title, year || 'any');
+
+	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
+		try {
+			const query: Record<string, string> = { q: title, limit: '1' };
+			if (year) {
+				const releaseYear = year.split('-')[0];
+				if (releaseYear) {
+					// Some anime might have slightly different start dates, but year usually works
+					// query.start_date = `${releaseYear}-01-01`; 
+				}
+			}
+
+			const response = await fetch(`https://api.jikan.moe/v4/anime?${new URLSearchParams(query)}`);
+			if (!response.ok) {
+				if (response.status === 429) {
+					console.warn('[MAL] Rate limited by Jikan');
+				}
+				return null;
+			}
+
+			const data = await response.json();
+			const result = data.data?.[0];
+
+			if (!result) return null;
+
+			// Double check if the title is reasonably close
+			const malTitle = (result.title || '').toLowerCase();
+			if (!malTitle.includes(title.toLowerCase()) && !title.toLowerCase().includes(malTitle)) {
+				console.warn(`[MAL] Title mismatch: ${title} vs ${result.title}`);
+				// Optional: return null if high confidence is needed
+			}
+
+			return result.mal_id || null;
+		} catch (error) {
+			console.warn('[MAL] Failed to fetch MAL ID', error);
+			return null;
+		}
+	});
+}
