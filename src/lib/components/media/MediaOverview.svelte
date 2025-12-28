@@ -1,25 +1,24 @@
 <script lang="ts">
 	import { Card } from '$lib/components/ui/card';
+	import { User } from '@lucide/svelte';
 
-	let {
-		cast,
-		productionCompanies,
-		overview,
-		posterPath,
-		title
-	} = $props<{
-		cast: {
-			id: number;
-			name: string;
-			character: string;
-			profilePath?: string | null;
-		}[] | undefined;
+	let { cast, productionCompanies, overview, posterPath, title } = $props<{
+		cast:
+			| {
+					id: number;
+					name: string;
+					character: string;
+					profilePath?: string | null;
+			  }[]
+			| undefined;
 
-		productionCompanies: {
-			id: number;
-			name: string;
-			logoPath: string | null;
-		}[] | undefined;
+		productionCompanies:
+			| {
+					id: number;
+					name: string;
+					logoPath: string | null;
+			  }[]
+			| undefined;
 
 		overview: string | null;
 		posterPath: string | null;
@@ -34,31 +33,36 @@
 				<ul class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 					{#each cast as member (member.id)}
 						<li
-							class="rounded-lg border border-border/40 bg-background/80 p-4 transition-colors hover:bg-muted/50"
+							class="group/cast rounded-lg border border-border/40 bg-background/80 p-3 transition-all hover:-translate-y-0.5 hover:bg-muted/50 hover:shadow-lg"
 						>
-							<a href={`/person/${member.id}`} class="flex items-center gap-3">
-								{#if member.profilePath}
-									<img
-										src={member.profilePath.startsWith('http')
-											? member.profilePath
-											: `https://image.tmdb.org/t/p/w185${member.profilePath}`}
-										alt={member.name}
-										class="h-16 w-12 rounded-md object-cover"
-										width="48"
-										height="64"
-									/>
-								{:else}
-									<div
-										class="flex h-16 w-12 items-center justify-center rounded-md bg-muted"
+							<a href={`/person/${member.id}`} class="flex items-center gap-4">
+								<div class="relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md shadow-sm">
+									{#if member.profilePath}
+										<img
+											src={member.profilePath.startsWith('http')
+												? member.profilePath
+												: `https://image.tmdb.org/t/p/w185${member.profilePath}`}
+											alt={member.name}
+											class="h-full w-full object-cover transition-transform duration-300 group-hover/cast:scale-110"
+											loading="lazy"
+											width="48"
+											height="64"
+										/>
+									{:else}
+										<div
+											class="flex h-full w-full items-center justify-center bg-muted text-muted-foreground"
+										>
+											<User class="h-6 w-6 opacity-50" />
+										</div>
+									{/if}
+								</div>
+								<div class="flex min-w-0 flex-1 flex-col justify-center">
+									<p
+										class="truncate font-semibold text-foreground transition-colors group-hover/cast:text-primary"
 									>
-										<span class="text-xs text-muted-foreground">No Image</span>
-									</div>
-								{/if}
-								<div class="flex-1">
-									<p class="font-semibold text-foreground hover:underline">
 										{member.name}
 									</p>
-									<p class="text-sm text-muted-foreground">{member.character}</p>
+									<p class="truncate text-xs text-muted-foreground">{member.character}</p>
 								</div>
 							</a>
 						</li>
@@ -74,11 +78,7 @@
 							<Card class="p-3">
 								<div class="flex items-center gap-2">
 									{#if company.logoPath}
-										<img
-											src={company.logoPath}
-											alt={company.name}
-											class="h-6 object-contain"
-										/>
+										<img src={company.logoPath} alt={company.name} class="h-6 object-contain" />
 									{/if}
 									<span class="text-sm font-medium">{company.name}</span>
 								</div>
@@ -90,11 +90,7 @@
 		</div>
 		<div class="flex flex-col items-center lg:w-[30%] lg:items-end">
 			{#if posterPath}
-				<img
-					src={posterPath}
-					alt={title}
-					class="mb-4 w-full max-w-sm rounded-lg object-cover"
-				/>
+				<img src={posterPath} alt={title} class="mb-4 w-full max-w-sm rounded-lg object-cover" />
 			{/if}
 			<div class="w-full max-w-sm">
 				<h2 class="text-xl font-semibold">Overview</h2>

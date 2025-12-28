@@ -8,7 +8,8 @@ export const TmdbGenreSchema = z.object({
 export const TmdbCastMemberSchema = z.object({
 	id: z.number(),
 	name: z.string(),
-	character: z.string().optional()
+	character: z.string().optional(),
+	profile_path: z.string().nullable().optional()
 });
 
 export const TmdbCrewMemberSchema = z.object({

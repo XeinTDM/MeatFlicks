@@ -81,15 +81,20 @@
 			}
 
 			if (media.trailerUrl) {
+				// Convert watch URL to embed URL for schema
+				let embedUrl = media.trailerUrl;
+				if (media.trailerUrl.includes('youtube.com/watch?v=')) {
+					embedUrl = media.trailerUrl.replace('watch?v=', 'embed/');
+				}
+
 				movieData.trailer = {
 					'@type': 'VideoObject',
 					name: `${media.title} Trailer`,
-					embedUrl: media.trailerUrl,
+					embedUrl: embedUrl,
 					thumbnailUrl: imageUrl || undefined,
 					uploadDate: media.releaseDate || undefined
 				};
 			}
-
 			return movieData;
 		} else {
 			const tvData: Record<string, unknown> = {
@@ -123,10 +128,16 @@
 			}
 
 			if (media.trailerUrl) {
+				// Convert watch URL to embed URL for schema
+				let embedUrl = media.trailerUrl;
+				if (media.trailerUrl.includes('youtube.com/watch?v=')) {
+					embedUrl = media.trailerUrl.replace('watch?v=', 'embed/');
+				}
+
 				tvData.trailer = {
 					'@type': 'VideoObject',
 					name: `${media.title} Trailer`,
-					embedUrl: media.trailerUrl,
+					embedUrl: embedUrl,
 					thumbnailUrl: imageUrl || undefined,
 					uploadDate: media.releaseDate || undefined
 				};

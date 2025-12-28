@@ -34,7 +34,7 @@ const LIST_TTL = CACHE_TTL_MEDIUM_SECONDS;
 export interface TmdbMovieExtras {
 	tmdbId: number;
 	imdbId: string | null;
-	cast: { id: number; name: string; character?: string | null }[];
+	cast: { id: number; name: string; character?: string | null; profilePath?: string | null }[];
 	trailerUrl: string | null;
 	runtime: number | null;
 	releaseDate: string | null;
@@ -68,7 +68,7 @@ export interface TmdbTvDetails {
 	backdropPath: string | null;
 	rating: number | null;
 	genres: TmdbMovieGenre[];
-	cast: { id: number; name: string; character?: string | null }[];
+	cast: { id: number; name: string; character?: string | null; profilePath?: string | null }[];
 	trailerUrl: string | null;
 	episodeRuntimes: number[];
 	firstAirDate: string | null;
@@ -357,8 +357,13 @@ export async function fetchTmdbTvDetails(
 					backdropPath: buildImageUrl(data.backdrop_path, env.TMDB_BACKDROP_SIZE),
 					rating: data.vote_average || null,
 					genres: data.genres || [],
-					cast: (data.credits?.cast || []).slice(0, 10),
-					trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
+					cast: (data.credits?.cast || []).slice(0, 10).map((c) => ({
+						id: c.id,
+						name: c.name,
+						character: c.character || null,
+						profilePath: buildImageUrl(c.profile_path, env.TMDB_POSTER_SIZE)
+					})),
+					trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
 					episodeRuntimes: data.episode_run_time || [],
 					firstAirDate: data.first_air_date || null,
 					seasonCount: data.number_of_seasons || null,
@@ -477,8 +482,13 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 				found: true,
 				tmdbId: data.id,
 				imdbId: data.imdb_id || null,
-				cast: (data.credits?.cast || []).slice(0, 10),
-				trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
+				cast: (data.credits?.cast || []).slice(0, 10).map((c) => ({
+					id: c.id,
+					name: c.name,
+					character: c.character || null,
+					profilePath: buildImageUrl(c.profile_path, env.TMDB_POSTER_SIZE)
+				})),
+				trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
 				runtime: data.runtime || null,
 				releaseDate: data.release_date || null,
 				title: data.title || data.original_title || null,

@@ -181,9 +181,8 @@ const attachIdentifiers = (
 };
 
 async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
-	// Temporarily force fallback by returning empty results
 	const [trendingRaw, collections, genres] = await Promise.all([
-		Promise.resolve([]), // Force empty trending movies
+		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT),
 		libraryRepository.listCollections(),
 		libraryRepository.listGenres()
 	]);

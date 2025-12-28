@@ -15,7 +15,7 @@ type TvWithDetails = {
 	durationMinutes: number | null;
 	episodeRuntimes?: number[];
 	genres?: { id: number; name: string }[];
-	cast?: { id: number; name: string; character: string }[];
+	cast?: { id: number; name: string; character: string; profilePath?: string | null }[];
 	trailerUrl?: string | null;
 	imdbId?: string | null;
 	seasonCount?: number | null;

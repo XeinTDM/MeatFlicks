@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { MediaType } from '$lib/streaming/streamingService.svelte';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Star, Film } from '@lucide/svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Star, Film, Play } from '@lucide/svelte';
 
 	let {
 		title,
@@ -78,22 +79,15 @@
 	<div class="absolute inset-0 rounded-lg bg-gradient-to-t from-black to-transparent"></div>
 	{#if trailerUrl}
 		<div class="absolute inset-0 flex items-center justify-center">
-			<button
+			<Button
+				variant="secondary"
+				size="lg"
+				class="gap-2"
 				onclick={() => window.open(trailerUrl!, '_blank', 'noopener,noreferrer')}
-				class="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-all hover:scale-110 hover:bg-white/30"
-				aria-label="Play trailer"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="32"
-					height="32"
-					viewBox="0 0 24 24"
-					fill="currentColor"
-					class="text-white"
-				>
-					<path d="M8 5v14l11-7z" />
-				</svg>
-			</button>
+				<Play class="h-4 w-4" />
+				Trailer
+			</Button>
 		</div>
 	{/if}
 	<div class="absolute bottom-4 left-4">
