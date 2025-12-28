@@ -23,7 +23,7 @@
 	let moviesCount = $derived(movies?.length ?? 0);
 	let hasMultipleMovies = $derived(moviesCount > 1);
 
-	const carouselOpts = { align: 'center' } as const;
+	const carouselOpts = { align: 'start' } as const;
 </script>
 
 <div class="px-[5%] py-8">
@@ -31,7 +31,7 @@
 		<a
 			href={linkTo}
 			data-sveltekit-preload-data="hover"
-			class="group mb-6 flex w-full items-center justify-center text-foreground transition-colors duration-300 hover:text-primary"
+			class="group mb-6 flex w-full items-center justify-start text-foreground transition-colors duration-300 hover:text-primary"
 		>
 			<h2 class="text-3xl font-semibold">{title}</h2>
 			<div class="ml-2 flex items-center gap-1">
@@ -44,7 +44,7 @@
 			</div>
 		</a>
 	{:else}
-		<div class="mb-6 flex w-full items-center justify-center">
+		<div class="mb-6 flex w-full items-center justify-start">
 			<h2 class="text-3xl font-semibold text-foreground">{title}</h2>
 		</div>
 	{/if}

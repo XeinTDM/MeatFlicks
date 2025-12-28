@@ -322,16 +322,30 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if hasSlides && activeMovie}
-	<Card
+	<div
 		class="rounded-b-0 relative min-h-[60vh] overflow-hidden border-0 bg-black bg-cover bg-center bg-no-repeat p-0 md:min-h-[65vh] lg:min-h-[70vh]"
-		style={trailerEmbedUrl ? undefined : backgroundStyle}
 		role="region"
 		aria-label="Featured content spotlight"
 		tabindex={isMultiSlide ? 0 : -1}
 	>
 		<div bind:this={heroElement} class="contents">
+			{#if backgroundImageUrl}
+				<img
+					src={backgroundImageUrl}
+					alt=""
+					loading="lazy"
+					aria-hidden="true"
+					class="absolute inset-0 -z-10 h-full w-full object-cover"
+					style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"
+				/>
+			{/if}
+
 			{#if trailerEmbedUrl}
-				<div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+				<div
+					class="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+					aria-hidden="true"
+					style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"
+				>
 					<iframe
 						title={`Trailer for ${activeMovie.title}`}
 						src={trailerEmbedUrl}
@@ -339,14 +353,6 @@
 						class="h-full w-full scale-125 md:scale-110"
 					></iframe>
 				</div>
-			{:else if backgroundImageUrl}
-				<img
-					src={backgroundImageUrl}
-					alt=""
-					loading="lazy"
-					aria-hidden="true"
-					class="absolute inset-0 -z-10 h-full w-full object-cover"
-				/>
 			{/if}
 
 			<div
@@ -360,7 +366,7 @@
 			></div>
 
 			<div
-				class="absolute top-8 left-[5%] z-20 flex flex-wrap items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+				class="absolute top-8 left-[10%] z-20 flex flex-wrap items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
 			>
 				<Badge
 					variant="secondary"
@@ -449,7 +455,7 @@
 				</Button>
 			{/if}
 
-			<div class="relative z-10 flex h-full items-end px-[5%] py-12">
+			<div class="relative z-10 flex h-full items-end px-[10%] py-12">
 				<CardContent class="max-w-2xl space-y-6 px-0 text-foreground">
 					<CardHeader class="space-y-4 px-0">
 						<CardTitle class="text-4xl leading-tight font-bold sm:text-5xl">
@@ -571,7 +577,7 @@
 				</div>
 			{/if}
 		</div>
-	</Card>
+	</div>
 {:else}
 	<Card
 		class="relative flex min-h-[50vh] items-center justify-center overflow-hidden border-0 bg-gradient-to-br from-background via-background/90 to-background px-[5%] py-24 text-center text-foreground/70"
