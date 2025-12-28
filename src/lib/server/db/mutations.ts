@@ -46,8 +46,19 @@ type UpsertMoviePayload = {
 export const upsertMovieWithGenres = async (
 	payload: UpsertMoviePayload
 ): Promise<MovieRecord | null> => {
-	return await db
-		.transaction(async (tx) => {
+	const results = await bulkUpsertMovies([payload]);
+	return results[0] ?? null;
+};
+
+export const bulkUpsertMovies = async (
+	payloads: UpsertMoviePayload[]
+): Promise<MovieRecord[]> => {
+	if (payloads.length === 0) return [];
+
+	return await db.transaction(async (tx) => {
+		const results: MovieRecord[] = [];
+
+		for (const payload of payloads) {
 			const genreIds: number[] = [];
 			for (const rawName of payload.genreNames) {
 				const name = rawName.trim();
@@ -98,18 +109,26 @@ export const upsertMovieWithGenres = async (
 				await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
 			}
 
-			return movieId;
-		})
-		.then(async (movieId) => {
-			try {
-				await syncMovieCast(movieId, payload.tmdbId);
-				await syncMovieCrew(movieId, payload.tmdbId);
-			} catch (error) {
-				console.warn(`Failed to sync person data for movie ${movieId}:`, error);
-			}
+			// Add to results
+			const movieClone = { ...movieData, createdAt: existingMovie?.createdAt ?? movieData.updatedAt };
+			results.push(movieClone as unknown as MovieRecord);
+		}
 
-			return loadMovieById(movieId);
-		});
+		return results;
+	}).then(async (syncedMovies) => {
+		// Post-transaction person sync (can be slow, so we do it after the main data is safe)
+		// We still do this in serial for now to avoid overloading TMDB Rate Limiter, 
+		// but outside the DB transaction.
+		for (const movie of syncedMovies) {
+			try {
+				await syncMovieCast(movie.id, movie.tmdbId!);
+				await syncMovieCrew(movie.id, movie.tmdbId!);
+			} catch (error) {
+				console.warn(`Failed to sync person data for movie ${movie.id}:`, error);
+			}
+		}
+		return syncedMovies;
+	});
 };
 
 export const setMovieCollection = async (movieId: string, collectionId: number | null) => {

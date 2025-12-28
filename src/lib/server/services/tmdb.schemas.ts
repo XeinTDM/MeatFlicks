@@ -80,38 +80,40 @@ export const TmdbTvSeasonSchema = z.object({
 	episodes: z.array(TmdbTvEpisodeSchema).optional()
 });
 
-export const TmdbTvSchema = z.object({
-	id: z.number(),
-	name: z.string().optional(),
-	original_name: z.string().optional(),
-	overview: z.string().nullable().optional(),
-	poster_path: z.string().nullable().optional(),
-	backdrop_path: z.string().nullable().optional(),
-	vote_average: z.number().nullable().optional(),
-	first_air_date: z.string().nullable().optional(),
-	episode_run_time: z.array(z.number()).optional(),
-	number_of_seasons: z.number().nullable().optional(),
-	number_of_episodes: z.number().nullable().optional(),
-	seasons: z.array(TmdbTvSeasonSchema).optional(),
-	genres: z.array(TmdbGenreSchema).optional(),
-	external_ids: z
-		.object({
-			imdb_id: z.string().nullable().optional()
-		})
-		.optional(),
-	credits: z
-		.object({
-			cast: z.array(TmdbCastMemberSchema)
-		})
-		.optional(),
-	videos: z
-		.object({
-			results: z.array(TmdbVideoSchema)
-		})
-		.optional(),
-	production_companies: z.array(TmdbProductionCompanySchema).optional(),
-	origin_country: z.array(z.string()).optional()
-});
+export const TmdbTvSchema = z
+	.object({
+		id: z.number(),
+		name: z.string().optional(),
+		original_name: z.string().optional(),
+		overview: z.string().nullable().optional(),
+		poster_path: z.string().nullable().optional(),
+		backdrop_path: z.string().nullable().optional(),
+		vote_average: z.number().nullable().optional(),
+		first_air_date: z.string().nullable().optional(),
+		episode_run_time: z.array(z.number()).optional(),
+		number_of_seasons: z.number().nullable().optional(),
+		number_of_episodes: z.number().nullable().optional(),
+		seasons: z.array(TmdbTvSeasonSchema).optional(),
+		genres: z.array(TmdbGenreSchema).optional(),
+		external_ids: z
+			.object({
+				imdb_id: z.string().nullable().optional()
+			})
+			.optional(),
+		credits: z
+			.object({
+				cast: z.array(TmdbCastMemberSchema)
+			})
+			.optional(),
+		videos: z
+			.object({
+				results: z.array(TmdbVideoSchema)
+			})
+			.optional(),
+		production_companies: z.array(TmdbProductionCompanySchema).optional(),
+		origin_country: z.array(z.string()).optional()
+	})
+	.passthrough();
 
 export const TmdbTrendingResultSchema = z.object({
 	id: z.number(),
@@ -202,4 +204,16 @@ export const TmdbPersonSchema = z.object({
 				.optional()
 		})
 		.optional()
+});
+export const TmdbConfigSchema = z.object({
+	images: z.object({
+		base_url: z.string(),
+		secure_base_url: z.string(),
+		backdrop_sizes: z.array(z.string()),
+		logo_sizes: z.array(z.string()),
+		poster_sizes: z.array(z.string()),
+		profile_sizes: z.array(z.string()),
+		still_sizes: z.array(z.string())
+	}),
+	change_keys: z.array(z.string())
 });

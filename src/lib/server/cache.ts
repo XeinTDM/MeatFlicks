@@ -129,22 +129,41 @@ export function buildCacheKey(
 		.join(':');
 }
 
+interface CacheEntry<T> {
+	v: T;
+	t: number;
+}
+
+function isCacheEntry<T>(val: any): val is CacheEntry<T> {
+	return val && typeof val === 'object' && 'v' in val && 't' in val;
+}
+
 export async function getCachedValue<T>(key: string): Promise<T | undefined> {
+	const entry = await getCacheEntry<T>(key);
+	return entry?.v;
+}
+
+async function getCacheEntry<T>(key: string): Promise<CacheEntry<T> | undefined> {
 	const memHit = lruStore.get(key);
-	if (memHit !== undefined) return memHit as T;
+	if (memHit !== undefined) {
+		if (isCacheEntry<T>(memHit)) return memHit;
+		return { v: memHit as T, t: Date.now() }; // Legacy support
+	}
 
 	const val = await cache.get(key);
 	if (val !== undefined) {
-		lruStore.set(key, val);
-		return val as T;
+		const entry: CacheEntry<T> = isCacheEntry<T>(val) ? val : { v: val as T, t: Date.now() };
+		lruStore.set(key, entry);
+		return entry;
 	}
 	return undefined;
 }
 
 export async function setCachedValue<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
 	const ttlMs = ttlSeconds * 1000;
-	lruStore.set(key, value as any, { ttl: ttlMs });
-	await cache.set(key, value, ttlMs);
+	const entry: CacheEntry<T> = { v: value, t: Date.now() };
+	lruStore.set(key, entry, { ttl: ttlMs });
+	await cache.set(key, entry, ttlMs);
 }
 
 export async function deleteCachedValue(key: string): Promise<void> {
@@ -165,17 +184,38 @@ export async function withCache<T>(
 		stampedeProtection?: boolean;
 		cacheOnError?: boolean;
 		errorTtlSeconds?: number;
+		swrSeconds?: number;
 	} = {}
 ): Promise<T> {
 	const {
 		stampedeProtection: useStampedeProtection = true,
 		cacheOnError = false,
-		errorTtlSeconds = 60
+		errorTtlSeconds = 60,
+		swrSeconds
 	} = options;
 
-	const cached = await getCachedValue<T>(key);
-	if (cached !== undefined) {
-		return cached;
+	const entry = await getCacheEntry<T>(key);
+
+	if (entry !== undefined) {
+		// If data is stale but SWR is enabled, return stale and update in background
+		if (swrSeconds !== undefined && Date.now() - entry.t > swrSeconds * 1000) {
+			const pendingRefresh = inflight.get(key);
+			if (!pendingRefresh) {
+				const refreshTask = (async () => {
+					try {
+						logger.debug({ key }, '[cache] SWR background refresh started');
+						const newValue = await factory();
+						await setCachedValue(key, newValue, ttlSeconds);
+					} catch (error) {
+						logger.debug({ key, error }, '[cache] SWR background refresh failed');
+					} finally {
+						inflight.delete(key);
+					}
+				})();
+				inflight.set(key, refreshTask);
+			}
+		}
+		return entry.v;
 	}
 
 	if (useStampedeProtection) {
@@ -209,7 +249,7 @@ export async function withCache<T>(
 				return await factory();
 			} catch (error) {
 				if (cacheOnError) {
-					await setCachedValue(key, null, errorTtlSeconds);
+					await setCachedValue(key, null as T, errorTtlSeconds);
 				}
 				throw error;
 			}
@@ -230,7 +270,7 @@ export async function withCache<T>(
 			if (value !== undefined) {
 				await setCachedValue(key, value, ttlSeconds);
 			} else if (cacheOnError) {
-				await setCachedValue(key, null, errorTtlSeconds);
+				await setCachedValue(key, null as T, errorTtlSeconds);
 			}
 			return value;
 		} catch (error) {
@@ -239,7 +279,7 @@ export async function withCache<T>(
 					{ key, error: error instanceof Error ? error.message : String(error) },
 					'Caching error response to prevent repeated failures'
 				);
-				await setCachedValue(key, null, errorTtlSeconds);
+				await setCachedValue(key, null as T, errorTtlSeconds);
 			}
 			throw error;
 		} finally {
@@ -261,29 +301,9 @@ export async function withCacheRefresh<T>(
 	key: string,
 	ttlSeconds: number,
 	factory: () => Promise<T>,
-	staleTtlSeconds: number = ttlSeconds * 2
+	swrSeconds: number = Math.floor(ttlSeconds / 2)
 ): Promise<T> {
-	const cached = await getCachedValue<T>(key);
-	if (cached !== undefined) {
-		if (staleTtlSeconds > 0) {
-			try {
-				await getCachedValue<T>(key);
-				setImmediate(() => {
-					withCache(key, staleTtlSeconds, factory, { stampedeProtection: true }).catch((error) => {
-						logger.debug(
-							{ key, error: error instanceof Error ? error.message : String(error) },
-							'Background cache refresh failed'
-						);
-					});
-				});
-			} catch {
-				// Ignore
-			}
-		}
-		return cached;
-	}
-
-	return withCache(key, ttlSeconds, factory, { stampedeProtection: true });
+	return withCache(key, ttlSeconds, factory, { swrSeconds, stampedeProtection: true });
 }
 
 /**

@@ -92,7 +92,6 @@ self.addEventListener('fetch', (event) => {
 
 				return caches.match(event.request).then((cachedResponse) => {
 					if (cachedResponse) {
-						console.log(`[SW] Serving from cache: ${event.request.url}`);
 						return cachedResponse;
 					}
 
