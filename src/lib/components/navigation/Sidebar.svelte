@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { Snippet } from 'svelte';
-	import { Cog } from '@lucide/svelte';
+
 	import {
 		Sidebar,
 		SidebarContent,
@@ -16,9 +16,10 @@
 		SidebarMenuItem,
 		SidebarMenuButton
 	} from '$lib/components/ui/sidebar';
-	import GlobalSearch from '$lib/components/global/GlobalSearch.svelte';
+
 	import SettingsDialog from '$lib/components/global/SettingsDialog.svelte';
 	import NavigationMenu from '$lib/components/navigation/NavigationMenu.svelte';
+	import UserProfile from '$lib/components/navigation/UserProfile.svelte';
 	import {
 		browseNav,
 		primaryNav,
@@ -48,46 +49,29 @@
 	};
 </script>
 
-<SidebarProvider>
+<SidebarProvider open={false}>
 	<Sidebar
 		aria-label={sidebarLabel}
-		collapsible={isDesktop() ? 'none' : 'offcanvas'}
+		collapsible={isDesktop() ? 'icon' : 'offcanvas'}
 		class="min-h-svh bg-background group-data-[side=right]:border-l-0 md:sticky md:top-0"
 	>
-		<SidebarHeader class="px-2 py-2">
-			<SidebarGroup class="rounded-lg bg-card">
-				<div class="px-2 pt-2 pb-4">
-					<GlobalSearch />
-				</div>
-				<SidebarGroupContent>
-					<NavigationMenu items={primaryNavItems} onItemSelected={handleItemSelect} />
-				</SidebarGroupContent>
-			</SidebarGroup>
-		</SidebarHeader>
-
 		<SidebarContent class="px-2 pt-0 pb-2">
-			<div class="flex flex-1 flex-col rounded-lg bg-card">
+			<div class="flex flex-1 flex-col justify-center rounded-lg">
 				<SidebarGroup class="px-2 pt-2 pb-2">
 					<SidebarGroupContent>
-						<NavigationMenu items={browseNavItems} onItemSelected={handleItemSelect} />
+						<NavigationMenu
+							items={[...primaryNavItems, ...browseNavItems]}
+							onItemSelected={handleItemSelect}
+						/>
 					</SidebarGroupContent>
 				</SidebarGroup>
 
 				<SidebarFooter class="mt-auto gap-0 px-0 pt-0 pb-2">
 					<SidebarGroup>
 						<SidebarGroupContent>
-							<NavigationMenu items={libraryNavItems} onItemSelected={handleItemSelect} />
 							<SidebarMenu>
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										class="cursor-pointer gap-5 p-2 text-base [&>svg]:!size-6"
-										onclick={() => (isSettingsOpen = true)}
-										tooltipContent="Settings"
-										size="lg"
-									>
-										<Cog class="h-6 w-6" />
-										<span class="font-semibold">Settings</span>
-									</SidebarMenuButton>
+								<SidebarMenuItem class="flex justify-center">
+									<UserProfile onOpenSettings={() => (isSettingsOpen = true)} />
 								</SidebarMenuItem>
 							</SidebarMenu>
 						</SidebarGroupContent>

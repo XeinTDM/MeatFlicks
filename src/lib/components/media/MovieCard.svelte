@@ -5,7 +5,7 @@
 	import { error as errorStore } from '$lib/state/stores/errorStore';
 
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardHeader, CardContent, CardTitle } from '$lib/components/ui/card';
+	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { LibraryMovie } from '$lib/types/library';
@@ -33,14 +33,6 @@
 			errorStore.set('Failed to update watchlist. Please try again.');
 		}
 	}
-
-	const releaseYear = $derived(() => {
-		if (!movie?.releaseDate) return 'N/A';
-		const date = new Date(movie.releaseDate);
-		return isNaN(date.getTime()) ? 'N/A' : date.getFullYear().toString();
-	});
-
-	const qualityTag = $derived(movie?.is4K ? '4K' : movie?.isHD ? 'HD' : '');
 
 	const detailsHref = $derived.by(() => {
 		if (!movie) return '#';
@@ -77,7 +69,7 @@
 
 		{#if movie}
 			<div
-				class="absolute inset-0 flex flex-col justify-end bg-black/50 p-4 opacity-0 transition-opacity duration-400 ease-in-out group-hover:opacity-100"
+				class="absolute inset-0 p-4 opacity-0 transition-opacity duration-400 ease-in-out group-hover:opacity-100"
 			>
 				<div
 					class="absolute top-4 left-4 opacity-0 transition-opacity duration-400 ease-in-out group-hover:opacity-100"
@@ -89,64 +81,22 @@
 				</div>
 
 				<div
-					class="absolute top-4 right-4 flex gap-2 opacity-0 transition-all duration-400 ease-in-out group-hover:scale-100 group-hover:opacity-100"
+					class="absolute top-4 right-4 opacity-0 transition-all duration-400 ease-in-out group-hover:scale-100 group-hover:opacity-100"
 				>
-					<Badge variant="secondary" class="bg-black/70 text-white">
-						{movie.media_type === 'tv'
-							? 'TV Series'
-							: movie.media_type === 'movie'
-								? 'Movie'
-								: movie.media_type || 'Media'}
-					</Badge>
-				</div>
-
-				<CardHeader
-					class="translate-y-5 transform transition-transform delay-100 duration-400 ease-in-out group-hover:translate-y-0"
-				>
-					<CardTitle
-						class="flex items-center justify-between text-lg font-semibold text-foreground"
+					<Button
+						type="button"
+						size="icon"
+						variant={isInWatchlist ? 'destructive' : 'secondary'}
+						onclick={handleWatchlistToggle}
+						class="size-8 rounded-full border border-border shadow-md backdrop-blur-sm"
 					>
-						<span>{movie.title}</span>
-						<Button
-							type="button"
-							size="icon"
-							variant={isInWatchlist ? 'destructive' : 'secondary'}
-							onclick={handleWatchlistToggle}
-							class="size-8 rounded-full border border-border backdrop-blur-sm"
-						>
-							{#if isInWatchlist}
-								<Minus class="size-4" />
-							{:else}
-								<Plus class="size-4" />
-							{/if}
-						</Button>
-					</CardTitle>
-				</CardHeader>
-
-				<CardContent class="text-sm text-muted-foreground">
-					<div class=" flex items-center gap-3">
-						<span>{releaseYear()}</span>
-						{#if qualityTag}
-							<Badge variant="secondary" class="bg-background text-foreground">
-								{qualityTag}
-							</Badge>
+						{#if isInWatchlist}
+							<Minus class="size-4" />
+						{:else}
+							<Plus class="size-4" />
 						{/if}
-					</div>
-					{#if movie.season && movie.episode}
-						<div class="mt-1 text-xs font-medium text-primary">
-							S{movie.season} E{movie.episode}
-						</div>
-					{/if}
-					<p class="h-10 overflow-hidden text-sm leading-relaxed text-muted-foreground">
-						{movie.overview}
-					</p>
-				</CardContent>
-			</div>
-		{:else}
-			<div class="absolute inset-0 flex flex-col justify-end p-4">
-				<Skeleton class="mb-2 h-4 w-3/4 rounded" />
-				<Skeleton class="mb-2 h-3 w-1/2 rounded" />
-				<Skeleton class="h-10 w-full rounded" />
+					</Button>
+				</div>
 			</div>
 		{/if}
 	</Card>

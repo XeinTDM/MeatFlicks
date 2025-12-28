@@ -64,7 +64,19 @@ export const TmdbMovieSchema = z.object({
 		})
 		.optional(),
 	production_companies: z.array(TmdbProductionCompanySchema).optional(),
-	production_countries: z.array(TmdbProductionCountrySchema).optional()
+	production_countries: z.array(TmdbProductionCountrySchema).optional(),
+	images: z
+		.object({
+			logos: z
+				.array(
+					z.object({
+						file_path: z.string(),
+						iso_639_1: z.string().nullable().optional()
+					})
+				)
+				.optional()
+		})
+		.optional()
 });
 
 export const TmdbTvEpisodeSchema = z.object({
@@ -117,7 +129,19 @@ export const TmdbTvSchema = z
 			})
 			.optional(),
 		production_companies: z.array(TmdbProductionCompanySchema).optional(),
-		origin_country: z.array(z.string()).optional()
+		origin_country: z.array(z.string()).optional(),
+		images: z
+			.object({
+				logos: z
+					.array(
+						z.object({
+							file_path: z.string(),
+							iso_639_1: z.string().nullable().optional()
+						})
+					)
+					.optional()
+			})
+			.optional()
 	})
 	.passthrough();
 

@@ -32,7 +32,7 @@
 	{#each items as item (item.href ?? item.label)}
 		<SidebarMenuItem>
 			<SidebarMenuButton
-				class="cursor-pointer gap-5 p-2 text-base [&>svg]:!size-6"
+				class="cursor-pointer justify-center gap-5 p-2 text-base [&>svg]:!size-6"
 				isActive={isActive(item)}
 				onclick={() => onItemSelected(item)}
 				tooltipContent={item.label}
@@ -55,7 +55,7 @@
 				{:else if item.label === 'Watchlist'}
 					<Bookmark class="h-6 w-6" />
 				{/if}
-				<span class="font-semibold">{item.label}</span>
+				<span class="font-semibold group-data-[collapsible=icon]:hidden">{item.label}</span>
 			</SidebarMenuButton>
 		</SidebarMenuItem>
 	{/each}

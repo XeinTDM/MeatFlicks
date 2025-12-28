@@ -16,7 +16,4 @@ export const browseNav: NavigationItem[] = [
 	{ label: 'Manga', href: '/explore/manga' }
 ];
 
-export const libraryNav: () => NavigationItem[] = () => [
-	{ label: 'History', href: '/history' },
-	{ label: 'Watchlist', href: '/watchlist' }
-];
+export const libraryNav: () => NavigationItem[] = () => [];

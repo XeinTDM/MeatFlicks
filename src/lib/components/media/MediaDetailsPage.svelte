@@ -5,14 +5,14 @@
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MovieScrollContainer } from '$lib/components';
 	import type { LibraryMovie } from '$lib/types/library';
-	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
+	import { StructuredData, SEOHead } from '$lib/components/seo';
 	import { StreamingService, type MediaType } from '$lib/streaming/streamingService.svelte';
 	import { PlayerService } from '$lib/components/player/playerService.svelte';
 	import { EpisodeService } from '$lib/components/episodes/episodeService.svelte';
 	import MediaHeader from '$lib/components/media/MediaHeader.svelte';
 	import EpisodeGrid from '$lib/components/episodes/EpisodeGrid.svelte';
 	import MediaOverview from '$lib/components/media/MediaOverview.svelte';
-	import MediaPlayer from '$lib/components/player/MediaPlayer.svelte';
+	import { Separator } from '$lib/components/ui/separator';
 	import { playbackStore } from '$lib/state/stores/playbackStore.svelte';
 
 	type MediaGenre = { id: number; name: string };
@@ -54,6 +54,7 @@
 		productionCompanies?: { id: number; name: string; logoPath: string | null }[];
 		productionCountries?: { iso: string; name: string }[];
 		voteCount?: number | null;
+		logoPath?: string | null;
 	};
 
 	type StreamingPayloadLike = {
@@ -61,7 +62,6 @@
 		resolutions: ProviderResolution[] | ReadonlyArray<ProviderResolution>;
 	};
 
-	// Access props directly to maintain reactivity in Svelte 5
 	const props = $props<{
 		data: {
 			movie: MediaDetails | null;
@@ -83,6 +83,7 @@
 	const episodeService = new EpisodeService();
 
 	let subOrDub = $state<'sub' | 'dub'>('sub');
+	let activeTab = $state<'suggested' | 'details'>('suggested');
 
 	const selectedEpisodeRuntime = $derived.by(() => {
 		if (mediaType !== 'tv' && mediaType !== 'anime') return null;
@@ -210,6 +211,28 @@
 			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
 		if (!playbackUrl) return;
 		window.open(playbackUrl, '_blank', 'noopener,noreferrer');
+	}
+
+	async function handleHeaderPlay(providerId: string) {
+		streamingService.selectProvider(providerId);
+
+		// Optimistic open to bypass popup blocker
+		const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
+
+		try {
+			await handlePlayClick();
+			const playbackUrl =
+				streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
+
+			if (win && playbackUrl) {
+				win.location.href = playbackUrl;
+			} else if (win) {
+				win.close();
+			}
+		} catch (e) {
+			console.error('Play failed', e);
+			win?.close();
+		}
 	}
 
 	$effect(() => {
@@ -526,6 +549,12 @@
 		];
 		return items;
 	});
+
+	const availableProviders = $derived(
+		streamingService.state.resolutions.length > 0
+			? streamingService.state.resolutions
+			: data.streaming?.resolutions || []
+	);
 </script>
 
 {#if movie}
@@ -559,26 +588,17 @@
 	</div>
 {:else}
 	<div class="min-h-screen bg-background text-foreground">
-		<main class="container mx-auto p-4">
-			<Breadcrumbs items={breadcrumbItems} />
-
+		<main class="container mx-auto">
 			<MediaHeader
-				title={movie.title}
-				rating={movie.rating ?? undefined}
-				{releaseYear}
-				durationMinutes={movie.durationMinutes ?? undefined}
-				episodeRuntimes={movie.episodeRuntimes}
-				currentEpisodeRuntime={selectedEpisodeRuntime}
-				{mediaType}
-				imdbId={movie.imdbId ?? undefined}
-				genres={movie.genres}
-				posterPath={movie.posterPath ?? undefined}
-				backdropPath={movie.backdropPath ?? undefined}
-				trailerUrl={movie.trailerUrl ?? undefined}
+				{movie}
+				logoPath={movie.logoPath}
+				overview={movie.overview}
+				providers={availableProviders}
+				onProviderSelect={handleHeaderPlay}
 			/>
 
 			{#if mediaType === 'anime'}
-				<div class="mb-6 flex items-center gap-4">
+				<div class="mb-6 flex items-center justify-center gap-4">
 					<span class="text-sm font-medium tracking-wider text-muted-foreground uppercase"
 						>Type:</span
 					>
@@ -589,7 +609,6 @@
 								: 'text-muted-foreground hover:text-foreground'}"
 							onclick={() => {
 								subOrDub = 'sub';
-								handlePlayClick();
 							}}
 						>
 							Sub
@@ -600,7 +619,6 @@
 								: 'text-muted-foreground hover:text-foreground'}"
 							onclick={() => {
 								subOrDub = 'dub';
-								handlePlayClick();
 							}}
 						>
 							Dub
@@ -609,47 +627,62 @@
 				</div>
 			{/if}
 
-			<MediaPlayer
-				{playerService}
-				{streamingService}
-				{mediaType}
-				movieTitle={movie.title}
-				durationMinutes={movie.durationMinutes}
-				onNextEpisode={goToNextEpisode}
-				onOpenInNewTab={handleOpenInNewTab}
-				onProviderSelect={handleProviderSelectionChange}
-				onPlayClick={handlePlayClick}
-			/>
-
-			{#if (mediaType === 'tv' || mediaType === 'anime') && movie.seasons}
-				<EpisodeGrid
-					episodes={episodeService.episodesList}
-					selectedEpisode={episodeService.selectedEpisode}
-					selectedSeason={episodeService.selectedSeason}
-					seasons={movie.seasons}
-					isLoading={episodeService.isLoadingEpisodes}
-					onSeasonChange={handleSeasonChange}
-					onEpisodeSelect={handleEpisodeSelect}
-				/>
-			{/if}
-
-			<section class="grid gap-6 lg:grid-cols-[70%,30%]">
-				<div class="space-y-4">
-					<MediaOverview
-						cast={movie.cast}
-						productionCompanies={movie.productionCompanies}
-						overview={movie.overview}
-						posterPath={movie.posterPath}
-						title={movie.title}
-					/>
+			<div class="mt-8 w-full">
+				<div class="px-[5%]">
+					<div class="mb-2 flex gap-2">
+						<button
+							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'suggested' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}"
+							onclick={() => activeTab = 'suggested'}>
+							Suggested
+						</button>
+						<button
+							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'details' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}"
+							onclick={() => activeTab = 'details'}>
+							Details
+						</button>
+					</div>
+					<Separator class="mb-2" />
 				</div>
-			</section>
 
-			{#if data.recommendations && data.recommendations.length > 0}
-				<section class="mt-12 mb-8">
-					<MovieScrollContainer title="More Like This" movies={data.recommendations} />
-				</section>
-			{/if}
+				{#if activeTab === 'suggested'}
+					<div>
+						{#if data.recommendations && data.recommendations.length > 0}
+							<MovieScrollContainer title="" movies={data.recommendations} />
+						{:else}
+							<div class="py-12 text-center text-muted-foreground">No recommendations available.</div>
+						{/if}
+					</div>
+				{:else if activeTab === 'details'}
+					<div>
+						{#if (mediaType === 'tv' || mediaType === 'anime') && movie.seasons}
+							<div class="mb-10">
+								<h3 class="mb-4 text-2xl font-bold">Episodes</h3>
+								<EpisodeGrid
+									episodes={episodeService.episodesList}
+									selectedEpisode={episodeService.selectedEpisode}
+									selectedSeason={episodeService.selectedSeason}
+									seasons={movie.seasons}
+									isLoading={episodeService.isLoadingEpisodes}
+									onSeasonChange={handleSeasonChange}
+									onEpisodeSelect={handleEpisodeSelect}
+								/>
+							</div>
+						{/if}
+
+						<section class="grid gap-6 lg:grid-cols-[70%,30%]">
+							<div class="space-y-4">
+								<MediaOverview
+									cast={movie.cast}
+									productionCompanies={movie.productionCompanies}
+									posterPath={movie.posterPath}
+									title={movie.title}
+									overview={movie.overview}
+								/>
+							</div>
+						</section>
+					</div>
+				{/if}
+			</div>
 		</main>
 	</div>
 {/if}

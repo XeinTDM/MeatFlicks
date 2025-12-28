@@ -1,36 +1,39 @@
 <script lang="ts">
-	import type { MediaType } from '$lib/streaming/streamingService.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Star, Film, Play } from '@lucide/svelte';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import { Star, Film, Play, Bookmark, BookmarkMinus } from '@lucide/svelte';
+	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import { error as errorStore } from '$lib/state/stores/errorStore';
+	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 
 	let {
-		title,
-		rating,
-		releaseYear,
-		durationMinutes,
-		episodeRuntimes,
-		currentEpisodeRuntime,
-		mediaType,
-		imdbId,
-		genres,
-		posterPath,
-		backdropPath,
-		trailerUrl
+		movie,
+		logoPath,
+		providers = [],
+		onProviderSelect
 	} = $props<{
-		title: string;
-		rating: number | null | undefined;
-		releaseYear: string | number;
-		durationMinutes: number | null | undefined;
-		episodeRuntimes?: number[];
-		currentEpisodeRuntime?: number | null;
-		mediaType: MediaType;
-		imdbId: string | null | undefined;
-		genres: { id: number; name: string }[] | undefined;
-		posterPath: string | null | undefined;
-		backdropPath: string | null | undefined;
-		trailerUrl: string | null | undefined;
+		movie: any;
+		logoPath?: string | null;
+		providers?: ProviderResolution[];
+		onProviderSelect?: (providerId: string) => void;
 	}>();
+
+	const isInWatchlist = $derived(movie ? watchlist.isInWatchlist(movie.id) : false);
+
+	function handleWatchlistToggle() {
+		if (!movie) return;
+		try {
+			if (isInWatchlist) {
+				watchlist.removeFromWatchlist(movie.id);
+			} else {
+				watchlist.addToWatchlist(movie);
+			}
+		} catch (err) {
+			console.error('Failed to update watchlist:', err);
+			errorStore.set('Failed to update watchlist. Please try again.');
+		}
+	}
 
 	const parseReleaseYear = (value: string | number) => {
 		if (typeof value === 'number') return value;
@@ -40,20 +43,21 @@
 		return Number.isFinite(year) ? year : 'N/A';
 	};
 
-	const formattedReleaseYear = $derived(parseReleaseYear(releaseYear));
+	const formattedReleaseYear = $derived(parseReleaseYear(movie?.releaseDate));
 
 	function getRuntimeLabel() {
-		if (mediaType === 'movie') {
-			return durationMinutes ? `${durationMinutes} min` : 'N/A';
+		if (!movie) return null;
+		if (movie.mediaType === 'movie') {
+			return movie.durationMinutes ? `${movie.durationMinutes} min` : 'N/A';
 		}
 
-		if (currentEpisodeRuntime) {
-			return `${currentEpisodeRuntime} min`;
+		if (movie.currentEpisodeRuntime) {
+			return `${movie.currentEpisodeRuntime} min`;
 		}
 
-		if (episodeRuntimes && episodeRuntimes.length > 0) {
-			const min = Math.min(...episodeRuntimes);
-			const max = Math.max(...episodeRuntimes);
+		if (movie.episodeRuntimes && movie.episodeRuntimes.length > 0) {
+			const min = Math.min(...movie.episodeRuntimes);
+			const max = Math.max(...movie.episodeRuntimes);
 
 			if (min === max) {
 				return `${min} min`;
@@ -62,69 +66,136 @@
 			}
 		}
 
-		if (durationMinutes) {
-			return `${durationMinutes} min`;
+		if (movie.durationMinutes) {
+			return `${movie.durationMinutes} min`;
 		}
 
 		return null;
 	}
 
-	const runtimeLabel = $derived(getRuntimeLabel());
+		const runtimeLabel = $derived(getRuntimeLabel());
+
+		let showFullOverview = $state(false);
+
+		function toggleOverview() {
+			showFullOverview = !showFullOverview;
+		}
 </script>
 
-<div class="relative mb-8 h-96 w-full">
-	{#if backdropPath}
-		<img src={backdropPath} alt={title} class="h-full w-full rounded-lg object-cover" />
+<div class="relative mb-8 h-[32rem] w-full">
+	{#if movie?.backdropPath}
+		<img src={movie.backdropPath} alt={movie.title} class="h-full w-full rounded-lg object-cover" />
 	{/if}
-	<div class="absolute inset-0 rounded-lg bg-gradient-to-t from-black to-transparent"></div>
-	{#if trailerUrl}
-		<div class="absolute inset-0 flex items-center justify-center">
-			<Button
-				variant="secondary"
-				size="lg"
-				class="gap-2"
-				onclick={() => window.open(trailerUrl!, '_blank', 'noopener,noreferrer')}
-			>
-				<Play class="h-4 w-4" />
-				Trailer
-			</Button>
-		</div>
-	{/if}
-	<div class="absolute bottom-4 left-4">
-		<div class="flex flex-col gap-2">
-			<div class="flex items-center gap-4">
-				<h1 class="text-5xl font-bold text-foreground">{title}</h1>
-				{#if rating}
-					<div class="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1 backdrop-blur-sm">
-						<Star class="h-5 w-5 text-blue-500" />
-						<span class="font-semibold">{rating.toFixed(1)}</span>
+	<div
+		class="absolute inset-0 rounded-lg bg-gradient-to-t from-background via-background/60 to-transparent"
+	></div>
+
+	<div class="absolute bottom-10 max-w-4xl px-[5%]">
+		<div class="flex flex-col gap-6">
+			{#if logoPath}
+				<img src={logoPath} alt={movie.title} class="h-32 w-auto origin-left object-contain" />
+			{:else}
+				<h1 class="text-6xl font-extrabold tracking-tight text-foreground">{movie?.title}</h1>
+			{/if}
+
+			<div class="flex items-center gap-4 text-lg">
+				{#if movie?.rating}
+					<div class="flex items-center gap-2 text-yellow-500">
+						<Star class="size-6 fill-current" />
+						<span class="font-bold text-foreground">{movie.rating.toFixed(1)}</span>
 					</div>
 				{/if}
-				{#if imdbId}
-					<a
-						href={`https://www.imdb.com/title/${imdbId}/`}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="flex h-10 w-10 items-center justify-center rounded-lg bg-black/20 backdrop-blur-sm transition-colors hover:bg-black/30"
-						title="View on IMDb"
-					>
-						<Film class="h-5 w-5 text-yellow-500" />
-					</a>
-				{/if}
+
+				<div class="flex items-center gap-3 text-muted-foreground">
+					<span>{formattedReleaseYear}</span>
+					{#if runtimeLabel}
+						<span>•</span>
+						<span>{runtimeLabel}</span>
+					{/if}
+					{#if movie?.genres?.length}
+						<span>•</span>
+						<div class="flex gap-2">
+							{#each movie.genres.slice(0, 3) as genre (genre.id)}
+								<span>{genre.name}</span>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			</div>
-			<div class="flex flex-wrap items-center gap-4">
-				<p class="text-xl text-gray-300">
-					{formattedReleaseYear}{runtimeLabel ? ` | ${runtimeLabel}` : ''}
-				</p>
-				{#if genres?.length}
-					<div class="flex flex-wrap gap-2">
-						{#each genres as genre (genre.id)}
-							<Badge variant="secondary">
-								{genre.name}
-							</Badge>
-						{/each}
-					</div>
+
+			{#if movie?.overview}
+				<div class="max-w-2xl">
+					{#if showFullOverview}
+						<p class="text-lg leading-relaxed text-muted-foreground">
+							{movie.overview}
+						</p>
+					{:else}
+						<p class="text-lg leading-relaxed text-muted-foreground line-clamp-1">
+							{movie.overview}
+						</p>
+					{/if}
+					{#if movie.overview.length > 100} <!-- Simple heuristic for when to show button -->
+						<Button
+							variant="link"
+							class="h-auto p-0 text-sm text-muted-foreground hover:text-foreground"
+							onclick={toggleOverview}
+						>
+							{#if showFullOverview}
+								Less
+							{:else}
+								More
+							{/if}
+						</Button>
+					{/if}
+				</div>
+			{/if}
+
+			<div class="mt-2 flex flex-wrap items-center gap-4">
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						<Button
+							variant="default"
+							size="lg"
+							class="h-12 gap-2 bg-primary px-8 text-lg font-semibold hover:bg-primary/90"
+						>
+							<Play class="size-5 fill-current" />
+							Play
+						</Button>
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="start" class="w-56">
+						{#if providers.length > 0}
+							<DropdownMenu.Label>Select Provider</DropdownMenu.Label>
+							<DropdownMenu.Separator />
+							{#each providers as provider}
+								<DropdownMenu.Item onclick={() => onProviderSelect?.(provider.providerId)}>
+									{provider.providerId.charAt(0).toUpperCase() + provider.providerId.slice(1)}
+								</DropdownMenu.Item>
+							{/each}
+						{:else}
+							<DropdownMenu.Item disabled>No providers available</DropdownMenu.Item>
+						{/if}
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+
+				{#if movie?.trailerUrl}
+					<Button
+						variant="secondary"
+						size="lg"
+						class="h-12 gap-2 px-6"
+						onclick={() => window.open(movie.trailerUrl!, '_blank', 'noopener,noreferrer')}
+					>
+						<Film class="size-5" />
+						Trailer
+					</Button>
 				{/if}
+
+				<Button variant="outline" size="lg" class="h-12 gap-2 px-6" onclick={handleWatchlistToggle}>
+					{#if isInWatchlist}
+						<BookmarkMinus class="size-5" />
+					{:else}
+						<Bookmark class="size-5" />
+					{/if}
+				</Button>
 			</div>
 		</div>
 	</div>

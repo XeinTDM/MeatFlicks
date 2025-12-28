@@ -41,6 +41,7 @@ export interface TmdbMovieExtras {
 	productionCompanies: { id: number; name: string; logoPath: string | null }[];
 	productionCountries: { iso: string; name: string }[];
 	voteCount: number | null;
+	logoPath: string | null;
 }
 
 export interface TmdbMovieGenre {
@@ -77,6 +78,7 @@ export interface TmdbTvDetails {
 
 	seasons: TmdbTvSeason[];
 	productionCompanies: { id: number; name: string; logoPath: string | null }[];
+	logoPath: string | null;
 }
 
 export interface TmdbTvSeason {
@@ -295,6 +297,7 @@ export async function fetchTmdbTvDetails(
 				const appendStr = [
 					'credits',
 					'videos',
+					'images',
 					'external_ids',
 					...appendSeasons.map((n) => `season/${n}`)
 				].join(',');
@@ -313,10 +316,13 @@ export async function fetchTmdbTvDetails(
 						(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
 				);
 
+				const logo = data.images?.logos?.find((l) => l.iso_639_1 === 'en') || data.images?.logos?.[0];
+
 				const seasons = (data.seasons || [])
 					.filter((s) => s.season_number > 0)
 					.map((s) => {
 						const seasonKey = `season/${s.season_number}`;
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						const detailedSeason = rawData[seasonKey];
 
 						if (detailedSeason) {
@@ -373,7 +379,8 @@ export async function fetchTmdbTvDetails(
 						id: c.id,
 						name: c.name,
 						logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
-					}))
+					})),
+					logoPath: logo ? buildImageUrl(logo.file_path, env.TMDB_POSTER_SIZE) : null
 				};
 			} catch (error) {
 				console.error(`[fetchTmdbTvDetails] Error for tmdbId ${tmdbId}:`, error);
@@ -466,7 +473,7 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 		try {
 			const rawData = await tmdbRateLimiter.schedule('tmdb-movie-details', () =>
 				api(`/movie/${tmdbId}`, {
-					query: { append_to_response: 'credits,videos' }
+					query: { append_to_response: 'credits,videos,images' }
 				})
 			);
 
@@ -477,6 +484,8 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 					v.site.toLowerCase() === 'youtube' &&
 					(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
 			);
+
+			const logo = data.images?.logos?.find((l) => l.iso_639_1 === 'en') || data.images?.logos?.[0];
 
 			return {
 				found: true,
@@ -506,7 +515,8 @@ export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDe
 				productionCountries: (data.production_countries || []).map((c) => ({
 					iso: c.iso_3166_1,
 					name: c.name
-				}))
+				})),
+				logoPath: logo ? buildImageUrl(logo.file_path, env.TMDB_POSTER_SIZE) : null
 			};
 		} catch (error) {
 			console.error(`[fetchTmdbMovieDetails] Error for tmdbId ${tmdbId}:`, error);
@@ -626,7 +636,9 @@ export async function fetchTmdbMovieExtras(tmdbId: number): Promise<TmdbMovieExt
 		releaseDate: details.releaseDate,
 		productionCompanies: details.productionCompanies,
 		productionCountries: details.productionCountries,
-		voteCount: details.voteCount
+
+		voteCount: details.voteCount,
+		logoPath: details.logoPath
 	};
 }
 
