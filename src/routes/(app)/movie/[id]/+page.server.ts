@@ -71,14 +71,34 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		: `/movie/${movie.tmdbId ?? movie.id}`;
 
 	try {
-		const [streaming, recommendations] = await Promise.all([
-			resolveStreaming({
-				mediaType: 'movie',
-				tmdbId: Number(movie.tmdbId),
-				imdbId: movie.imdbId ?? undefined
-			}),
-			fetchTmdbRecommendations(Number(movie.tmdbId), 'movie')
-		]);
+		// Try to resolve streaming first - this is critical
+		console.log(`[DEBUG] Resolving streaming for movie ${movie.title} (TMDB: ${movie.tmdbId})`);
+		const streaming = await resolveStreaming({
+			mediaType: 'movie',
+			tmdbId: Number(movie.tmdbId),
+			imdbId: movie.imdbId ?? undefined
+		});
+
+		console.log(`[DEBUG] Streaming resolution result for ${movie.title}:`, {
+			hasSource: Boolean(streaming.source),
+			resolutionCount: streaming.resolutions.length,
+			providerIds: streaming.resolutions.map(r => r.providerId)
+		});
+
+		// Try to get recommendations, but don't fail if this doesn't work
+		let recommendations: any[] = [];
+		try {
+			recommendations = await fetchTmdbRecommendations(Number(movie.tmdbId), 'movie');
+		} catch (recommendationError) {
+			console.warn('[movie][load] Failed to fetch recommendations, but continuing with streaming data', recommendationError);
+			// Continue with empty recommendations rather than failing the whole request
+		}
+
+		console.log('[DEBUG] Server returning streaming data:', {
+			hasSource: Boolean(streaming.source),
+			resolutionCount: streaming.resolutions.length,
+			providerIds: streaming.resolutions.map(r => r.providerId)
+		});
 
 		return {
 			mediaType: 'movie' as const,
@@ -91,7 +111,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	} catch (error) {
-		console.error('[movie][load] Failed to resolve data', error);
+		console.error('[movie][load] Failed to resolve streaming data', error);
 		return {
 			mediaType: 'movie' as const,
 			movie,

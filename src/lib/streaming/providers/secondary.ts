@@ -63,8 +63,12 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 
 		// Try to fetch the embed page to verify it works
 		const response = await fetchWithTimeout(embedUrl, {
-			headers: { accept: 'text/html, */*' },
-			timeoutMs: 10000
+			headers: {
+				accept: 'text/html, */*',
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+				'Referer': hnembedCc.baseUrl
+			},
+			timeoutMs: 20000
 		});
 
 		if (response.ok) {
@@ -101,8 +105,12 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 
 		const endpoint = `${twoEmbed.baseUrl}/api/${context.mediaType}`;
 		const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
-			headers: { accept: 'application/json, text/json, */*' },
-			timeoutMs: 10000
+			headers: {
+				accept: 'application/json, text/json, */*',
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+				'Referer': twoEmbed.baseUrl
+			},
+			timeoutMs: 20000
 		});
 
 		if (response.ok) {

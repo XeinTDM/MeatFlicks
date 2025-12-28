@@ -18,7 +18,6 @@ const streamingSchema = z.object({
 	VIDSRCME_SU_BASE_URL: z.string().url().default('https://vidsrcme.su'),
 	VSRC_SU_BASE_URL: z.string().url().default('https://vsrc.su'),
 	VIDSRCXYZ_BASE_URL: z.string().url().default('https://vidsrc.xyz'),
-	EMBEDSU_BASE_URL: z.string().url().default('https://embed.su'),
 	TWOEMBED_BASE_URL: z.string().url().default('https://2embed.cc'),
 	HNEMBED_CC_BASE_URL: z.string().url().default('https://hnembed.cc'),
 	HNEMBED_NET_BASE_URL: z.string().url().default('https://hnembed.net'),
@@ -40,7 +39,6 @@ const envValues = streamingSchema.parse({
 	VIDSRCME_SU_BASE_URL: process.env.VIDSRCME_SU_BASE_URL,
 	VSRC_SU_BASE_URL: process.env.VSRC_SU_BASE_URL,
 	VIDSRCXYZ_BASE_URL: process.env.VIDSRCXYZ_BASE_URL,
-	EMBEDSU_BASE_URL: process.env.EMBEDSU_BASE_URL,
 	TWOEMBED_BASE_URL: process.env.TWOEMBED_BASE_URL,
 	HNEMBED_CC_BASE_URL: process.env.HNEMBED_CC_BASE_URL,
 	HNEMBED_NET_BASE_URL: process.env.HNEMBED_NET_BASE_URL,
@@ -77,9 +75,6 @@ export const streamingConfig = {
 	},
 	vidsrcxyz: {
 		baseUrl: normalizeBase(envValues.VIDSRCXYZ_BASE_URL)
-	},
-	embedSu: {
-		baseUrl: normalizeBase(envValues.EMBEDSU_BASE_URL)
 	},
 	twoEmbed: {
 		baseUrl: normalizeBase(envValues.TWOEMBED_BASE_URL)

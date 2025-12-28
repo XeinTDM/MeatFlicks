@@ -24,25 +24,25 @@ type CurrentMedia = {
     episodeInfo: EpisodeInfo;
 };
 
-export function createStreamingService() {
-    let state: StreamingState = {
+export class StreamingService {
+    state = $state<StreamingState>({
         source: null,
         resolutions: [],
         qualities: [],
         subtitles: [],
         isResolving: false,
         error: null
-    };
+    });
 
-    let currentProviderId: string | null = null;
-    let currentMedia: CurrentMedia = {
+    currentProviderId = $state<string | null>(null);
+    currentMedia = $state<CurrentMedia>({
         mediaId: null,
         tmdbId: null,
         mediaType: null,
         episodeInfo: {}
-    };
+    });
 
-    async function resolveProvider(
+    resolveProvider = async (
         providerId: string,
         options: {
             tmdbId: number;
@@ -54,14 +54,14 @@ export function createStreamingService() {
             preferredSubtitleLanguage?: string | null;
             csrfToken?: string;
         }
-    ) {
+    ) => {
         if (!options.tmdbId) {
-            state.error = 'No TMDB ID provided';
+            this.state.error = 'No TMDB ID provided';
             return;
         }
 
-        state.isResolving = true;
-        state.error = null;
+        this.state.isResolving = true;
+        this.state.error = null;
 
         try {
             const response = await fetch('/api/streaming', {
@@ -89,35 +89,35 @@ export function createStreamingService() {
 
             const payload = await response.json();
 
-            state.source = payload?.source ?? null;
-            state.resolutions = Array.isArray(payload?.resolutions) ? [...payload.resolutions] : [];
+            this.state.source = payload?.source ?? null;
+            this.state.resolutions = Array.isArray(payload?.resolutions) ? [...payload.resolutions] : [];
 
             if (payload.source) {
-                state.qualities = payload.source.qualities || [];
-                state.subtitles = payload.source.subtitles || [];
+                this.state.qualities = payload.source.qualities || [];
+                this.state.subtitles = payload.source.subtitles || [];
             }
 
-            if (!state.source) {
-                state.error = 'Provider did not return a playable stream. Please try another option.';
+            if (!this.state.source) {
+                this.state.error = 'Provider did not return a playable stream. Please try another option.';
             }
 
-            currentProviderId = state.source?.providerId ?? null;
+            this.currentProviderId = this.state.source?.providerId ?? null;
         } catch (error) {
             console.error('[streaming][resolveProvider]', error);
-            state.error = error instanceof Error ? error.message : 'Failed to load provider stream.';
+            this.state.error = error instanceof Error ? error.message : 'Failed to load provider stream.';
         } finally {
-            state.isResolving = false;
+            this.state.isResolving = false;
         }
-    }
+    };
 
-    function setCurrentMedia(mediaInfo: {
+    setCurrentMedia = (mediaInfo: {
         mediaId: string;
         tmdbId: number | null;
         mediaType: MediaType;
         season?: number;
         episode?: number;
-    }) {
-        currentMedia = {
+    }) => {
+        this.currentMedia = {
             mediaId: mediaInfo.mediaId,
             tmdbId: mediaInfo.tmdbId,
             mediaType: mediaInfo.mediaType,
@@ -126,16 +126,42 @@ export function createStreamingService() {
                 episode: mediaInfo.episode
             }
         };
-    }
+    };
 
-    function selectProvider(providerId: string) {
-        if (currentProviderId === providerId) return;
-        currentProviderId = providerId;
-        state.error = null;
-    }
+    selectProvider = (providerId: string) => {
+        if (this.currentProviderId === providerId) return;
+        this.currentProviderId = providerId;
+        this.state.error = null;
+    };
 
-    function reset() {
-        state = {
+    initializeFromServerData = (serverData: {
+        source?: StreamingSource | null;
+        resolutions?: ProviderResolution[];
+    }) => {
+        console.log('[DEBUG] initializeFromServerData called with:', {
+            hasSource: Boolean(serverData.source),
+            sourceProvider: serverData.source?.providerId,
+            resolutionCount: serverData.resolutions?.length || 0,
+            resolutions: serverData.resolutions
+        });
+
+        if (serverData.source) {
+            this.state.source = serverData.source;
+            this.state.qualities = serverData.source.qualities || [];
+            this.state.subtitles = serverData.source.subtitles || [];
+            this.currentProviderId = serverData.source.providerId;
+        }
+
+        if (serverData.resolutions && serverData.resolutions.length > 0) {
+            this.state.resolutions = [...serverData.resolutions];
+            console.log('[DEBUG] Streaming service resolutions set:', this.state.resolutions);
+        } else {
+            console.log('[DEBUG] No resolutions to set from server data');
+        }
+    };
+
+    reset = () => {
+        this.state = {
             source: null,
             resolutions: [],
             qualities: [],
@@ -143,24 +169,6 @@ export function createStreamingService() {
             isResolving: false,
             error: null
         };
-        currentProviderId = null;
-    }
-
-    return {
-        get state() {
-            return state;
-        },
-        get currentProviderId() {
-            return currentProviderId;
-        },
-        get currentMedia() {
-            return currentMedia;
-        },
-        resolveProvider,
-        setCurrentMedia,
-        selectProvider,
-        reset
+        this.currentProviderId = null;
     };
 }
-
-export type StreamingService = ReturnType<typeof createStreamingService>;

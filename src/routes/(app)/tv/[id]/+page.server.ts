@@ -89,14 +89,21 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	}
 
 	try {
-		const [streaming, recommendations] = await Promise.all([
-			resolveStreaming({
-				mediaType: 'tv',
-				tmdbId: Number(tvShow.tmdbId),
-				imdbId: tvShow.imdbId ?? undefined
-			}),
-			fetchTmdbRecommendations(Number(tvShow.tmdbId), 'tv')
-		]);
+		// Try to resolve streaming first - this is critical
+		const streaming = await resolveStreaming({
+			mediaType: 'tv',
+			tmdbId: Number(tvShow.tmdbId),
+			imdbId: tvShow.imdbId ?? undefined
+		});
+
+		// Try to get recommendations, but don't fail if this doesn't work
+		let recommendations: any[] = [];
+		try {
+			recommendations = await fetchTmdbRecommendations(Number(tvShow.tmdbId), 'tv');
+		} catch (recommendationError) {
+			console.warn('[tv][load] Failed to fetch recommendations, but continuing with streaming data', recommendationError);
+			// Continue with empty recommendations rather than failing the whole request
+		}
 
 		return {
 			mediaType: 'tv' as const,
@@ -109,7 +116,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			csrfToken: getCsrfToken({ cookies }) ?? undefined
 		};
 	} catch (error) {
-		console.error('[tv][load] Failed to resolve data', error);
+		console.error('[tv][load] Failed to resolve streaming data', error);
 		return {
 			mediaType: 'tv' as const,
 			movie: tvShow,

@@ -124,9 +124,6 @@ const api = ofetch.create({
 	},
 	retry: 3,
 	retryDelay: 1000,
-	onRequest({ request, options }) {
-		console.log('[ofetch] Request:', { url: request.toString(), options });
-	},
 	onResponseError({ request, response, options }) {
 		console.error('[ofetch] Response Error:', {
 			url: request.toString(),

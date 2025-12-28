@@ -20,6 +20,13 @@
 		onPlayClick: () => void;
 	}>();
 
+	console.log('[DEBUG] ProviderSelector: Component rendered with', {
+		resolutionCount: resolutions.length,
+		selectedProvider,
+		isResolving,
+		hasRequestedPlayback
+	});
+
 	const selectedProviderLabel = $derived(
 		resolutions.find((resolution: ProviderResolution) => resolution.providerId === selectedProvider)
 			?.label || 'Select Provider'

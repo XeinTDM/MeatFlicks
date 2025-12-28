@@ -74,10 +74,20 @@ function fallbackSource(
 
 async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource']>[0]) {
 	const params = buildQuery(context);
-	const endpoint = `${vidsrc.baseUrl}/api/${context.mediaType}`;
+
+	// Try multiple endpoint structures to handle API changes
+	const endpoints = [
+		`${vidsrc.baseUrl}/api/${context.mediaType}`,
+		`${vidsrc.baseUrl}/embed/${context.mediaType}`,
+		`${vidsrc.baseUrl}/v1/${context.mediaType}`,
+		`${vidsrcEmbedRu.baseUrl}/api/${context.mediaType}`,
+		`${vidsrcEmbedSu.baseUrl}/api/${context.mediaType}`
+	];
 
 	const headers: Record<string, string> = {
-		accept: 'application/json, text/json, */*'
+		accept: 'application/json, text/json, */*',
+		'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+		'Referer': vidsrc.baseUrl
 	};
 
 	if (vidsrc.apiKey) {
@@ -85,44 +95,113 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 	}
 
 	try {
-		const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
-			headers,
-			timeoutMs: 10000
-		});
+		// Try each endpoint in sequence
+		for (const endpoint of endpoints) {
+			try {
+				const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
+					headers,
+					timeoutMs: 15000, // Increased timeout
+					redirect: 'follow'
+				});
 
-		if (!response.ok) {
-			throw new Error(`VidSrc responded with status ${response.status}`);
+				if (!response.ok) {
+					if (response.status === 404) {
+						continue; // Try next endpoint for 404 errors
+					} else if (response.status === 403) {
+						// If we get 403, try with different headers
+						const retryHeaders = {
+							...headers,
+							'x-requested-with': 'XMLHttpRequest'
+						};
+
+						const retryResponse = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
+							headers: retryHeaders,
+							timeoutMs: 15000
+						});
+
+						if (retryResponse.ok) {
+							// Process the successful retry response
+							const contentType = retryResponse.headers.get('content-type') ?? '';
+							if (contentType.includes('json')) {
+								const payload = await retryResponse.json();
+								const streamCandidate = ensureAbsoluteUrl(
+									vidsrc.baseUrl,
+									extractFirstUrl(payload, DEFAULT_STREAM_PATHS)
+								);
+
+								const embedCandidate = ensureAbsoluteUrl(
+									vidsrc.baseUrl,
+									extractFirstUrl(payload, DEFAULT_EMBED_PATHS)
+								);
+
+								if (streamCandidate || embedCandidate) {
+									return {
+										providerId: 'vidsrc',
+										streamUrl: streamCandidate ?? embedCandidate!,
+										embedUrl: embedCandidate ?? undefined,
+										reliabilityScore: streamCandidate ? 0.75 : 0.6,
+										notes: streamCandidate
+											? 'Direct stream resolved from VidSrc API.'
+											: 'Embed resolved from VidSrc API.'
+									} as const;
+								}
+							}
+						}
+						continue; // Try next endpoint
+					} else {
+						continue; // Try next endpoint for other errors
+					}
+				}
+
+				const contentType = response.headers.get('content-type') ?? '';
+				if (!contentType.includes('json')) {
+					// If we get HTML, try to extract embed URL from it
+					if (contentType.includes('html')) {
+						const html = await response.text();
+						const embedMatch = html.match(/https?:\/\/[^\s"']+\/embed\/[^\s"']+/);
+						if (embedMatch) {
+							return {
+								providerId: 'vidsrc',
+								streamUrl: embedMatch[0],
+								embedUrl: embedMatch[0],
+								reliabilityScore: 0.65,
+								notes: 'Embed URL extracted from HTML response.'
+							} as const;
+						}
+					}
+					continue; // Try next endpoint
+				}
+
+				const payload = await response.json();
+				const streamCandidate = ensureAbsoluteUrl(
+					vidsrc.baseUrl,
+					extractFirstUrl(payload, DEFAULT_STREAM_PATHS)
+				);
+
+				const embedCandidate = ensureAbsoluteUrl(
+					vidsrc.baseUrl,
+					extractFirstUrl(payload, DEFAULT_EMBED_PATHS)
+				);
+
+				if (streamCandidate || embedCandidate) {
+					return {
+						providerId: 'vidsrc',
+						streamUrl: streamCandidate ?? embedCandidate!,
+						embedUrl: embedCandidate ?? undefined,
+						reliabilityScore: streamCandidate ? 0.75 : 0.6,
+						notes: streamCandidate
+							? 'Direct stream resolved from VidSrc API.'
+							: 'Embed resolved from VidSrc API.'
+					} as const;
+				}
+			} catch (endpointError) {
+				console.warn(`[streaming][vidsrc] Endpoint ${endpoint} failed:`, endpointError);
+				continue; // Try next endpoint
+			}
 		}
 
-		const contentType = response.headers.get('content-type') ?? '';
-		if (!contentType.includes('json')) {
-			return fallbackSource(context, params);
-		}
-
-		const payload = await response.json();
-		const streamCandidate = ensureAbsoluteUrl(
-			vidsrc.baseUrl,
-			extractFirstUrl(payload, DEFAULT_STREAM_PATHS)
-		);
-
-		const embedCandidate = ensureAbsoluteUrl(
-			vidsrc.baseUrl,
-			extractFirstUrl(payload, DEFAULT_EMBED_PATHS)
-		);
-
-		if (!streamCandidate && !embedCandidate) {
-			return fallbackSource(context, params);
-		}
-
-		return {
-			providerId: 'vidsrc',
-			streamUrl: streamCandidate ?? embedCandidate!,
-			embedUrl: embedCandidate ?? undefined,
-			reliabilityScore: streamCandidate ? 0.75 : 0.6,
-			notes: streamCandidate
-				? 'Direct stream resolved from VidSrc API.'
-				: 'Embed resolved from VidSrc API.'
-		} as const;
+		// If all endpoints fail, return fallback
+		return fallbackSource(context, params);
 	} catch (error) {
 		console.warn('[streaming][vidsrc]', error);
 		return fallbackSource(context, params);

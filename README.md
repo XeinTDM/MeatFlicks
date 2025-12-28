@@ -48,40 +48,6 @@ MeatFlicks is a SvelteKit 2 (Svelte 5 runes) web application for exploring and s
 
 ## Environment Variables
 
-### Core backend
-
-| Variable                      | Description                                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------------ |
-| `SQLITE_DB_PATH`              | Optional absolute/relative path for the SQLite database file (defaults to `data/meatflicks.db`). |
-| `TMDB_API_KEY`                | Server-side TMDB API key for enriching movie records.                                            |
-| `TMDB_IMAGE_BASE_URL`         | TMDB CDN base URL (default `https://image.tmdb.org/t/p/`).                                       |
-| `TMDB_POSTER_SIZE`            | Poster size path segment (e.g. `w500`).                                                          |
-| `TMDB_BACKDROP_SIZE`          | Backdrop size path segment (e.g. `original`).                                                    |
-| `AUTH_SECRET`                 | Secret used by NextAuth JWT sessions.                                                            |
-| `NEXTAUTH_SECRET`             | Duplicate of `AUTH_SECRET` required by runtime config validation.                                |
-| `GITHUB_ID` / `GITHUB_SECRET` | OAuth client credentials for GitHub sign-in.                                                     |
-| `GOOGLE_ID` / `GOOGLE_SECRET` | OAuth client credentials for Google sign-in (optional but supported).                            |
-
-### Client-facing
-
-| Variable                                                          | Description                                                                                             |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_BASE_URL`                                            | Absolute URL the browser should use when calling internal APIs (e.g. `http://localhost:5173`).          |
-| `NEXT_PUBLIC_TMDB_API_KEY`                                        | Optional: overrides the public TMDB key exposed to the client; falls back to `TMDB_API_KEY` if omitted. |
-| `NEXT_PUBLIC_TMDB_IMAGE_BASE_URL`                                 | Optional: overrides the image base URL exposed to the client; defaults to the server value.             |
-| `NEXT_PUBLIC_TMDB_POSTER_SIZE` / `NEXT_PUBLIC_TMDB_BACKDROP_SIZE` | Optional poster/backdrop size overrides; default to server values.                                      |
-
-### Streaming providers (optional overrides)
-
-| Variable                               | Description                                                                |
-| -------------------------------------- | -------------------------------------------------------------------------- |
-| `VIDLINK_BASE_URL` / `VIDLINK_API_KEY` | Base URL and key for Vidlink resolver (defaults to `https://vidlink.pro`). |
-| `VIDSRC_BASE_URL` / `VIDSRC_API_KEY`   | Base URL and key for Vidsrc resolver (defaults to `https://vidsrc.me`).    |
-| `EMBEDSU_BASE_URL`                     | Base URL for EmbedSu resolver (defaults to `https://embed.su`).            |
-| `TWOEMBED_BASE_URL`                    | Base URL for TwoEmbed resolver (defaults to `https://www.2embed.to`).      |
-
-Keep secrets out of version control and rotate credentials regularly.
-
 ## Commands
 
 | Command         | Description                                                       |
@@ -92,46 +58,6 @@ Keep secrets out of version control and rotate credentials regularly.
 | `bun run lint`  | Run Prettier check and ESLint.                                    |
 | `bun run check` | Run SvelteKit sync and type-checking (svelte-check + TypeScript). |
 | `bun test`      | Execute Vitest unit tests (`--run` configured in package).        |
-
-## Project Structure
-
-```
-src/
-  lib/
-    components/        # Reusable Svelte components (hero, cards, header, etc.)
-    config/            # Runtime environment and streaming provider configuration
-    server/            # SQLite client, repositories, services, Auth config
-    state/             # Svelte stores (theme, watchlist)
-    streaming/         # Provider registry and resolution helpers
-    utils/             # Shared utility helpers (slugs, etc.)
-routes/
-  (app)/               # UI routes (home, movie detail, collections, search, watchlist)
-  api/                 # JSON APIs (movies, genres, search, streaming, watchlist, auth)
-hooks.server.ts        # NextAuth (@auth/sveltekit) integration
-static/                # Static assets served as-is
-tailwind.config.ts     # Tailwind CSS configuration (v4)
-vite.config.ts         # Vite configuration for SvelteKit
-```
-
-## Caching
-
-- Memory-first LRU cache lives in `src/lib/server/cache.ts`, backed by a singleton `lru-cache` instance. Entries are stored as JSON with TTLs so they expire automatically.
-- On a memory miss we consult the SQLite `cache` table (`key`, `data`, `expiresAt`). Fresh hits repopulate the LRU for fast subsequent lookups; expired rows are pruned lazily.
-- Library queries in `src/lib/server/repositories/library.repository.ts` plus the movie/search API routes (`src/routes/api/...`) always go through the helper functions in `src/lib/server/cache.ts`, so the pipeline is Memory → SQLite.
-- Tune TTLs with `CACHE_TTL_SHORT`, `CACHE_TTL_MEDIUM`, `CACHE_TTL_LONG`, and `CACHE_TTL_MOVIE` (seconds, clamped to 5-30 minutes). `CACHE_MEMORY_MAX_ITEMS` controls the LRU size.
-- SQLite writes are best-effort: if the database file is unavailable the app falls back to the in-process cache, trading shared consistency for availability.
-
-## API Surface
-
-- `GET /api/movies/[id]` - Retrieves a movie by internal ID with TMDB credits and trailer metadata.
-- `GET /api/genres/[genreName]` - Returns movies tagged with the given genre (404 when empty).
-- `GET /api/search?q=` - Case-insensitive search across stored titles and overviews.
-- `GET|POST /api/streaming` - Resolves playable sources from registered streaming providers.
-- `GET /api/watchlist/get` - Returns the signed-in user's watchlist.
-- `POST /api/watchlist/add` / `POST /api/watchlist/remove` - Mutate the authenticated user's watchlist.
-- `GET /api/auth/[...nextauth]` - NextAuth handlers (GitHub/Google OAuth, session callbacks).
-
-Routes rely on @auth/sveltekit session middleware; unauthenticated watchlist access returns an error.
 
 ## Testing & Quality
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MediaType } from '$lib/streaming/streamingService';
+	import type { MediaType } from '$lib/streaming/streamingService.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Star, Film } from '@lucide/svelte';
 
@@ -37,21 +37,17 @@
 
 	const formattedReleaseYear = $derived(parseReleaseYear(releaseYear));
 
-	const runtimeLabel = $derived(() => {
-		if (!durationMinutes) {
+	function getRuntimeLabel() {
+		if (durationMinutes === null || durationMinutes === undefined) {
 			return mediaType === 'tv' ? 'Runtime varies' : 'N/A';
 		}
 		return `${durationMinutes} min`;
-	});
+	}
 </script>
 
 <div class="relative mb-8 h-96 w-full">
 	{#if backdropPath}
-		<img
-			src={backdropPath}
-			alt={title}
-			class="h-full w-full rounded-lg object-cover"
-		/>
+		<img src={backdropPath} alt={title} class="h-full w-full rounded-lg object-cover" />
 	{/if}
 	<div class="absolute inset-0 rounded-lg bg-gradient-to-t from-black to-transparent"></div>
 	{#if trailerUrl}
@@ -79,9 +75,7 @@
 			<div class="flex items-center gap-4">
 				<h1 class="text-5xl font-bold text-foreground">{title}</h1>
 				{#if rating}
-					<div
-						class="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1 backdrop-blur-sm"
-					>
+					<div class="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-1 backdrop-blur-sm">
 						<Star class="h-5 w-5 text-blue-500" />
 						<span class="font-semibold">{rating.toFixed(1)}</span>
 					</div>
@@ -100,7 +94,7 @@
 			</div>
 			<div class="flex flex-wrap items-center gap-4">
 				<p class="text-xl text-gray-300">
-					{formattedReleaseYear} | {runtimeLabel}
+					{formattedReleaseYear} | {getRuntimeLabel()}
 				</p>
 				{#if genres?.length}
 					<div class="flex flex-wrap gap-2">

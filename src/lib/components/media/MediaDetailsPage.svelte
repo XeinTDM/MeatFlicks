@@ -5,14 +5,17 @@
 	import { MovieScrollContainer } from '$lib/components';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { StructuredData, Breadcrumbs, SEOHead } from '$lib/components/seo';
-	import { createStreamingService, type MediaType } from '$lib/streaming/streamingService';
-	import { createPlayerService } from '$lib/components/player/playerService';
-	import { createEpisodeService } from '$lib/components/episodes/episodeService';
+	import { StreamingService, type MediaType } from '$lib/streaming/streamingService.svelte';
+	import { PlayerService } from '$lib/components/player/playerService.svelte';
+	import { EpisodeService } from '$lib/components/episodes/episodeService.svelte';
 	import MediaHeader from '$lib/components/media/MediaHeader.svelte';
 	import ProviderSelector from '$lib/components/utils/ProviderSelector.svelte';
 	import EpisodeGrid from '$lib/components/episodes/EpisodeGrid.svelte';
 	import MediaOverview from '$lib/components/media/MediaOverview.svelte';
 	import MediaPlayer from '$lib/components/player/MediaPlayer.svelte';
+	import { playbackStore } from '$lib/state/stores/playbackStore.svelte';
+
+	console.log('[DEBUG] MediaDetailsPage component script loaded');
 
 	type MediaGenre = { id: number; name: string };
 	type MediaCastMember = {
@@ -59,28 +62,36 @@
 		resolutions: ProviderResolution[] | ReadonlyArray<ProviderResolution>;
 	};
 
-	let {
-		data
-	}: {
+	// Access props directly to maintain reactivity in Svelte 5
+	const props = $props<{
 		data: {
 			movie: MediaDetails | null;
 			streaming?: StreamingPayloadLike;
 			mediaType?: MediaType;
 			recommendations?: LibraryMovie[];
 			csrfToken?: string;
+			canonicalPath?: string;
 		} & Record<string, unknown>;
-	} = $props();
+	}>();
 
-	const movie = $derived(data.movie ?? null);
-	const mediaType = $derived((data.mediaType ?? 'movie') as MediaType);
-	const canonicalPath = $derived(data.canonicalPath as string | undefined);
+	const movie = $derived(props.data.movie ?? null);
+	const mediaType = $derived((props.data.mediaType ?? 'movie') as MediaType);
+	const canonicalPath = $derived(props.data.canonicalPath as string | undefined);
+	const data = $derived(props.data);
 
-	const streamingService = createStreamingService();
-	const playerService = createPlayerService();
-	const episodeService = createEpisodeService();
+	const streamingService = new StreamingService();
+	const playerService = new PlayerService();
+	const episodeService = new EpisodeService();
 
 	$effect(() => {
+		console.log('[DEBUG] MediaDetailsPage effect running, movie:', movie ? 'available' : 'null');
 		if (movie) {
+			console.log('[DEBUG] MediaDetailsPage: Movie data available', {
+				movieId: movie.id,
+				tmdbId: movie.tmdbId,
+				title: movie.title
+			});
+
 			streamingService.setCurrentMedia({
 				mediaId: movie.id,
 				tmdbId: movie.tmdbId,
@@ -89,15 +100,33 @@
 				episode: mediaType === 'tv' ? episodeService.selectedEpisode : undefined
 			});
 
-			if (data.streaming) {
-				const initialResolutions = [...data.streaming.resolutions];
-				streamingService.state.resolutions = initialResolutions;
+			console.log('[DEBUG] MediaDetailsPage: Checking data.streaming:', {
+				dataStreamingExists: Boolean(data.streaming),
+				dataStreaming: data.streaming
+			});
 
-				if (data.streaming.source) {
-					streamingService.state.source = data.streaming.source;
-					streamingService.state.qualities = data.streaming.source.qualities || [];
-					streamingService.state.subtitles = data.streaming.source.subtitles || [];
-				}
+			if (data.streaming) {
+				console.log('[DEBUG] MediaDetailsPage: Streaming data available', {
+					hasSource: Boolean(data.streaming.source),
+					resolutionCount: data.streaming.resolutions?.length || 0,
+					resolutions: data.streaming.resolutions
+				});
+
+				streamingService.initializeFromServerData({
+					source: data.streaming.source ?? null,
+					resolutions: Array.isArray(data.streaming.resolutions)
+						? [...data.streaming.resolutions]
+						: []
+				});
+
+				// Debug the streaming service state after initialization
+				console.log('[DEBUG] MediaDetailsPage: Streaming service state after init:', {
+					resolutions: streamingService.state.resolutions,
+					source: streamingService.state.source,
+					currentProviderId: streamingService.currentProviderId
+				});
+			} else {
+				console.log('[DEBUG] MediaDetailsPage: No streaming data available');
 			}
 		}
 	});
@@ -112,7 +141,8 @@
 			return;
 		}
 
-		const alreadyResolved = streamingService.state.source?.providerId === streamingService.currentProviderId &&
+		const alreadyResolved =
+			streamingService.state.source?.providerId === streamingService.currentProviderId &&
 			Boolean(streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl);
 
 		if (alreadyResolved) {
@@ -158,13 +188,18 @@
 	function goToNextEpisode() {
 		if (!movie?.seasons || mediaType !== 'tv') return;
 
-		const currentSeasonData = movie.seasons.find((s) => s.seasonNumber === episodeService.selectedSeason);
+		const currentSeasonData = movie.seasons.find(
+			(s: { seasonNumber: number; episodeCount: number }) =>
+				s.seasonNumber === episodeService.selectedSeason
+		);
 		if (!currentSeasonData) return;
 
 		if (episodeService.selectedEpisode < currentSeasonData.episodeCount) {
 			handleEpisodeSelect(episodeService.selectedEpisode + 1);
 		} else {
-			const nextSeason = movie.seasons.find((s) => s.seasonNumber === episodeService.selectedSeason + 1);
+			const nextSeason = movie.seasons.find(
+				(s: { seasonNumber: number }) => s.seasonNumber === episodeService.selectedSeason + 1
+			);
 			if (nextSeason) {
 				episodeService.handleSeasonChange(nextSeason.seasonNumber);
 				handleEpisodeSelect(1);
@@ -173,7 +208,8 @@
 	}
 
 	function handleOpenInNewTab() {
-		const playbackUrl = streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
+		const playbackUrl =
+			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
 		if (!playbackUrl) return;
 		window.open(playbackUrl, '_blank', 'noopener,noreferrer');
 	}
@@ -182,9 +218,10 @@
 		if (!streamingService.currentProviderId && streamingService.state.resolutions.length > 0) {
 			streamingService.selectProvider(
 				streamingService.state.source?.providerId ??
-				streamingService.state.resolutions.find((r: ProviderResolution) => r.success)?.providerId ??
-				streamingService.state.resolutions[0]?.providerId ??
-				null
+					streamingService.state.resolutions.find((r: ProviderResolution) => r.success)
+						?.providerId ??
+					streamingService.state.resolutions[0]?.providerId ??
+					null
 			);
 		}
 	});
@@ -193,12 +230,14 @@
 		if (
 			streamingService.currentProviderId &&
 			streamingService.state.resolutions.length > 0 &&
-			!streamingService.state.resolutions.some((r: ProviderResolution) => r.providerId === streamingService.currentProviderId)
+			!streamingService.state.resolutions.some(
+				(r: ProviderResolution) => r.providerId === streamingService.currentProviderId
+			)
 		) {
 			streamingService.selectProvider(
 				streamingService.state.resolutions.find((r: ProviderResolution) => r.success)?.providerId ??
-				streamingService.state.resolutions[0]?.providerId ??
-				null
+					streamingService.state.resolutions[0]?.providerId ??
+					null
 			);
 		}
 	});
@@ -210,7 +249,9 @@
 	});
 
 	$effect(() => {
-		const displayPlayer = Boolean(streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl);
+		const displayPlayer = Boolean(
+			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl
+		);
 		if (displayPlayer && movie) {
 			playerService.startProgressTracking(
 				movie.id,
@@ -221,25 +262,56 @@
 				async (progress) => {
 					if (!movie) return;
 
+					// Save to local storage store first
+					playbackStore.saveProgress({
+						mediaId: movie.id,
+						mediaType,
+						progress,
+						duration: movie.durationMinutes ? movie.durationMinutes * 60 : 0,
+						seasonNumber: mediaType === 'tv' ? episodeService.selectedSeason : undefined,
+						episodeNumber: mediaType === 'tv' ? episodeService.selectedEpisode : undefined,
+						updatedAt: Date.now(),
+						movieData: {
+							...movie,
+							mediaType
+						} as LibraryMovie
+					});
+
 					try {
 						const duration = movie.durationMinutes ? movie.durationMinutes * 60 : 0;
 						if (duration > 0) {
-							await fetch('/api/playback/progress', {
+							const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+							if (data.csrfToken) {
+								headers['X-CSRF-Token'] = data.csrfToken;
+							}
+
+							const response = await fetch('/api/playback/progress', {
 								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
+								headers,
 								body: JSON.stringify({
 									mediaId: movie.id,
 									mediaType,
 									progress: progress,
 									duration,
 									seasonNumber: mediaType === 'tv' ? episodeService.selectedSeason : undefined,
-									episodeNumber: mediaType === 'tv' ? episodeService.selectedEpisode : undefined,
-									csrf_token: data.csrfToken
+									episodeNumber: mediaType === 'tv' ? episodeService.selectedEpisode : undefined
 								}),
 								credentials: 'include'
 							});
+
+							if (!response.ok) {
+								if (response.status === 401 || response.status === 403) {
+									// User is not authenticated or CSRF validation failed
+									// This is expected for unauthenticated users, so we silently ignore
+									return;
+								}
+								console.error(
+									`Failed to save playback progress: ${response.status} ${response.statusText}`
+								);
+							}
 						}
 					} catch (error) {
+						// Network errors or other issues - log but don't spam
 						console.error('Failed to save playback progress:', error);
 					}
 				}
@@ -250,7 +322,9 @@
 	});
 
 	$effect(() => {
-		const displayPlayer = Boolean(streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl);
+		const displayPlayer = Boolean(
+			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl
+		);
 		if (displayPlayer && movie?.durationMinutes && mediaType === 'tv') {
 			playerService.setupAutoPlayTimer(movie.durationMinutes, goToNextEpisode);
 		} else {
@@ -290,7 +364,9 @@
 				return;
 			}
 
-			const displayPlayer = Boolean(streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl);
+			const displayPlayer = Boolean(
+				streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl
+			);
 
 			switch (event.key.toLowerCase()) {
 				case 'f':
@@ -358,7 +434,9 @@
 	$effect(() => {
 		if (typeof window !== 'undefined' && movie?.id) {
 			const normalizedGenres =
-				movie.genres?.map((genre) => ('name' in genre ? String(genre.name) : String(genre))) ?? [];
+				movie.genres?.map((genre: MediaGenre) =>
+					'name' in genre ? String(genre.name) : String(genre)
+				) ?? [];
 
 			type WatchPayload = {
 				id: string;
@@ -468,7 +546,7 @@
 		twitterCard="summary_large_image"
 		keywords={[
 			movie.title,
-			...(movie.genres?.map((g) => g.name) || []),
+			...(movie.genres?.map((g: MediaGenre) => g.name) || []),
 			mediaType === 'tv' ? 'TV show' : 'movie',
 			'watch online',
 			'free streaming'
@@ -493,9 +571,9 @@
 			<MediaHeader
 				title={movie.title}
 				rating={movie.rating ?? undefined}
-				releaseYear={releaseYear}
+				{releaseYear}
 				durationMinutes={movie.durationMinutes ?? undefined}
-				mediaType={mediaType}
+				{mediaType}
 				imdbId={movie.imdbId ?? undefined}
 				genres={movie.genres}
 				posterPath={movie.posterPath ?? undefined}
@@ -504,16 +582,16 @@
 			/>
 
 			<MediaPlayer
-				playerService={playerService}
-				streamingService={streamingService}
-				mediaType={mediaType}
+				{playerService}
+				{streamingService}
+				{mediaType}
 				movieTitle={movie.title}
 				durationMinutes={movie.durationMinutes}
 				onNextEpisode={goToNextEpisode}
 				onOpenInNewTab={handleOpenInNewTab}
 			/>
 
-			{#if streamingService.state.resolutions.length}
+			{#if streamingService.state.resolutions.length > 0}
 				<section class="mb-6">
 					<ProviderSelector
 						resolutions={streamingService.state.resolutions}
@@ -527,6 +605,37 @@
 						<p class="mt-2 text-sm text-destructive">{streamingService.state.error}</p>
 					{/if}
 				</section>
+			{:else if streamingService.state.isResolving}
+				<section class="mb-6">
+					<div class="flex items-center gap-2">
+						<p class="text-sm text-muted-foreground">Loading streaming providers...</p>
+					</div>
+				</section>
+			{:else if !streamingService.state.isResolving && streamingService.state.resolutions.length === 0}
+				<section class="mb-6">
+					<div class="rounded-lg border border-dashed border-gray-600 p-4 text-center">
+						<p class="text-sm text-muted-foreground">
+							No streaming providers available for this {mediaType === 'tv' ? 'TV show' : 'movie'}.
+						</p>
+						{#if streamingService.state.error}
+							<p class="mt-1 text-sm text-destructive">{streamingService.state.error}</p>
+						{/if}
+					</div>
+				</section>
+			{/if}
+
+			{#if !streamingService.state.isResolving && streamingService.state.resolutions.length === 0}
+				<script>
+					console.log('[DEBUG] MediaDetailsPage: No providers shown - debugging info:', {
+						streamingServiceState: streamingService.state,
+						dataStreaming: data.streaming,
+						movieData: {
+							id: movie?.id,
+							tmdbId: movie?.tmdbId,
+							title: movie?.title
+						}
+					});
+				</script>
 			{/if}
 
 			{#if mediaType === 'tv' && movie.seasons}

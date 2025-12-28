@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { PlayerService } from '$lib/components/player/playerService';
-	import type { StreamingService } from '$lib/streaming/streamingService';
-	import type { MediaType } from '$lib/streaming/streamingService';
+	import type { PlayerService } from '$lib/components/player/playerService.svelte';
+	import type { StreamingService } from '$lib/streaming/streamingService.svelte';
+	import type { MediaType } from '$lib/streaming/streamingService.svelte';
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -20,12 +20,14 @@
 		streamingService: StreamingService;
 		mediaType: MediaType;
 		movieTitle: string;
-		durationMinutes: number | null;
+		durationMinutes?: number | null;
 		onNextEpisode: () => void;
 		onOpenInNewTab: () => void;
 	}>();
 
-	const playbackUrl = $derived(streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null);
+	const playbackUrl = $derived(
+		streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null
+	);
 	const displayPlayer = $derived(Boolean(playbackUrl));
 	const primarySource = $derived(streamingService.state.source);
 	const currentQualities = $derived(streamingService.state.qualities);
@@ -61,8 +63,7 @@
 			</button>
 		{/if}
 
-		<!-- Player Controls -->
-		{#if displayPlayer && (currentQualities.length > 1 || currentSubtitles.length > 0)}
+		{#if currentQualities.length > 1 || currentSubtitles.length > 0}
 			<PlayerControls
 				qualities={currentQualities}
 				subtitles={currentSubtitles}
@@ -95,9 +96,7 @@
 				class="overlay-enter absolute right-6 bottom-6 z-40 w-80 overflow-hidden rounded-xl border border-white/10 bg-black/80 p-5 text-white shadow-2xl backdrop-blur-md"
 			>
 				<div class="mb-4">
-					<h4 class="text-xs font-semibold tracking-wider text-white/60 uppercase">
-						Up Next
-					</h4>
+					<h4 class="text-xs font-semibold tracking-wider text-white/60 uppercase">Up Next</h4>
 					<p class="mt-1 text-lg font-bold">{movieTitle}</p>
 				</div>
 
@@ -127,49 +126,63 @@
 			</div>
 		{/if}
 	</div>
-
-	{#if !playerService.isTheaterMode}
-		<div
-			class="mb-6 flex flex-wrap items-center justify-between gap-6 text-sm text-muted-foreground"
-		>
-			<div class="flex flex-wrap items-center gap-6">
-				{#if playbackUrl}
-					<Button variant="secondary" size="sm" onclick={onOpenInNewTab}
-						>Open in New Tab</Button
-					>
+{:else}
+	<div
+		class="relative mb-8 flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-gray-900/50 shadow-2xl"
+	>
+		<div class="p-4 text-center">
+			<p class="text-sm text-muted-foreground">
+				{#if streamingService.state.isResolving}
+					Loading player...
+				{:else if !streamingService.currentProviderId}
+					Select a streaming provider to begin playback
+				{:else}
+					No playback source available. Try selecting a different provider.
 				{/if}
-				{#if mediaType === 'tv'}
-					<label
-						class="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
-					>
-						<Checkbox
-							bind:checked={playerService.isAutoPlay}
-							class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
-						/>
-						<span>Auto-play Next</span>
-					</label>
-				{/if}
-				<button
-					onclick={playerService.togglePictureInPicture}
-					class="flex items-center gap-2 transition-colors hover:text-foreground"
-					disabled={typeof document === 'undefined' ||
-						!('pictureInPictureEnabled' in document)}
-				>
-					<PictureInPicture class="h-4 w-4" />
-					Picture-in-Picture
-				</button>
-				<Button
-					variant="ghost"
-					size="sm"
-					onclick={playerService.toggleTheaterMode}
-					class="flex items-center gap-2 transition-colors hover:text-foreground"
-				>
-					<MonitorPlay class="h-4 w-4" />
-					Theater Mode
-				</Button>
-			</div>
+			</p>
+			{#if streamingService.state.error && !streamingService.state.isResolving}
+				<p class="mt-2 text-sm text-destructive">{streamingService.state.error}</p>
+			{/if}
 		</div>
-	{/if}
+	</div>
+{/if}
+
+{#if !playerService.isTheaterMode}
+	<div class="mb-6 flex flex-wrap items-center justify-between gap-6 text-sm text-muted-foreground">
+		<div class="flex flex-wrap items-center gap-6">
+			{#if playbackUrl}
+				<Button variant="secondary" size="sm" onclick={onOpenInNewTab}>Open in New Tab</Button>
+			{/if}
+			{#if mediaType === 'tv'}
+				<label
+					class="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
+				>
+					<Checkbox
+						bind:checked={playerService.isAutoPlay}
+						class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
+					/>
+					<span>Auto-play Next</span>
+				</label>
+			{/if}
+			<button
+				onclick={playerService.togglePictureInPicture}
+				class="flex items-center gap-2 transition-colors hover:text-foreground"
+				disabled={typeof document === 'undefined' || !('pictureInPictureEnabled' in document)}
+			>
+				<PictureInPicture class="h-4 w-4" />
+				Picture-in-Picture
+			</button>
+			<Button
+				variant="ghost"
+				size="sm"
+				onclick={playerService.toggleTheaterMode}
+				class="flex items-center gap-2 transition-colors hover:text-foreground"
+			>
+				<MonitorPlay class="h-4 w-4" />
+				Theater Mode
+			</Button>
+		</div>
+	</div>
 {/if}
 
 <style>

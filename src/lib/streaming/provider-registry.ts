@@ -2,13 +2,11 @@ import type { StreamingProvider, StreamingProviderContext, StreamingSource } fro
 import { primaryProvider } from './providers/primary';
 import { secondaryProvider } from './providers/secondary';
 import { tertiaryProvider } from './providers/tertiary';
-import { quaternaryProvider } from './providers/quaternary';
 
 const providers: StreamingProvider[] = [
 	tertiaryProvider, // vidlink - priority 40
 	primaryProvider, // vidsrc - priority 30
-	secondaryProvider, // hnembed - priority 25
-	quaternaryProvider // embedSu - priority 15
+	secondaryProvider // hnembed - priority 25
 ];
 
 function orderProviders(
@@ -51,7 +49,7 @@ export async function collectStreamingSources(
 		timeoutMs?: number;
 	} = {}
 ): Promise<ProviderResolution[]> {
-	const { parallel = true, timeoutMs = 10000 } = options;
+	const { parallel = true, timeoutMs = 20000 } = options;
 	const orderedProviders = orderProviders(context, preferredProviders);
 	const results: ProviderResolution[] = [];
 

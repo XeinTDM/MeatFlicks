@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Episode } from '$lib/components/episodes/episodeService';
+	import type { Episode } from '$lib/components/episodes/episodeService.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 
@@ -15,7 +15,13 @@
 		episodes: Episode[];
 		selectedEpisode: number;
 		selectedSeason: number;
-		seasons: { id: number; name: string; seasonNumber: number; episodeCount: number; posterPath: string | null; }[];
+		seasons: {
+			id: number;
+			name: string;
+			seasonNumber: number;
+			episodeCount: number;
+			posterPath: string | null;
+		}[];
 		isLoading: boolean;
 		onSeasonChange: (value: string) => void;
 		onEpisodeSelect: (episodeNumber: number) => void;
@@ -25,17 +31,13 @@
 <section class="mb-8">
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-xl font-semibold">Episodes</h3>
-	<Select
-			type="single"
-			value={selectedSeason.toString()}
-			onValueChange={onSeasonChange}
-		>
+		<Select type="single" value={selectedSeason.toString()} onValueChange={onSeasonChange}>
 			<SelectTrigger class="w-48" aria-label="Select season">
 				<span data-slot="select-value">
 					{#if seasons?.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)}
-						{seasons.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)?.name} ({seasons.find(
-							(s: { seasonNumber: number }) => s.seasonNumber === selectedSeason
-						)?.episodeCount} Episodes)
+						{seasons.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)?.name}
+						({seasons.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)
+							?.episodeCount} Episodes)
 					{/if}
 				</span>
 			</SelectTrigger>
@@ -60,9 +62,9 @@
 			{#each episodes as episode (episode.id)}
 				<button
 					class="group relative aspect-video overflow-hidden rounded-md border transition-all hover:border-primary {selectedEpisode ===
-									episode.episodeNumber
-										? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
-										: 'border-border'}"
+					episode.episodeNumber
+						? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
+						: 'border-border'}"
 					onclick={() => onEpisodeSelect(episode.episodeNumber)}
 				>
 					{#if episode.stillPath}

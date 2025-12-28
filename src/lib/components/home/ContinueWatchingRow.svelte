@@ -3,10 +3,15 @@
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
+	import { playbackStore } from '$lib/state/stores/playbackStore.svelte';
+
 	let continueWatchingMovies = $state<LibraryMovie[]>([]);
 	let isLoading = $state(true);
 
 	onMount(async () => {
+		const localProgress = playbackStore.getContinueWatching();
+		continueWatchingMovies = localProgress;
+
 		try {
 			const response = await fetch('/api/playback/progress', {
 				credentials: 'include'
@@ -36,12 +41,26 @@
 						return null;
 					});
 
-					const movies = await Promise.all(moviePromises);
-					continueWatchingMovies = movies.filter((m) => m !== null) as LibraryMovie[];
+					const serverMovies = (await Promise.all(moviePromises)).filter(
+						(m) => m !== null
+					) as LibraryMovie[];
+
+					// Combine and deduplicate
+					const combined = [...serverMovies];
+					localProgress.forEach((local) => {
+						const exists = combined.some(
+							(s) => s.id === local.id && s.season === local.season && s.episode === local.episode
+						);
+						if (!exists) {
+							combined.push(local);
+						}
+					});
+
+					continueWatchingMovies = combined;
 				}
 			} else if (response.status === 401) {
-				// User is not authenticated, which is fine - just don't show continue watching
-				console.log('User not authenticated for continue watching');
+				console.log('User not authenticated for continue watching, using local storage.');
+				// Already set from localProgress
 			} else {
 				console.error('Failed to fetch continue watching:', response.statusText);
 			}
