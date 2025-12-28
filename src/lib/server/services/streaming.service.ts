@@ -12,6 +12,9 @@ export interface ResolveStreamingInput {
 	episode?: number;
 	language?: string;
 	preferredProviders?: string[];
+	startAt?: number;
+	sub_file?: string;
+	sub_label?: string;
 }
 
 export interface ResolveStreamingResponse {
@@ -50,7 +53,10 @@ export async function resolveStreaming(
 			imdbId: input.imdbId,
 			season: input.season,
 			episode: input.episode,
-			language: input.language
+			language: input.language,
+			startAt: input.startAt,
+			sub_file: input.sub_file,
+			sub_label: input.sub_label
 		} as const;
 
 		const resolutions = await collectStreamingSources(context, input.preferredProviders ?? []);

@@ -11,11 +11,19 @@ const optionalSecret = z
 const streamingSchema = z.object({
 	VIDLINK_BASE_URL: z.string().url().default('https://vidlink.pro'),
 	VIDLINK_API_KEY: optionalSecret,
+	VIDLINK_PRIMARY_COLOR: z.string().default('63b8bc'),
+	VIDLINK_SECONDARY_COLOR: z.string().default('a2a2a2'),
+	VIDLINK_ICON_COLOR: z.string().default('eefdec'),
+	VIDLINK_ICONS: z.enum(['vid', 'default']).default('default'),
+	VIDLINK_PLAYER: z.enum(['jw', 'default']).default('default'),
 	VIDSRC_BASE_URL: z.string().url().default('https://vidsrcme.su'),
 	VIDSRC_API_KEY: optionalSecret,
 	VIDSRC_EMBED_RU_BASE_URL: z.string().url().default('https://vidsrc-embed.ru'),
 	VIDSRC_EMBED_SU_BASE_URL: z.string().url().default('https://vidsrc-embed.su'),
+	VIDSRCME_RU_BASE_URL: z.string().url().default('https://vidsrcme.ru'),
 	VIDSRCME_SU_BASE_URL: z.string().url().default('https://vidsrcme.su'),
+	VIDSRC_ME_RU_BASE_URL: z.string().url().default('https://vidsrc-me.ru'),
+	VIDSRC_ME_SU_BASE_URL: z.string().url().default('https://vidsrc-me.su'),
 	VSRC_SU_BASE_URL: z.string().url().default('https://vsrc.su'),
 	VIDSRCXYZ_BASE_URL: z.string().url().default('https://vidsrc.xyz'),
 	TWOEMBED_BASE_URL: z.string().url().default('https://2embed.cc'),
@@ -32,11 +40,19 @@ const streamingSchema = z.object({
 const envValues = streamingSchema.parse({
 	VIDLINK_BASE_URL: process.env.VIDLINK_BASE_URL,
 	VIDLINK_API_KEY: process.env.VIDLINK_API_KEY,
+	VIDLINK_PRIMARY_COLOR: process.env.VIDLINK_PRIMARY_COLOR,
+	VIDLINK_SECONDARY_COLOR: process.env.VIDLINK_SECONDARY_COLOR,
+	VIDLINK_ICON_COLOR: process.env.VIDLINK_ICON_COLOR,
+	VIDLINK_ICONS: process.env.VIDLINK_ICONS,
+	VIDLINK_PLAYER: process.env.VIDLINK_PLAYER,
 	VIDSRC_BASE_URL: process.env.VIDSRC_BASE_URL,
 	VIDSRC_API_KEY: process.env.VIDSRC_API_KEY,
 	VIDSRC_EMBED_RU_BASE_URL: process.env.VIDSRC_EMBED_RU_BASE_URL,
 	VIDSRC_EMBED_SU_BASE_URL: process.env.VIDSRC_EMBED_SU_BASE_URL,
+	VIDSRCME_RU_BASE_URL: process.env.VIDSRCME_RU_BASE_URL,
 	VIDSRCME_SU_BASE_URL: process.env.VIDSRCME_SU_BASE_URL,
+	VIDSRC_ME_RU_BASE_URL: process.env.VIDSRC_ME_RU_BASE_URL,
+	VIDSRC_ME_SU_BASE_URL: process.env.VIDSRC_ME_SU_BASE_URL,
 	VSRC_SU_BASE_URL: process.env.VSRC_SU_BASE_URL,
 	VIDSRCXYZ_BASE_URL: process.env.VIDSRCXYZ_BASE_URL,
 	TWOEMBED_BASE_URL: process.env.TWOEMBED_BASE_URL,
@@ -55,7 +71,12 @@ const normalizeBase = (url: string) => url.replace(/\/$/, '');
 export const streamingConfig = {
 	vidlink: {
 		baseUrl: normalizeBase(envValues.VIDLINK_BASE_URL),
-		apiKey: envValues.VIDLINK_API_KEY ?? null
+		apiKey: envValues.VIDLINK_API_KEY ?? null,
+		primaryColor: envValues.VIDLINK_PRIMARY_COLOR,
+		secondaryColor: envValues.VIDLINK_SECONDARY_COLOR,
+		iconColor: envValues.VIDLINK_ICON_COLOR,
+		icons: envValues.VIDLINK_ICONS,
+		player: envValues.VIDLINK_PLAYER
 	},
 	vidsrc: {
 		baseUrl: normalizeBase(envValues.VIDSRC_BASE_URL),
@@ -67,8 +88,17 @@ export const streamingConfig = {
 	vidsrcEmbedSu: {
 		baseUrl: normalizeBase(envValues.VIDSRC_EMBED_SU_BASE_URL)
 	},
+	vidsrcmeRu: {
+		baseUrl: normalizeBase(envValues.VIDSRC_ME_RU_BASE_URL)
+	},
 	vidsrcmeSu: {
 		baseUrl: normalizeBase(envValues.VIDSRCME_SU_BASE_URL)
+	},
+	vidsrcMeRu: {
+		baseUrl: normalizeBase(envValues.VIDSRC_ME_RU_BASE_URL)
+	},
+	vidsrcMeSu: {
+		baseUrl: normalizeBase(envValues.VIDSRC_ME_SU_BASE_URL)
 	},
 	vsrcSu: {
 		baseUrl: normalizeBase(envValues.VSRC_SU_BASE_URL)

@@ -11,6 +11,9 @@ export interface StreamingProviderContext {
 	preferredSubtitleLanguage?: string;
 	includeQualities?: boolean;
 	includeSubtitles?: boolean;
+	startAt?: number;
+	sub_file?: string;
+	sub_label?: string;
 }
 
 export interface VideoQuality {

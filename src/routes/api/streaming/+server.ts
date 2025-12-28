@@ -4,16 +4,17 @@ import { resolveStreaming } from '$lib/server';
 import { z } from 'zod';
 import { validateQueryParams, tmdbIdSchema } from '$lib/server/validation';
 import { errorHandler } from '$lib/server';
+import { validateRequestBody } from '$lib/server/validation';
 
 const streamingQueryParamsSchema = z.object({
 	tmdbId: tmdbIdSchema,
 	mediaType: z.enum(['movie', 'tv']),
-	imdbId: z.string().optional(),
-	season: z.coerce.number().int().positive().optional(),
-	episode: z.coerce.number().int().positive().optional(),
-	language: z.string().optional(),
-	preferredQuality: z.string().optional(),
-	preferredSubtitleLanguage: z.string().optional(),
+	imdbId: z.string().nullable().optional(),
+	season: z.coerce.number().int().min(0).optional(),
+	episode: z.coerce.number().int().min(0).optional(),
+	language: z.string().nullable().optional(),
+	preferredQuality: z.string().nullable().optional(),
+	preferredSubtitleLanguage: z.string().nullable().optional(),
 	includeQualities: z
 		.enum(['true', 'false'])
 		.transform((val) => val === 'true')
@@ -22,7 +23,10 @@ const streamingQueryParamsSchema = z.object({
 		.enum(['true', 'false'])
 		.transform((val) => val === 'true')
 		.optional(),
-	preferred: z.string().optional()
+	preferred: z.string().optional(),
+	startAt: z.coerce.number().int().min(0).optional(),
+	sub_file: z.string().url().nullable().optional().or(z.literal('')),
+	sub_label: z.string().nullable().optional()
 });
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -31,23 +35,26 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		const preferredProviders = queryParams.preferred
 			? queryParams.preferred
-					.split(',')
-					.map((entry) => entry.trim())
-					.filter(Boolean)
+				.split(',')
+				.map((entry) => entry.trim())
+				.filter(Boolean)
 			: undefined;
 
 		const input = {
 			mediaType: queryParams.mediaType,
 			tmdbId: queryParams.tmdbId,
-			imdbId: queryParams.imdbId,
+			imdbId: queryParams.imdbId ?? undefined,
 			season: queryParams.season,
 			episode: queryParams.episode,
-			language: queryParams.language,
-			preferredQuality: queryParams.preferredQuality,
-			preferredSubtitleLanguage: queryParams.preferredSubtitleLanguage,
+			language: queryParams.language ?? undefined,
+			preferredQuality: queryParams.preferredQuality ?? undefined,
+			preferredSubtitleLanguage: queryParams.preferredSubtitleLanguage ?? undefined,
 			includeQualities: queryParams.includeQualities ?? false,
 			includeSubtitles: queryParams.includeSubtitles ?? false,
-			preferredProviders
+			preferredProviders,
+			startAt: queryParams.startAt,
+			sub_file: queryParams.sub_file ?? undefined,
+			sub_label: queryParams.sub_label ?? undefined
 		};
 
 		const result = await resolveStreaming(input);
@@ -62,20 +69,21 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 };
 
-import { validateRequestBody } from '$lib/server/validation';
-
 const streamingRequestBodySchema = z.object({
 	tmdbId: tmdbIdSchema,
 	mediaType: z.enum(['movie', 'tv']),
-	imdbId: z.string().optional(),
-	season: z.number().int().positive().optional(),
-	episode: z.number().int().positive().optional(),
-	language: z.string().optional(),
-	preferredQuality: z.string().optional(),
-	preferredSubtitleLanguage: z.string().optional(),
+	imdbId: z.string().nullable().optional(),
+	season: z.number().int().min(0).optional(),
+	episode: z.number().int().min(0).optional(),
+	language: z.string().nullable().optional(),
+	preferredQuality: z.string().nullable().optional(),
+	preferredSubtitleLanguage: z.string().nullable().optional(),
 	includeQualities: z.boolean().optional(),
 	includeSubtitles: z.boolean().optional(),
-	preferredProviders: z.array(z.string()).optional()
+	preferredProviders: z.array(z.string()).optional(),
+	startAt: z.number().int().min(0).optional(),
+	sub_file: z.string().url().nullable().optional().or(z.literal('')),
+	sub_label: z.string().nullable().optional()
 });
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -85,15 +93,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		const input = {
 			mediaType: body.mediaType,
 			tmdbId: body.tmdbId,
-			imdbId: body.imdbId,
+			imdbId: body.imdbId ?? undefined,
 			season: body.season,
 			episode: body.episode,
-			language: body.language,
-			preferredQuality: body.preferredQuality,
-			preferredSubtitleLanguage: body.preferredSubtitleLanguage,
+			language: body.language ?? undefined,
+			preferredQuality: body.preferredQuality ?? undefined,
+			preferredSubtitleLanguage: body.preferredSubtitleLanguage ?? undefined,
 			includeQualities: body.includeQualities ?? false,
 			includeSubtitles: body.includeSubtitles ?? false,
-			preferredProviders: body.preferredProviders
+			preferredProviders: body.preferredProviders,
+			startAt: body.startAt,
+			sub_file: body.sub_file ?? undefined,
+			sub_label: body.sub_label ?? undefined
 		};
 
 		const result = await resolveStreaming(input);

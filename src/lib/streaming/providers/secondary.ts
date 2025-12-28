@@ -148,7 +148,7 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 
 export const secondaryProvider: StreamingProvider = {
 	id: '2embed',
-	label: 'HnEmbed',
+	label: 'Tertiary',
 	priority: 25,
 	supportedMedia: ['movie', 'tv'],
 	async fetchSource(context) {

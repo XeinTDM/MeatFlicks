@@ -6,15 +6,36 @@ import {
 	extractFirstUrl,
 	fetchWithTimeout
 } from '../provider-helpers';
-import type { StreamingProvider, VideoQuality, SubtitleTrack } from '../types';
-import {
-	extractQualities,
-	extractSubtitles,
-	type QualitySource,
-	type SubtitleSource
-} from '../quality-helpers';
+import type { StreamingProvider } from '../types';
 
 const { vidlink } = streamingConfig;
+
+function getCustomParams(context?: Parameters<StreamingProvider['fetchSource']>[0]): URLSearchParams {
+	const params = new URLSearchParams({
+		primaryColor: vidlink.primaryColor,
+		secondaryColor: vidlink.secondaryColor,
+		iconColor: vidlink.iconColor,
+		icons: vidlink.icons,
+		player: vidlink.player,
+		title: 'false',
+		poster: 'true',
+		autoplay: 'false',
+		nextbutton: 'false'
+	});
+
+	if (context?.startAt) {
+		params.set('startAt', context.startAt.toString());
+	}
+
+	if (context?.sub_file) {
+		params.set('sub_file', context.sub_file);
+		if (context.sub_label) {
+			params.set('sub_label', context.sub_label);
+		}
+	}
+
+	return params;
+}
 
 function buildQuery(context: Parameters<StreamingProvider['fetchSource']>[0]): URLSearchParams {
 	const params = new URLSearchParams({
@@ -41,6 +62,17 @@ function buildQuery(context: Parameters<StreamingProvider['fetchSource']>[0]): U
 		params.set('lang', context.language);
 	}
 
+	// Add customization parameters
+	params.set('primaryColor', vidlink.primaryColor);
+	params.set('secondaryColor', vidlink.secondaryColor);
+	params.set('iconColor', vidlink.iconColor);
+	params.set('icons', vidlink.icons);
+	params.set('player', vidlink.player);
+	params.set('title', 'false');
+	params.set('poster', 'true');
+	params.set('autoplay', 'false');
+	params.set('nextbutton', 'false');
+
 	params.set('watch', '1');
 
 	return params;
@@ -51,10 +83,12 @@ function fallbackSource(
 	params: URLSearchParams
 ) {
 	let embedUrl;
+	const customParams = getCustomParams(context);
+
 	if (context.mediaType === 'movie') {
-		embedUrl = `${vidlink.baseUrl}/movie/${context.tmdbId}`;
+		embedUrl = `${vidlink.baseUrl}/movie/${context.tmdbId}?${customParams.toString()}`;
 	} else if (context.mediaType === 'tv') {
-		embedUrl = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}`;
+		embedUrl = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}?${customParams.toString()}`;
 	} else {
 		embedUrl = `${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
 	}
@@ -71,7 +105,6 @@ function fallbackSource(
 async function requestVidlink(context: Parameters<StreamingProvider['fetchSource']>[0]) {
 	const params = buildQuery(context);
 
-	// Try multiple endpoint structures to handle API changes
 	const endpoints = [
 		`${vidlink.baseUrl}/api/${context.mediaType}`,
 		`${vidlink.baseUrl}/embed/${context.mediaType}`,
@@ -89,18 +122,16 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 	}
 
 	try {
-		// Try each endpoint in sequence
 		for (const endpoint of endpoints) {
 			try {
 				const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
 					headers,
-					timeoutMs: 15000, // Increased timeout
+					timeoutMs: 15000,
 					redirect: 'follow'
 				});
 
 				if (!response.ok) {
 					if (response.status === 403) {
-						// If we get 403, try with different headers
 						const retryHeaders = {
 							...headers,
 							'x-requested-with': 'XMLHttpRequest'
@@ -112,7 +143,6 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 						});
 
 						if (retryResponse.ok) {
-							// Process the successful retry response
 							const contentType = retryResponse.headers.get('content-type') ?? '';
 							if (contentType.includes('json')) {
 								const payload = await retryResponse.json();
@@ -127,10 +157,11 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 								);
 
 								if (!embedCandidate) {
+									const customParams = getCustomParams(context);
 									if (context.mediaType === 'movie') {
-										embedCandidate = `${vidlink.baseUrl}/movie/${context.tmdbId}`;
+										embedCandidate = `${vidlink.baseUrl}/movie/${context.tmdbId}?${customParams.toString()}`;
 									} else if (context.mediaType === 'tv') {
-										embedCandidate = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}`;
+										embedCandidate = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}?${customParams.toString()}`;
 									} else {
 										embedCandidate = `${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
 									}
@@ -150,12 +181,11 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 							}
 						}
 					}
-					continue; // Try next endpoint for 404 or other errors
+					continue;
 				}
 
 				const contentType = response.headers.get('content-type') ?? '';
 				if (!contentType.includes('json')) {
-					// If we get HTML, try to extract embed URL from it
 					if (contentType.includes('html')) {
 						const html = await response.text();
 						const embedMatch = html.match(/https?:\/\/[^\s"']+\/embed\/[^\s"']+/);
@@ -169,7 +199,7 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 							};
 						}
 					}
-					continue; // Try next endpoint
+					continue;
 				}
 
 				const payload = await response.json();
@@ -184,10 +214,11 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 				);
 
 				if (!embedCandidate) {
+					const customParams = getCustomParams(context);
 					if (context.mediaType === 'movie') {
-						embedCandidate = `${vidlink.baseUrl}/movie/${context.tmdbId}`;
+						embedCandidate = `${vidlink.baseUrl}/movie/${context.tmdbId}?${customParams.toString()}`;
 					} else if (context.mediaType === 'tv') {
-						embedCandidate = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}`;
+						embedCandidate = `${vidlink.baseUrl}/tv/${context.tmdbId}/${context.season}/${context.episode}?${customParams.toString()}`;
 					} else {
 						embedCandidate = `${vidlink.baseUrl}/player/${context.mediaType}?${params.toString()}`;
 					}
@@ -206,11 +237,10 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 				}
 			} catch (endpointError) {
 				console.warn(`[streaming][vidlink] Endpoint ${endpoint} failed:`, endpointError);
-				continue; // Try next endpoint
+				continue;
 			}
 		}
 
-		// If all endpoints fail, return fallback
 		return fallbackSource(context, params);
 	} catch (error) {
 		console.warn('[streaming][vidlink]', error);
@@ -220,7 +250,7 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 
 export const tertiaryProvider: StreamingProvider = {
 	id: 'vidlink',
-	label: 'Vidlink',
+	label: 'Primary',
 	priority: 40,
 	supportedMedia: ['movie', 'tv'],
 	async fetchSource(context) {

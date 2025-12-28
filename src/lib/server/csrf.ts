@@ -57,7 +57,7 @@ export function createCsrfCookie(token: string): {
 			sameSite: 'lax' as const,
 			path: '/',
 			maxAge: Math.floor(CSRF_TOKEN_EXPIRATION_MS / 1000),
-			partitioned: true
+			...(!isDev ? { partitioned: true } : {})
 		}
 	};
 }
@@ -83,7 +83,7 @@ export function createSecureCsrfCookie(tokenData: {
 			sameSite: 'lax' as const,
 			path: '/',
 			maxAge: Math.floor(CSRF_TOKEN_EXPIRATION_MS / 1000),
-			partitioned: true
+			...(!isDev ? { partitioned: true } : {})
 		}
 	};
 }

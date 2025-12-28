@@ -12,7 +12,10 @@ const {
 	vidsrc,
 	vidsrcEmbedRu,
 	vidsrcEmbedSu,
+	vidsrcmeRu,
 	vidsrcmeSu,
+	vidsrcMeRu,
+	vidsrcMeSu,
 	vsrcSu
 } = streamingConfig;
 
@@ -20,7 +23,10 @@ const VIDSRC_DOMAINS = [
 	vidsrc.baseUrl,
 	vidsrcEmbedRu.baseUrl,
 	vidsrcEmbedSu.baseUrl,
+	vidsrcmeRu.baseUrl,
 	vidsrcmeSu.baseUrl,
+	vidsrcMeRu.baseUrl,
+	vidsrcMeSu.baseUrl,
 	vsrcSu.baseUrl
 ];
 
@@ -81,7 +87,12 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 		`${vidsrc.baseUrl}/embed/${context.mediaType}`,
 		`${vidsrc.baseUrl}/v1/${context.mediaType}`,
 		`${vidsrcEmbedRu.baseUrl}/api/${context.mediaType}`,
-		`${vidsrcEmbedSu.baseUrl}/api/${context.mediaType}`
+		`${vidsrcEmbedSu.baseUrl}/api/${context.mediaType}`,
+		`${vidsrcmeRu.baseUrl}/api/${context.mediaType}`,
+		`${vidsrcmeSu.baseUrl}/api/${context.mediaType}`,
+		`${vidsrcMeRu.baseUrl}/api/${context.mediaType}`,
+		`${vidsrcMeSu.baseUrl}/api/${context.mediaType}`,
+		`${vsrcSu.baseUrl}/api/${context.mediaType}`
 	];
 
 	const headers: Record<string, string> = {
@@ -210,7 +221,7 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 
 export const primaryProvider: StreamingProvider = {
 	id: 'vidsrc',
-	label: 'VidSrc',
+	label: 'Secondary',
 	priority: 30,
 	supportedMedia: ['movie', 'tv'],
 	async fetchSource(context) {

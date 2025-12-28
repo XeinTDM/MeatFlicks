@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import type { ProviderResolution } from './provider-registry';
 import type { StreamingSource, VideoQuality, SubtitleTrack } from './types';
 
@@ -53,6 +54,9 @@ export class StreamingService {
             preferredQuality?: string;
             preferredSubtitleLanguage?: string | null;
             csrfToken?: string;
+            startAt?: number;
+            sub_file?: string;
+            sub_label?: string;
         }
     ) => {
         if (!options.tmdbId) {
@@ -64,9 +68,14 @@ export class StreamingService {
         this.state.error = null;
 
         try {
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (options.csrfToken) {
+                headers['X-CSRF-Token'] = options.csrfToken;
+            }
+
             const response = await fetch('/api/streaming', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     mediaType: options.mediaType,
                     tmdbId: options.tmdbId,
@@ -78,7 +87,9 @@ export class StreamingService {
                     includeQualities: true,
                     includeSubtitles: true,
                     preferredProviders: providerId ? [providerId] : undefined,
-                    csrf_token: options.csrfToken
+                    startAt: options.startAt,
+                    sub_file: options.sub_file,
+                    sub_label: options.sub_label
                 }),
                 credentials: 'include'
             });
@@ -138,26 +149,20 @@ export class StreamingService {
         source?: StreamingSource | null;
         resolutions?: ProviderResolution[];
     }) => {
-        console.log('[DEBUG] initializeFromServerData called with:', {
-            hasSource: Boolean(serverData.source),
-            sourceProvider: serverData.source?.providerId,
-            resolutionCount: serverData.resolutions?.length || 0,
-            resolutions: serverData.resolutions
+        untrack(() => {
+            if (serverData.source) {
+                this.state.source = serverData.source;
+                this.state.qualities = serverData.source.qualities || [];
+                this.state.subtitles = serverData.source.subtitles || [];
+                this.currentProviderId = serverData.source.providerId;
+            }
+
+            if (serverData.resolutions && serverData.resolutions.length > 0) {
+                this.state.resolutions = [...serverData.resolutions];
+            } else {
+                console.log('[DEBUG] No resolutions to set from server data');
+            }
         });
-
-        if (serverData.source) {
-            this.state.source = serverData.source;
-            this.state.qualities = serverData.source.qualities || [];
-            this.state.subtitles = serverData.source.subtitles || [];
-            this.currentProviderId = serverData.source.providerId;
-        }
-
-        if (serverData.resolutions && serverData.resolutions.length > 0) {
-            this.state.resolutions = [...serverData.resolutions];
-            console.log('[DEBUG] Streaming service resolutions set:', this.state.resolutions);
-        } else {
-            console.log('[DEBUG] No resolutions to set from server data');
-        }
     };
 
     reset = () => {

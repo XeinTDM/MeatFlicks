@@ -5,7 +5,8 @@
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { PictureInPicture, MonitorPlay } from '@lucide/svelte';
+	import { MonitorPlay } from '@lucide/svelte';
+	import ProviderSelector from '$lib/components/utils/ProviderSelector.svelte';
 
 	let {
 		playerService,
@@ -14,7 +15,9 @@
 		movieTitle,
 		durationMinutes,
 		onNextEpisode,
-		onOpenInNewTab
+		onOpenInNewTab,
+		onProviderSelect,
+		onPlayClick
 	} = $props<{
 		playerService: PlayerService;
 		streamingService: StreamingService;
@@ -23,6 +26,8 @@
 		durationMinutes?: number | null;
 		onNextEpisode: () => void;
 		onOpenInNewTab: () => void;
+		onProviderSelect: (providerId: string) => void;
+		onPlayClick: () => void;
 	}>();
 
 	const playbackUrl = $derived(
@@ -35,34 +40,7 @@
 </script>
 
 {#if displayPlayer}
-	<div
-		class={playerService.isTheaterMode
-			? 'fixed inset-0 z-50 flex h-screen w-screen bg-black'
-			: 'relative mb-8 aspect-video w-full overflow-hidden rounded-lg bg-black shadow-2xl'}
-	>
-		{#if playerService.isTheaterMode}
-			<button
-				class="absolute top-6 right-6 z-50 rounded-full bg-black/50 p-3 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
-				onclick={playerService.toggleTheaterMode}
-				aria-label="Exit Theater Mode"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path
-						d="M3 16h3a2 2 0 0 1 2 2v3"
-					/><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg
-				>
-			</button>
-		{/if}
-
+	<div class="relative mb-8 aspect-video w-full overflow-hidden rounded-lg bg-black shadow-2xl">
 		{#if currentQualities.length > 1 || currentSubtitles.length > 0}
 			<PlayerControls
 				qualities={currentQualities}
@@ -81,7 +59,6 @@
 				src={playbackUrl}
 				title="Player"
 				class="h-full w-full border-none"
-				allowfullscreen
 				allow="autoplay; fullscreen; picture-in-picture"
 				onload={() => playerService.handleIframeLoad(currentQualities, currentSubtitles)}
 			></iframe>
@@ -147,43 +124,45 @@
 	</div>
 {/if}
 
-{#if !playerService.isTheaterMode}
-	<div class="mb-6 flex flex-wrap items-center justify-between gap-6 text-sm text-muted-foreground">
-		<div class="flex flex-wrap items-center gap-6">
-			{#if playbackUrl}
-				<Button variant="secondary" size="sm" onclick={onOpenInNewTab}>Open in New Tab</Button>
-			{/if}
-			{#if mediaType === 'tv'}
-				<label
-					class="flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
-				>
-					<Checkbox
-						bind:checked={playerService.isAutoPlay}
-						class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
-					/>
-					<span>Auto-play Next</span>
-				</label>
-			{/if}
-			<button
-				onclick={playerService.togglePictureInPicture}
-				class="flex items-center gap-2 transition-colors hover:text-foreground"
-				disabled={typeof document === 'undefined' || !('pictureInPictureEnabled' in document)}
-			>
-				<PictureInPicture class="h-4 w-4" />
-				Picture-in-Picture
-			</button>
-			<Button
-				variant="ghost"
-				size="sm"
-				onclick={playerService.toggleTheaterMode}
-				class="flex items-center gap-2 transition-colors hover:text-foreground"
-			>
-				<MonitorPlay class="h-4 w-4" />
-				Theater Mode
-			</Button>
-		</div>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-6 text-sm text-muted-foreground">
+	<div class="flex flex-wrap items-center gap-4">
+		{#if streamingService.state.resolutions.length > 0}
+			<div class="flex flex-col gap-2">
+				<ProviderSelector
+					resolutions={streamingService.state.resolutions}
+					selectedProvider={streamingService.currentProviderId}
+					isResolving={streamingService.state.isResolving}
+					hasRequestedPlayback={Boolean(streamingService.state.source)}
+					{onProviderSelect}
+					{onPlayClick}
+				/>
+				{#if streamingService.state.error}
+					<p class="text-xs text-destructive">{streamingService.state.error}</p>
+				{/if}
+			</div>
+		{/if}
 	</div>
-{/if}
+
+	<div class="flex flex-wrap items-center gap-4">
+		{#if mediaType === 'tv'}
+			<label
+				class="mr-2 flex cursor-pointer items-center gap-2 transition-colors hover:text-foreground"
+			>
+				<Checkbox
+					bind:checked={playerService.isAutoPlay}
+					class="h-4 w-4 rounded border-gray-600 bg-transparent text-primary focus:ring-primary"
+				/>
+				<span>Auto-play Next</span>
+			</label>
+		{/if}
+		{#if playbackUrl}
+			<Button variant="ghost" size="sm" onclick={onOpenInNewTab}>
+				<MonitorPlay class="h-4 w-4" />
+				Open in New Tab
+			</Button>
+		{/if}
+	</div>
+</div>
 
 <style>
 	@keyframes progress {

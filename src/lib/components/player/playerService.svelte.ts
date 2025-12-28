@@ -1,7 +1,6 @@
 import type { VideoQuality, SubtitleTrack } from '$lib/streaming/types';
 
 export class PlayerService {
-    isTheaterMode = $state(false);
     playbackSpeed = $state(1.0);
     iframeElement = $state<HTMLIFrameElement | null>(null);
     selectedQuality = $state('auto');
@@ -13,25 +12,6 @@ export class PlayerService {
     private nextEpTimer: ReturnType<typeof setTimeout> | null = null;
     private autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
     private progressSaveInterval: ReturnType<typeof setInterval> | null = null;
-
-    toggleTheaterMode = () => {
-        this.isTheaterMode = !this.isTheaterMode;
-    };
-
-    togglePictureInPicture = () => {
-        if (!this.iframeElement || typeof document === 'undefined') return;
-
-        if (document.pictureInPictureElement) {
-            document.exitPictureInPicture();
-        } else if (this.iframeElement.contentWindow) {
-            try {
-                const video = this.iframeElement.contentWindow.document.querySelector('video');
-                if (video) video.requestPictureInPicture();
-            } catch (error) {
-                console.error('Picture-in-Picture not supported:', error);
-            }
-        }
-    };
 
     handleQualityChange = (quality: VideoQuality, qualities: VideoQuality[]) => {
         this.selectedQuality = quality.label;

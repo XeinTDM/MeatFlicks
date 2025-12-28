@@ -1,5 +1,6 @@
 <script lang="ts">
 	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
+	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
@@ -11,6 +12,11 @@
 	onMount(async () => {
 		const localProgress = playbackStore.getContinueWatching();
 		continueWatchingMovies = localProgress;
+
+		if (!$page.data.user) {
+			isLoading = false;
+			return;
+		}
 
 		try {
 			const response = await fetch('/api/playback/progress', {
@@ -59,8 +65,7 @@
 					continueWatchingMovies = combined;
 				}
 			} else if (response.status === 401) {
-				console.log('User not authenticated for continue watching, using local storage.');
-				// Already set from localProgress
+				// Ignore
 			} else {
 				console.error('Failed to fetch continue watching:', response.statusText);
 			}
