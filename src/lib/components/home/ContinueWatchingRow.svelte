@@ -4,7 +4,11 @@
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
-	import { playbackStore } from '$lib/state/stores/playbackStore.svelte';
+	import {
+		playbackStore,
+		shouldShowInContinueWatching,
+		type PlaybackProgress
+	} from '$lib/state/stores/playbackStore.svelte';
 
 	let continueWatchingMovies = $state<LibraryMovie[]>([]);
 	let isLoading = $state(true);
@@ -62,7 +66,17 @@
 						}
 					});
 
-					continueWatchingMovies = combined;
+					continueWatchingMovies = combined.filter((m) => {
+						const movie = m as any;
+						const progress: PlaybackProgress = {
+							mediaId: movie.id.toString(),
+							mediaType: (movie.mediaType as 'movie' | 'tv' | 'anime') || 'movie',
+							progress: movie.progressSeconds || 0,
+							duration: movie.durationSeconds || 0,
+							updatedAt: 0
+						};
+						return shouldShowInContinueWatching(progress);
+					});
 				}
 			} else if (response.status === 401) {
 				// Ignore

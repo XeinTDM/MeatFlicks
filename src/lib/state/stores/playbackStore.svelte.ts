@@ -14,6 +14,25 @@ export type PlaybackProgress = {
 const STORAGE_KEY = 'meatflicks.playback_progress';
 const hasStorage = typeof localStorage !== 'undefined';
 
+export function shouldShowInContinueWatching(p: PlaybackProgress): boolean {
+    if (!p.duration || p.duration <= 0) return false;
+
+    const percent = (p.progress / p.duration) * 100;
+    if (percent >= 95) return false;
+
+    const isShortContent = p.duration < 20 * 60;
+
+    if (isShortContent) {
+        return p.progress >= 20;
+    }
+
+    if (p.mediaType === 'movie') {
+        return p.progress >= 120;
+    }
+
+    return p.progress >= 60;
+}
+
 function readStorage(): Record<string, PlaybackProgress> {
     if (!hasStorage) return {};
     try {
@@ -58,8 +77,7 @@ export class PlaybackStore {
     getContinueWatching = () => {
         return Object.values(this.progress)
             .filter((p) => {
-                const percent = (p.progress / p.duration) * 100;
-                return percent > 1 && percent < 90;
+                return shouldShowInContinueWatching(p);
             })
             .sort((a, b) => b.updatedAt - a.updatedAt)
             .map((p) => ({

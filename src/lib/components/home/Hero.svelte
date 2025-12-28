@@ -365,25 +365,6 @@
 				class="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background via-background/90 to-transparent"
 			></div>
 
-			<div
-				class="absolute top-8 left-[10%] z-20 flex flex-wrap items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
-			>
-				<Badge
-					variant="secondary"
-					class="rounded-full bg-background/60 text-foreground backdrop-blur"
-				>
-					Spotlight
-				</Badge>
-				{#if isMultiSlide}
-					<Badge
-						variant="outline"
-						class="rounded-full border-foreground/20 bg-background/50 text-foreground backdrop-blur"
-					>
-						{activeIndex + 1} / {slides.length}
-					</Badge>
-				{/if}
-			</div>
-
 			{#if isMultiSlide || canRefresh}
 				<div class="absolute top-8 right-[5%] z-20 flex items-center gap-2">
 					{#if canRefresh}
