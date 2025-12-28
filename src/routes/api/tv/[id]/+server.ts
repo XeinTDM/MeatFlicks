@@ -1,6 +1,9 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { buildCacheKey, CACHE_TTL_LONG_SECONDS, withCache } from '$lib/server/cache';
 import { fetchTmdbTvDetails, lookupTmdbIdByImdbId } from '$lib/server/services/tmdb.service';
+import { db } from '$lib/server/db';
+import { movies } from '$lib/server/db/schema';
+import { eq, and } from 'drizzle-orm';
 import type { TmdbTvDetails } from '$lib/server/services/tmdb.service';
 import { z } from 'zod';
 import { validatePathParams, validateQueryParams, queryModeSchema } from '$lib/server/validation';
@@ -20,11 +23,26 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		const queryParams = validateQueryParams(tvQueryParamsSchema, url.searchParams);
 
 		const identifier = pathParams.id;
-		const queryMode = queryParams.by ?? (identifier.startsWith('tt') ? 'imdb' : 'tmdb');
+		const queryMode = queryParams.by ?? (identifier.startsWith('tt') ? 'imdb' : /^\d+$/.test(identifier) ? 'tmdb' : 'id');
 
 		let tmdbId: number | null = null;
+		let localShow: any = null;
 
-		if (queryMode === 'imdb') {
+		if (queryMode === 'id') {
+			const results = await db
+				.select()
+				.from(movies)
+				.where(eq(movies.id, identifier))
+				.limit(1);
+			localShow = results[0];
+			if (localShow) {
+				tmdbId = localShow.tmdbId;
+			} else {
+				// If not found as UUID, maybe it's a numeric TMDB id anyway?
+				const parsed = Number.parseInt(identifier, 10);
+				if (Number.isFinite(parsed)) tmdbId = parsed;
+			}
+		} else if (queryMode === 'imdb') {
 			tmdbId = await lookupTmdbIdByImdbId(identifier);
 			if (!tmdbId) {
 				return json({ message: 'TV show not found' }, { status: 404 });
@@ -35,6 +53,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 				return json({ error: 'A valid TMDB id is required.' }, { status: 400 });
 			}
 			tmdbId = parsed;
+		}
+
+		if (!tmdbId) {
+			return json({ message: 'TV show not found' }, { status: 404 });
 		}
 
 		const cacheKey = buildCacheKey('tv', tmdbId);
@@ -55,7 +77,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			backdropPath: details.backdropPath ?? null,
 			releaseDate: details.firstAirDate ?? null,
 			rating: details.rating ?? null,
-			durationMinutes: details.episodeRuntime ?? null,
+			durationMinutes: details.episodeRuntimes?.[0] ?? null,
+			episodeRuntimes: details.episodeRuntimes ?? [],
 			genres: details.genres,
 			cast: details.cast,
 			trailerUrl: details.trailerUrl ?? null,

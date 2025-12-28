@@ -1,4 +1,4 @@
-import { fetchTmdbPersonDetails } from './tmdb.service';
+import { fetchTmdbPersonDetails, fetchTmdbMediaCredits } from './tmdb.service';
 import { db } from '$lib/server/db';
 import { people, moviePeople } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -55,32 +55,38 @@ export async function syncPersonFromTmdb(tmdbId: number) {
 /**
  * Sync movie-cast relationships from TMDB data
  */
-export async function syncMovieCast(movieId: string, tmdbMovieId: number) {
+export async function syncMovieCast(
+	movieId: string,
+	tmdbMovieId: number,
+	mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+) {
 	try {
-		const tmdbPerson = await fetchTmdbPersonDetails(tmdbMovieId);
+		const credits = await fetchTmdbMediaCredits(tmdbMovieId, mediaType);
 
-		if (!tmdbPerson) {
-			return;
+		if (!credits || !credits.cast) {
+			return 0;
 		}
 
-		const castPromises = (tmdbPerson as any).cast?.slice(0, 10).map(async (castMember: any) => {
+		const castPromises = credits.cast.slice(0, 10).map(async (castMember: any) => {
 			return await syncPersonFromTmdb(castMember.id);
 		});
 
 		const syncedCast = await Promise.all(castPromises);
 
 		const relationships = syncedCast
-			.filter((person: any) => person !== null)
-			.map((person) => ({
-				movieId,
-				personId: person.id!,
-				role: 'actor' as const,
-				character: (tmdbPerson as any).cast?.find((c: any) => c.id === person.tmdbId)?.character,
-				order: (tmdbPerson as any).cast?.find((c: any, index: number) =>
-					c.id === person.tmdbId ? index : 0
-				),
-				createdAt: Date.now()
-			}));
+			.filter((person): person is NonNullable<typeof person> => person !== null)
+			.map((person) => {
+				const castMember = credits.cast.find((c: any) => c.id === person.tmdbId);
+				const index = credits.cast.findIndex((c: any) => c.id === person.tmdbId);
+				return {
+					movieId,
+					personId: person.id!,
+					role: 'actor' as const,
+					character: castMember?.character || null,
+					order: index >= 0 ? index : null,
+					createdAt: Date.now()
+				};
+			});
 
 		if (relationships.length > 0) {
 			await db.insert(moviePeople).values(relationships).onConflictDoNothing();
@@ -96,41 +102,49 @@ export async function syncMovieCast(movieId: string, tmdbMovieId: number) {
 /**
  * Sync movie-crew relationships (directors, writers, etc.) from TMDB data
  */
-export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
+export async function syncMovieCrew(
+	movieId: string,
+	tmdbMovieId: number,
+	mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+) {
 	try {
-		const tmdbPerson = await fetchTmdbPersonDetails(tmdbMovieId);
+		const credits = await fetchTmdbMediaCredits(tmdbMovieId, mediaType);
 
-		if (!tmdbPerson) {
-			return;
+		if (!credits || !credits.crew) {
+			return 0;
 		}
 
-		const crewMembers = [
-			...(tmdbPerson as any).cast?.slice(0, 10),
-			...((tmdbPerson as any).knownFor || [])
-		];
+		// Filter for key crew members to avoid syncing hundreds of people
+		const relevantCrew = credits.crew
+			.filter((member) =>
+				['directing', 'writing', 'production', 'editing', 'sound', 'art'].includes(
+					member.department?.toLowerCase() || ''
+				)
+			)
+			.slice(0, 15);
 
-		const syncPromises = crewMembers.map(async (crewMember: any) => {
+		const syncPromises = relevantCrew.map(async (crewMember: any) => {
 			return await syncPersonFromTmdb(crewMember.id);
 		});
 
 		const syncedCrew = await Promise.all(syncPromises);
 
 		const relationships = syncedCrew
-			.filter((person: any) => person !== null)
-			.filter((person: any) => {
-				const role = determineCrewRole(person.tmdbId, tmdbPerson);
-				return role !== null;
-			})
+			.filter((person): person is NonNullable<typeof person> => person !== null)
 			.map((person: any) => {
-				const role = determineCrewRole(person.tmdbId, tmdbPerson)!;
+				const crewMember = credits.crew.find((c: any) => c.id === person.tmdbId);
+				const role = determineCrewRole(crewMember);
+				if (!role) return null;
+
 				return {
 					movieId,
 					personId: person.id!,
 					role,
-					job: role,
+					job: crewMember?.job || role,
 					createdAt: Date.now()
 				};
-			});
+			})
+			.filter((r): r is NonNullable<typeof r> => r !== null);
 
 		if (relationships.length > 0) {
 			await db.insert(moviePeople).values(relationships).onConflictDoNothing();
@@ -143,29 +157,27 @@ export async function syncMovieCrew(movieId: string, tmdbMovieId: number) {
 	}
 }
 
-function determineCrewRole(personTmdbId: number, tmdbPerson: any): string | null {
-	const crewMember = (tmdbPerson as any).knownFor?.find(
-		(member: any) => member.id === personTmdbId
-	);
+function determineCrewRole(crewMember: any): string | null {
+	if (!crewMember) return null;
 
-	if (!crewMember) {
-		return null;
-	}
+	const dept = crewMember.department?.toLowerCase();
+	const job = crewMember.job?.toLowerCase() || '';
 
-	switch (crewMember.department?.toLowerCase()) {
+	switch (dept) {
 		case 'directing':
 			return 'director';
 		case 'writing':
-			return crewMember.job?.toLowerCase().includes('screenplay') ? 'screenplay' : 'writer';
+			return job.includes('screenplay') ? 'screenplay' : 'writer';
 		case 'production':
-			return 'producer';
+			if (job.includes('producer')) return 'producer';
+			return 'production';
 		case 'editing':
 			return 'editor';
 		case 'sound':
-			return crewMember.job?.toLowerCase().includes('composer') ? 'composer' : 'sound';
+			return job.includes('composer') ? 'composer' : 'sound';
 		case 'art':
-			return crewMember.job?.toLowerCase().includes('costume') ? 'costume' : 'art';
+			return job.includes('costume') ? 'costume' : 'art';
 		default:
-			return crewMember.job?.toLowerCase() || null;
+			return job || null;
 	}
 }

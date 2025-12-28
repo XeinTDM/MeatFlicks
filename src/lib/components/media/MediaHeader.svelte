@@ -8,6 +8,8 @@
 		rating,
 		releaseYear,
 		durationMinutes,
+		episodeRuntimes,
+		currentEpisodeRuntime,
 		mediaType,
 		imdbId,
 		genres,
@@ -19,6 +21,8 @@
 		rating: number | null | undefined;
 		releaseYear: string | number;
 		durationMinutes: number | null | undefined;
+		episodeRuntimes?: number[];
+		currentEpisodeRuntime?: number | null;
 		mediaType: MediaType;
 		imdbId: string | null | undefined;
 		genres: { id: number; name: string }[] | undefined;
@@ -38,11 +42,33 @@
 	const formattedReleaseYear = $derived(parseReleaseYear(releaseYear));
 
 	function getRuntimeLabel() {
-		if (durationMinutes === null || durationMinutes === undefined) {
-			return mediaType === 'tv' || mediaType === 'anime' ? 'Runtime varies' : 'N/A';
+		if (mediaType === 'movie') {
+			return durationMinutes ? `${durationMinutes} min` : 'N/A';
 		}
-		return `${durationMinutes} min`;
+
+		if (currentEpisodeRuntime) {
+			return `${currentEpisodeRuntime} min`;
+		}
+
+		if (episodeRuntimes && episodeRuntimes.length > 0) {
+			const min = Math.min(...episodeRuntimes);
+			const max = Math.max(...episodeRuntimes);
+
+			if (min === max) {
+				return `${min} min`;
+			} else {
+				return `${min}-${max} min`;
+			}
+		}
+
+		if (durationMinutes) {
+			return `${durationMinutes} min`;
+		}
+
+		return null;
 	}
+
+	const runtimeLabel = $derived(getRuntimeLabel());
 </script>
 
 <div class="relative mb-8 h-96 w-full">
@@ -94,7 +120,7 @@
 			</div>
 			<div class="flex flex-wrap items-center gap-4">
 				<p class="text-xl text-gray-300">
-					{formattedReleaseYear} | {getRuntimeLabel()}
+					{formattedReleaseYear}{runtimeLabel ? ` | ${runtimeLabel}` : ''}
 				</p>
 				{#if genres?.length}
 					<div class="flex flex-wrap gap-2">

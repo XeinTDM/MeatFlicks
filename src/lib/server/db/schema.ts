@@ -5,7 +5,8 @@ import {
 	real,
 	primaryKey,
 	index,
-	customType
+	customType,
+	unique
 } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
@@ -406,7 +407,7 @@ export const seasons = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.tvShowId, table.seasonNumber] }),
+		unique('unq_seasons_show_number').on(table.tvShowId, table.seasonNumber),
 		index('idx_seasons_tv_show_id').on(table.tvShowId),
 		index('idx_seasons_season_number').on(table.seasonNumber),
 		index('idx_seasons_air_date').on(table.airDate)
@@ -441,7 +442,7 @@ export const episodes = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.seasonId, table.episodeNumber] }),
+		unique('unq_episodes_show_season_number').on(table.tvShowId, table.seasonId, table.episodeNumber),
 		index('idx_episodes_tv_show_id').on(table.tvShowId),
 		index('idx_episodes_season_id').on(table.seasonId),
 		index('idx_episodes_episode_number').on(table.episodeNumber),
@@ -472,7 +473,7 @@ export const episodeWatchStatus = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.userId, table.episodeId] }),
+		unique('unq_episode_watch_status_user_episode').on(table.userId, table.episodeId),
 		index('idx_episode_watch_status_user_id').on(table.userId),
 		index('idx_episode_watch_status_episode_id').on(table.episodeId),
 		index('idx_episode_watch_status_watched').on(table.watched)
@@ -500,7 +501,7 @@ export const seasonWatchStatus = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.userId, table.seasonId] }),
+		unique('unq_season_watch_status_user_season').on(table.userId, table.seasonId),
 		index('idx_season_watch_status_user_id').on(table.userId),
 		index('idx_season_watch_status_season_id').on(table.seasonId)
 	]
@@ -533,7 +534,7 @@ export const tvShowWatchStatus = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.userId, table.tvShowId] }),
+		unique('unq_tv_show_watch_status_user_show').on(table.userId, table.tvShowId),
 		index('idx_tv_show_watch_status_user_id').on(table.userId),
 		index('idx_tv_show_watch_status_tv_show_id').on(table.tvShowId),
 		index('idx_tv_show_watch_status_status').on(table.status)

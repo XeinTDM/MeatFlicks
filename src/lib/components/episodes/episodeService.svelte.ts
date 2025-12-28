@@ -6,6 +6,7 @@ export type Episode = {
     episodeNumber: number;
     seasonNumber: number;
     stillPath: string | null;
+    runtime?: number | null;
 };
 
 export class EpisodeService {

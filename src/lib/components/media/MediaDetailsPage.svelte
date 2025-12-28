@@ -33,6 +33,7 @@
 		releaseDate: string | null;
 		rating: number | null;
 		durationMinutes: number | null;
+		episodeRuntimes?: number[];
 		genres?: MediaGenre[];
 		cast?: MediaCastMember[];
 		trailerUrl?: string | null;
@@ -82,6 +83,14 @@
 	const episodeService = new EpisodeService();
 
 	let subOrDub = $state<'sub' | 'dub'>('sub');
+
+	const selectedEpisodeRuntime = $derived.by(() => {
+		if (mediaType !== 'tv' && mediaType !== 'anime') return null;
+		const ep = episodeService.episodesList.find(
+			(e) => e.episodeNumber === episodeService.selectedEpisode
+		);
+		return ep?.runtime ?? null;
+	});
 
 	$effect(() => {
 		if (movie) {
@@ -558,6 +567,8 @@
 				rating={movie.rating ?? undefined}
 				{releaseYear}
 				durationMinutes={movie.durationMinutes ?? undefined}
+				episodeRuntimes={movie.episodeRuntimes}
+				currentEpisodeRuntime={selectedEpisodeRuntime}
 				{mediaType}
 				imdbId={movie.imdbId ?? undefined}
 				genres={movie.genres}

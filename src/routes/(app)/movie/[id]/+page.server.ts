@@ -66,6 +66,10 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		throw redirect(301, `/movie/${movie.imdbId}`);
 	}
 
+	if (!movie.imdbId && movie.tmdbId && queryMode !== 'tmdb') {
+		throw redirect(301, `/movie/${movie.tmdbId}`);
+	}
+
 	const canonicalPath = movie.imdbId
 		? `/movie/${movie.imdbId}`
 		: `/movie/${movie.tmdbId ?? movie.id}`;

@@ -13,6 +13,7 @@ type TvWithDetails = {
 	releaseDate: string | null;
 	rating: number | null;
 	durationMinutes: number | null;
+	episodeRuntimes?: number[];
 	genres?: { id: number; name: string }[];
 	cast?: { id: number; name: string; character: string }[];
 	trailerUrl?: string | null;
@@ -28,7 +29,7 @@ type TvWithDetails = {
 	}[];
 };
 
-const detectQueryMode = (identifier: string): 'tmdb' | 'imdb' => {
+const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
 	if (/^tt\d{7,}$/i.test(identifier)) {
 		return 'imdb';
 	}
@@ -37,7 +38,7 @@ const detectQueryMode = (identifier: string): 'tmdb' | 'imdb' => {
 		return 'tmdb';
 	}
 
-	return 'tmdb';
+	return 'id';
 };
 
 export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
@@ -53,7 +54,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	}
 
 	const queryMode = detectQueryMode(identifier);
-	const apiPath = `/api/tv/${identifier}${queryMode === 'tmdb' ? '' : `?by=${queryMode}`}`;
+	const apiPath = `/api/tv/${identifier}${queryMode === 'id' ? '' : `?by=${queryMode}`}`;
 	const response = await fetch(apiPath);
 
 	if (!response.ok) {
@@ -82,10 +83,14 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 
 	const canonicalPath = tvShow.imdbId
 		? `/tv/${tvShow.imdbId}`
-		: `/tv/${tvShow.tmdbId ?? tvShow.id}`;
+		: `/tv/${tvShow.tmdbId || tvShow.id}`;
 
 	if (tvShow.imdbId && queryMode !== 'imdb') {
-		throw redirect(301, canonicalPath);
+		throw redirect(301, `/tv/${tvShow.imdbId}`);
+	}
+
+	if (!tvShow.imdbId && tvShow.tmdbId && queryMode !== 'tmdb') {
+		throw redirect(301, `/tv/${tvShow.tmdbId}`);
 	}
 
 	try {

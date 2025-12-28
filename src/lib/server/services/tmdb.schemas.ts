@@ -8,7 +8,19 @@ export const TmdbGenreSchema = z.object({
 export const TmdbCastMemberSchema = z.object({
 	id: z.number(),
 	name: z.string(),
-	character: z.string()
+	character: z.string().optional()
+});
+
+export const TmdbCrewMemberSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	department: z.string().optional(),
+	job: z.string().optional()
+});
+
+export const TmdbCreditsSchema = z.object({
+	cast: z.array(TmdbCastMemberSchema).optional().default([]),
+	crew: z.array(TmdbCrewMemberSchema).optional().default([])
 });
 
 export const TmdbVideoSchema = z.object({
@@ -44,11 +56,7 @@ export const TmdbMovieSchema = z.object({
 	release_date: z.string().nullable().optional(),
 	runtime: z.number().nullable().optional(),
 	genres: z.array(TmdbGenreSchema).optional(),
-	credits: z
-		.object({
-			cast: z.array(TmdbCastMemberSchema)
-		})
-		.optional(),
+	credits: TmdbCreditsSchema.optional(),
 	videos: z
 		.object({
 			results: z.array(TmdbVideoSchema)
@@ -66,7 +74,8 @@ export const TmdbTvEpisodeSchema = z.object({
 	season_number: z.number(),
 	air_date: z.string().nullable().optional(),
 	still_path: z.string().nullable().optional(),
-	vote_average: z.number().nullable().optional()
+	vote_average: z.number().nullable().optional(),
+	runtime: z.number().nullable().optional()
 });
 
 export const TmdbTvSeasonSchema = z.object({
@@ -100,11 +109,7 @@ export const TmdbTvSchema = z
 				imdb_id: z.string().nullable().optional()
 			})
 			.optional(),
-		credits: z
-			.object({
-				cast: z.array(TmdbCastMemberSchema)
-			})
-			.optional(),
+		credits: TmdbCreditsSchema.optional(),
 		videos: z
 			.object({
 				results: z.array(TmdbVideoSchema)

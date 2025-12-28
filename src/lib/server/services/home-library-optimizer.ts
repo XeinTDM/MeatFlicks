@@ -150,8 +150,10 @@ const ingestMedia = async (tmdbIds: number[], options: IngestOptions) => {
                     backdropPath: tvDetails.backdropPath,
                     releaseDate: tvDetails.firstAirDate,
                     rating: tvDetails.rating,
-                    runtime: tvDetails.episodeRuntime,
-                    genres: tvDetails.genres
+                    durationMinutes: tvDetails.episodeRuntime,
+                    genres: tvDetails.genres,
+                    imdbId: tvDetails.imdbId,
+                    trailerUrl: tvDetails.trailerUrl
                 };
             }
 
@@ -182,7 +184,9 @@ const ingestMedia = async (tmdbIds: number[], options: IngestOptions) => {
                 is4K: false,
                 isHD: true,
                 genreNames,
-                mediaType
+                mediaType,
+                imdbId: details.imdbId ?? null,
+                trailerUrl: details.trailerUrl ?? null
             });
         } catch (error) {
             logger.error({ tmdbId, label, error, mediaType }, '[home-library] Failed to fetch TMDB data for ingestion');

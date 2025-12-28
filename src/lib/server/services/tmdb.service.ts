@@ -18,7 +18,9 @@ import {
 	TmdbTvSeasonSchema,
 	TmdbRecommendationResponseSchema,
 	TmdbPersonSchema,
-	TmdbConfigSchema
+	TmdbConfigSchema,
+	TmdbCreditsSchema,
+	TmdbCrewMemberSchema
 } from './tmdb.schemas';
 import { z } from 'zod';
 
@@ -32,7 +34,7 @@ const LIST_TTL = CACHE_TTL_MEDIUM_SECONDS;
 export interface TmdbMovieExtras {
 	tmdbId: number;
 	imdbId: string | null;
-	cast: { id: number; name: string; character: string }[];
+	cast: { id: number; name: string; character?: string | null }[];
 	trailerUrl: string | null;
 	runtime: number | null;
 	releaseDate: string | null;
@@ -66,9 +68,9 @@ export interface TmdbTvDetails {
 	backdropPath: string | null;
 	rating: number | null;
 	genres: TmdbMovieGenre[];
-	cast: { id: number; name: string; character: string }[];
+	cast: { id: number; name: string; character?: string | null }[];
 	trailerUrl: string | null;
-	episodeRuntime: number | null;
+	episodeRuntimes: number[];
 	firstAirDate: string | null;
 	seasonCount: number | null;
 	episodeCount: number | null;
@@ -97,6 +99,7 @@ export interface TmdbTvEpisode {
 	airDate: string | null;
 	stillPath: string | null;
 	voteAverage: number | null;
+	runtime: number | null;
 }
 
 export interface TmdbPersonCredit {
@@ -120,6 +123,11 @@ export interface TmdbPersonDetails {
 	profilePath: string | null;
 	knownFor: TmdbPersonCredit[];
 	images: string[];
+}
+
+export interface TmdbMediaCredits {
+	cast: { id: number; name: string; character: string }[];
+	crew: { id: number; name: string; department: string; job: string }[];
 }
 
 const api = ofetch.create({
@@ -191,7 +199,8 @@ function mapTmdbEpisode(e: any): TmdbTvEpisode {
 		seasonNumber: e.season_number,
 		airDate: e.air_date || null,
 		stillPath: buildImageUrl(e.still_path, env.TMDB_STILL_SIZE || 'original'),
-		voteAverage: e.vote_average || null
+		voteAverage: e.vote_average || null,
+		runtime: e.runtime || null
 	};
 }
 
@@ -350,7 +359,7 @@ export async function fetchTmdbTvDetails(
 					genres: data.genres || [],
 					cast: (data.credits?.cast || []).slice(0, 10),
 					trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
-					episodeRuntime: data.episode_run_time?.[0] || null,
+					episodeRuntimes: data.episode_run_time || [],
 					firstAirDate: data.first_air_date || null,
 					seasonCount: data.number_of_seasons || null,
 					episodeCount: data.number_of_episodes || null,
@@ -848,6 +857,43 @@ export async function searchTmdbMoviesByPeople(
 		}
 
 		return libraryMovies;
+	});
+}
+
+export async function fetchTmdbMediaCredits(
+	tmdbId: number,
+	mediaType: 'movie' | 'tv' | 'anime'
+): Promise<TmdbMediaCredits | null> {
+	// TMDB uses 'movie' for both movies and anime movies usually, or we treat anime as tv/movie
+	const tmdbType = mediaType === 'tv' ? 'tv' : 'movie';
+	const cacheKey = buildCacheKey('tmdb', tmdbType, tmdbId, 'credits');
+
+	return withCache(cacheKey, DETAILS_TTL, async () => {
+		try {
+			const rawData = await tmdbRateLimiter.schedule(`tmdb-${tmdbType}-credits`, () =>
+				api(`/${tmdbType}/${tmdbId}/credits`)
+			);
+			const data = TmdbCreditsSchema.parse(rawData);
+
+			return {
+				cast: (data.cast || []).map((c) => ({
+					id: c.id,
+					name: c.name,
+					character: c.character || ''
+				})),
+				crew: (data.crew || []).map((c) => ({
+					id: c.id,
+					name: c.name,
+					department: c.department || '',
+					job: c.job || ''
+				}))
+			};
+		} catch (error) {
+			if (error instanceof ApiError && error.statusCode === 404) {
+				return null;
+			}
+			throw error;
+		}
 	});
 }
 

@@ -20,10 +20,11 @@
 		onPlayClick: () => void;
 	}>();
 
-	const selectedProviderLabel = $derived(
-		resolutions.find((resolution: ProviderResolution) => resolution.providerId === selectedProvider)
-			?.label || 'Select Provider'
-	);
+	const selectedProviderLabel = $derived.by(() => {
+		const res = resolutions.find((r: ProviderResolution) => r.providerId === selectedProvider);
+		if (!res) return 'Select Provider';
+		return res.success ? res.label : `${res.label} (Unavailable)`;
+	});
 </script>
 
 <div class="flex items-center gap-2">
@@ -40,8 +41,13 @@
 		</SelectTrigger>
 		<SelectContent>
 			{#each resolutions as resolution (resolution.providerId)}
-				<SelectItem value={resolution.providerId}>
-					{resolution.label}
+				<SelectItem value={resolution.providerId} disabled={!resolution.success}>
+					<div class="flex w-full items-center justify-between gap-2">
+						<span>{resolution.label}</span>
+						{#if !resolution.success}
+							<span class="text-xs text-muted-foreground opacity-70">(Unavailable)</span>
+						{/if}
+					</div>
 				</SelectItem>
 			{/each}
 		</SelectContent>

@@ -49,7 +49,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-	if (event.request.method !== 'GET') {
+	if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
 		return;
 	}
 
@@ -71,17 +71,20 @@ self.addEventListener('fetch', (event) => {
 				const responseToCache = response.clone();
 
 				if (response.status === 200 &&
+					!response.headers.get('Vary')?.includes('*') &&
 					(STATIC_ASSETS.some(asset => event.request.url.endsWith(asset)) ||
-					event.request.url.endsWith('.js') ||
-					event.request.url.endsWith('.css') ||
-					event.request.url.endsWith('.png') ||
-					event.request.url.endsWith('.jpg') ||
-					event.request.url.endsWith('.jpeg') ||
-					event.request.url.endsWith('.svg') ||
-					event.request.url.endsWith('.woff') ||
-					event.request.url.endsWith('.woff2'))) {
+						event.request.url.endsWith('.js') ||
+						event.request.url.endsWith('.css') ||
+						event.request.url.endsWith('.png') ||
+						event.request.url.endsWith('.jpg') ||
+						event.request.url.endsWith('.jpeg') ||
+						event.request.url.endsWith('.svg') ||
+						event.request.url.endsWith('.woff') ||
+						event.request.url.endsWith('.woff2'))) {
 					caches.open(CACHE_NAME).then((cache) => {
-						cache.put(event.request, responseToCache);
+						cache.put(event.request, responseToCache).catch(err => {
+							console.warn('[SW] Failed to cache:', event.request.url, err);
+						});
 					});
 				}
 

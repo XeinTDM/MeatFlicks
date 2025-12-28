@@ -42,11 +42,15 @@
 
 	const qualityTag = $derived(movie?.is4K ? '4K' : movie?.isHD ? 'HD' : '');
 
-	const detailsHref = $derived(
-		movie && movie.id
-			? (movie.canonicalPath ?? `/${movie.mediaType || movie.media_type || 'movie'}/${movie.id}`)
-			: '#'
-	);
+	const detailsHref = $derived.by(() => {
+		if (!movie) return '#';
+		if (movie.canonicalPath) return movie.canonicalPath;
+
+		const type = movie.mediaType || movie.media_type || 'movie';
+		const identifier = movie.imdbId || movie.tmdbId || movie.id;
+
+		return `/${type}/${identifier}`;
+	});
 </script>
 
 <a

@@ -124,8 +124,8 @@ export const bulkUpsertMovies = async (
 		// but outside the DB transaction.
 		for (const movie of syncedMovies) {
 			try {
-				await syncMovieCast(movie.id, movie.tmdbId!);
-				await syncMovieCrew(movie.id, movie.tmdbId!);
+				await syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any);
+				await syncMovieCrew(movie.id, movie.tmdbId!, movie.mediaType as any);
 			} catch (error) {
 				console.warn(`Failed to sync person data for movie ${movie.id}:`, error);
 			}
