@@ -12,8 +12,6 @@ export const primaryNav: NavigationItem[] = [
 export const browseNav: NavigationItem[] = [
 	{ label: 'Movies', href: '/explore/movies' },
 	{ label: 'TV Series', href: '/explore/tv-shows' },
-	{ label: 'Anime', href: '/explore/anime' },
-	{ label: 'Manga', href: '/explore/manga' }
 ];
 
 export const libraryNav: () => NavigationItem[] = () => [];

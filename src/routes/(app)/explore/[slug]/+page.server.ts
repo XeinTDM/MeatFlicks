@@ -14,16 +14,12 @@ const CATEGORY_PRESETS: Record<string, { title: string; genres: string[] }> = {
 	'tv-shows': {
 		title: 'TV Shows',
 		genres: ['Animation', 'Documentary', 'Family', 'Kids', 'Mystery', 'Reality']
-	},
-	anime: {
-		title: 'Anime',
-		genres: ['Action', 'Adventure', 'Comedy', 'Fantasy', 'Sci-Fi', 'Shounen']
 	}
 };
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const { slug } = params;
-	const { filters, sort, pagination } = parseAllFromURL(url.searchParams);
+	const { filters, sort, pagination, include_anime } = parseAllFromURL(url.searchParams);
 
 	const hasActiveFilters =
 		filters.yearFrom ||
@@ -46,8 +42,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 		if (!match) {
 			if (hasActiveFilters) {
-				const mediaType = slug === 'tv-shows' ? 'tv' : slug === 'anime' ? 'anime' : 'movie';
-				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination, mediaType);
+				const mediaType = slug === 'tv-shows' ? 'tv' : 'movie';
+				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination, mediaType, include_anime);
 				const availableGenres = await libraryRepository.listGenres();
 				return {
 					categoryTitle: fromSlug(slug),
@@ -58,7 +54,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 					hasContent: result.items.length > 0,
 					singleGenreMode: true,
 					availableGenres,
-					useFilters: true
+					useFilters: true,
+					include_anime
 				};
 			}
 
@@ -68,7 +65,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 				hasContent: false,
 				singleGenreMode: true,
 				availableGenres: await libraryRepository.listGenres(),
-				useFilters: false
+				useFilters: false,
+				include_anime
 			};
 		}
 
@@ -83,8 +81,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			finalFilters.genres = [genresToFetch[0], ...(finalFilters.genres || [])];
 		}
 
-		const mediaType = slug === 'tv-shows' ? 'tv' : slug === 'anime' ? 'anime' : 'movie';
-		const result = await libraryRepository.findMoviesWithFilters(finalFilters, sort, pagination, mediaType);
+		const mediaType = slug === 'tv-shows' ? 'tv' : 'movie';
+		const result = await libraryRepository.findMoviesWithFilters(finalFilters, sort, pagination, mediaType, include_anime);
 		const availableGenres = await libraryRepository.listGenres();
 
 		return {
@@ -96,7 +94,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			hasContent: result.items.length > 0,
 			singleGenreMode,
 			availableGenres,
-			useFilters: true
+			useFilters: true,
+			include_anime
 		};
 	}
 
@@ -104,7 +103,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		genresToFetch.map(async (genreName) => ({
 			genre: genreName,
 			slug: toSlug(genreName),
-			movies: await libraryRepository.findGenreMovies(genreName, undefined, undefined, slug === 'tv-shows' ? 'tv' : slug === 'anime' ? 'anime' : 'movie')
+			movies: await libraryRepository.findGenreMovies(genreName, undefined, undefined, slug === 'tv-shows' ? 'tv' : 'movie', include_anime)
 		}))
 	);
 
@@ -120,6 +119,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		useFilters: false,
 		filters: {} as MovieFilters,
 		sort: { field: 'popularity', order: 'desc' } as SortOptions,
-		pagination: { page: 1, pageSize: DEFAULT_PAGE_SIZE } as PaginationParams
+		pagination: { page: 1, pageSize: DEFAULT_PAGE_SIZE } as PaginationParams,
+		include_anime
 	};
 };

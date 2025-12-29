@@ -174,21 +174,31 @@ export const libraryRepository = {
 		genreName: string,
 		limit?: number,
 		offset?: number,
-		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+		mediaType: 'movie' | 'tv' = 'movie',
+		include_anime: 'include' | 'exclude' | 'only' = 'include'
 	): Promise<MovieSummary[]> {
 		const take = typeof limit === 'number' ? toPositiveInteger(limit, 20) : 20;
 		const skip = normalizeOffset(offset);
 		const normalizedGenre = genreName.trim();
 
 		try {
-			const cacheKey = buildCacheKey('movies', 'genre', mediaType, normalizedGenre.toLowerCase(), take, skip);
+			const cacheKey = buildCacheKey('movies', 'genre', mediaType, normalizedGenre.toLowerCase(), take, skip, include_anime);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+				let mediaTypeCondition;
+				if (include_anime === 'only') {
+					mediaTypeCondition = eq(movies.mediaType, 'anime');
+				} else if (include_anime === 'exclude') {
+					mediaTypeCondition = eq(movies.mediaType, mediaType);
+				} else {
+					mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
+				}
+
 				const rows = await db
 					.select({ movies })
 					.from(movies)
 					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
 					.innerJoin(genres, eq(genres.id, moviesGenres.genreId))
-					.where(and(eq(genres.name, normalizedGenre), eq(movies.mediaType, mediaType)))
+					.where(and(eq(genres.name, normalizedGenre), mediaTypeCondition))
 					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 					.limit(take)
 					.offset(skip);
@@ -209,11 +219,20 @@ export const libraryRepository = {
 		filters: MovieFilters,
 		sort: SortOptions,
 		pagination: PaginationParams,
-		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+		mediaType: 'movie' | 'tv' = 'movie',
+		include_anime: 'include' | 'exclude' | 'only' = 'include'
 	): Promise<PaginatedResult<MovieSummary>> {
 		try {
 			const offset = calculateOffset(pagination.page, pagination.pageSize);
-			const conditions: any[] = [eq(movies.mediaType, mediaType)];
+			let mediaTypeCondition;
+			if (include_anime === 'only') {
+				mediaTypeCondition = eq(movies.mediaType, 'anime');
+			} else if (include_anime === 'exclude') {
+				mediaTypeCondition = eq(movies.mediaType, mediaType);
+			} else {
+				mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
+			}
+			const conditions: any[] = [mediaTypeCondition];
 
 			if (filters.yearFrom) {
 				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
@@ -274,7 +293,7 @@ export const libraryRepository = {
 			const orderByClause = this.buildOrderByClause(sort);
 			query = query.orderBy(...orderByClause) as any;
 
-			const totalItems = await this.countMoviesWithFilters(filters, mediaType);
+			const totalItems = await this.countMoviesWithFilters(filters, mediaType, include_anime);
 
 			query = query.limit(pagination.pageSize).offset(offset) as any;
 
@@ -303,10 +322,19 @@ export const libraryRepository = {
 	 */
 	async countMoviesWithFilters(
 		filters: MovieFilters,
-		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+		mediaType: 'movie' | 'tv' = 'movie',
+		include_anime: 'include' | 'exclude' | 'only' = 'include'
 	): Promise<number> {
 		try {
-			const conditions: any[] = [eq(movies.mediaType, mediaType)];
+			let mediaTypeCondition;
+			if (include_anime === 'only') {
+				mediaTypeCondition = eq(movies.mediaType, 'anime');
+			} else if (include_anime === 'exclude') {
+				mediaTypeCondition = eq(movies.mediaType, mediaType);
+			} else {
+				mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
+			}
+			const conditions: any[] = [mediaTypeCondition];
 
 			if (filters.yearFrom) {
 				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));

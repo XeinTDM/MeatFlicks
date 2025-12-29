@@ -171,10 +171,28 @@ export function serializePaginationToURL(pagination: PaginationParams): URLSearc
 	return params;
 }
 
+export function parseAllFromURL(searchParams: URLSearchParams): {
+	filters: MovieFilters;
+	sort: SortOptions;
+	pagination: PaginationParams;
+	include_anime: 'include' | 'exclude' | 'only';
+} {
+	const include_anime = searchParams.get('include_anime');
+
+	return {
+		filters: parseFiltersFromURL(searchParams),
+		sort: parseSortFromURL(searchParams),
+		pagination: parsePaginationFromURL(searchParams),
+		include_anime:
+			include_anime === 'only' || include_anime === 'exclude' ? include_anime : 'include'
+	};
+}
+
 export function combineURLParams(
 	filters: MovieFilters,
 	sort: SortOptions,
-	pagination: PaginationParams
+	pagination: PaginationParams,
+	include_anime: 'include' | 'exclude' | 'only'
 ): URLSearchParams {
 	const params = new URLSearchParams();
 
@@ -193,17 +211,9 @@ export function combineURLParams(
 		params.set(key, value);
 	});
 
-	return params;
-}
+	if (include_anime && include_anime !== 'include') {
+		params.set('include_anime', include_anime);
+	}
 
-export function parseAllFromURL(searchParams: URLSearchParams): {
-	filters: MovieFilters;
-	sort: SortOptions;
-	pagination: PaginationParams;
-} {
-	return {
-		filters: parseFiltersFromURL(searchParams),
-		sort: parseSortFromURL(searchParams),
-		pagination: parsePaginationFromURL(searchParams)
-	};
+	return params;
 }

@@ -39,6 +39,8 @@
 			: []
 	);
 
+	const include_anime = $derived(data.include_anime ?? 'include');
+
 	const hasContent = $derived(
 		useFilters
 			? Boolean(data.hasContent && movies.length > 0)
@@ -122,6 +124,7 @@
 	let currentFilters = $state<MovieFilters>({} as MovieFilters);
 	let currentSort = $state<SortOptions>({ field: 'popularity', order: 'desc' } as SortOptions);
 	let currentPagination = $state<PaginationParams>({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
+	let currentIncludeAnime = $state<'include' | 'exclude' | 'only'>('include');
 
 	$effect(() => {
 		currentFilters = filters;
@@ -130,10 +133,11 @@
 			const page = 'currentPage' in pagination ? pagination.currentPage : pagination.page;
 			currentPagination = { page, pageSize: pagination.pageSize };
 		}
+		currentIncludeAnime = include_anime;
 	});
 
 	function updateURL() {
-		const params = combineURLParams(currentFilters, currentSort, currentPagination);
+		const params = combineURLParams(currentFilters, currentSort, currentPagination, currentIncludeAnime);
 		const url = new URL(window.location.href);
 		url.search = params.toString();
 		goto(url.pathname + url.search, { keepFocus: true, noScroll: true });
@@ -148,6 +152,7 @@
 	function handleClearFilters() {
 		currentFilters = {} as MovieFilters;
 		currentPagination = { ...currentPagination, page: 1 };
+		currentIncludeAnime = 'include';
 		updateURL();
 	}
 
@@ -204,6 +209,7 @@
 							<FilterPanel
 								filters={currentFilters}
 								{availableGenres}
+								include_anime={currentIncludeAnime}
 								onFiltersChange={handleFiltersChange}
 								onClearAll={handleClearFilters}
 							/>

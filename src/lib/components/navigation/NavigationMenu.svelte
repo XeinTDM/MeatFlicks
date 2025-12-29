@@ -38,10 +38,10 @@
 				tooltipContent={item.label}
 				size="lg"
 			>
-				{#if item.label === 'Home'}
-					<House class="h-6 w-6" />
-				{:else if item.label === 'Search'}
+				{#if item.label === 'Search'}
 					<Search class="h-6 w-6" />
+				{:else if item.label === 'Home'}
+					<House class="h-6 w-6" />
 				{:else if item.label === 'Movies'}
 					<Clapperboard class="h-6 w-6" />
 				{:else if item.label === 'TV Series'}

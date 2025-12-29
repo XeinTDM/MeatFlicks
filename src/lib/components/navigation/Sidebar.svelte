@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { Snippet } from 'svelte';
-
 	import {
 		Sidebar,
 		SidebarContent,
@@ -10,11 +9,9 @@
 		SidebarGroupContent,
 		SidebarProvider,
 		SidebarTrigger,
-		SidebarHeader,
 		SidebarInset,
 		SidebarMenu,
-		SidebarMenuItem,
-		SidebarMenuButton
+		SidebarMenuItem
 	} from '$lib/components/ui/sidebar';
 
 	import SettingsDialog from '$lib/components/global/SettingsDialog.svelte';
@@ -33,7 +30,6 @@
 
 	const primaryNavItems = primaryNav;
 	const browseNavItems = browseNav;
-	const libraryNavItems = libraryNav();
 	const isDesktop = $derived(() => Boolean($media?.desktop));
 	const sidebarLabel = 'Primary navigation';
 

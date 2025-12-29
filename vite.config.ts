@@ -4,6 +4,11 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	server: {
+		watch: {
+			ignored: ['data/meatflicks.db', 'data/meatflicks.db-shm', 'data/meatflicks.db-wal']
+		}
+	},
 	ssr: {
 		external: ['better-sqlite3']
 	},
