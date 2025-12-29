@@ -38,10 +38,11 @@
 	}
 
 	function handleSearchClick(query: string) {
+		const getResolvedPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
 		if (onSearchSelect) {
 			onSearchSelect(query);
 		} else {
-			goto(`/search?q=${encodeURIComponent(query)}`);
+			goto(getResolvedPath(`/search?q=${encodeURIComponent(query)}`));
 		}
 	}
 

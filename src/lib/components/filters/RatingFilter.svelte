@@ -12,16 +12,12 @@
 
 	let { minRating, maxRating, onMinRatingChange, onMaxRatingChange }: Props = $props();
 
-	let sliderValue = $state([minRating || 0, maxRating || 10]);
-
-	$effect(() => {
-		sliderValue = [minRating || 0, maxRating || 10];
+	let sliderValue = $derived.by(() => {
+		return [minRating || 0, maxRating || 10];
 	});
 
 	function handleSliderChange(values: number[]) {
-		sliderValue = values;
 		const [min, max] = values;
-
 		onMinRatingChange(min > 0 ? min : undefined);
 		onMaxRatingChange(max < 10 ? max : undefined);
 	}

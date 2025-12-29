@@ -9,7 +9,6 @@
 	let { items = [] }: { items?: BreadcrumbItem[] } = $props();
 
 	const breadcrumbItems = $derived.by(() => {
-		const baseUrl = 'https://meatflicks.com';
 		const allItems = [{ label: 'Home', href: '/' }, ...items];
 
 		return allItems;
@@ -32,6 +31,7 @@
 </script>
 
 <svelte:head>
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html '<script type="application/ld+json">' + JSON.stringify(structuredData) + '</script>'}
 </svelte:head>
 
@@ -56,10 +56,9 @@
 					<span itemprop="name" class="font-medium text-foreground" aria-current="page">
 						{item.label}
 					</span>
-					<meta itemprop="position" content={String(index + 1)} />
 				{:else}
 					<a
-						href={item.href}
+						href={`/${item.href}`}
 						itemprop="item"
 						class="flex items-center gap-1 transition-colors hover:text-foreground"
 					>
@@ -68,7 +67,6 @@
 						{/if}
 						<span itemprop="name">{item.label}</span>
 					</a>
-					<meta itemprop="position" content={String(index + 1)} />
 				{/if}
 			</li>
 		{/each}

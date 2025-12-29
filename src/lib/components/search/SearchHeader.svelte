@@ -2,30 +2,30 @@
 	import { browser } from '$app/environment';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Spinner } from '$lib/components/ui/spinner/index';
-	import {
-		Search as SearchIcon,
-		LoaderCircle,
-		Sparkles as SparklesIcon,
-		History as HistoryIcon
-	} from '@lucide/svelte';
+	import { Search as SearchIcon, History as HistoryIcon } from '@lucide/svelte';
 	import { addToSearchHistory, getSearchHistory, clearSearchHistory } from '$lib/utils/searchUtils';
+	import type { SortOption, QualityFilter } from '$lib/utils/searchUtils';
 
 	let {
-		query,
-		loading,
+		query = $bindable(),
 		performSearch,
-		handleSubmit,
-		trendingQueries
+		trendingQueries,
+		sortOptions = [],
+		qualityOptions = [],
+		sortBy = $bindable('relevance'),
+		qualityFilter = $bindable('any')
 	}: {
 		query: string;
-		loading: boolean;
 		performSearch: (term: string) => Promise<void>;
-		handleSubmit: (event: Event) => void;
 		trendingQueries: string[];
+		sortOptions?: Array<{ label: string; value: SortOption }>;
+		qualityOptions?: Array<{ label: string; value: QualityFilter }>;
+		sortBy?: SortOption;
+		qualityFilter?: QualityFilter;
 	} = $props();
 
 	let searchHistory = $state(getSearchHistory(browser));
+	let showHistory = $state(false);
 
 	function handleQuickSearch(term: string) {
 		query = term;
@@ -35,17 +35,12 @@
 
 	function clearHistory() {
 		searchHistory = clearSearchHistory(browser);
+		showHistory = false;
 	}
 </script>
 
 <section class="space-y-6 rounded-3xl p-6 sm:p-8">
 	<div class="space-y-3">
-		<span
-			class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary"
-		>
-			<SparklesIcon class="size-4" />
-			Instant streaming search
-		</span>
 		<h1 class="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
 			Find something to watch right now
 		</h1>
@@ -55,7 +50,7 @@
 		</p>
 	</div>
 
-	<form class="flex flex-col gap-3 md:flex-row" onsubmit={handleSubmit}>
+	<div class="flex flex-col gap-3 md:flex-row">
 		<div class="relative flex-1">
 			<SearchIcon
 				class="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground"
@@ -68,13 +63,43 @@
 				aria-label="Search the MeatFlicks library"
 			/>
 		</div>
-		<Button type="submit" class="h-12 min-w-[120px] rounded-2xl text-base font-semibold">
-			{#if loading}
-				<Spinner class="mr-2" />
-			{/if}
-			Search
-		</Button>
-	</form>
+
+		{#if sortOptions.length > 0 && qualityOptions.length > 0}
+			<div class="flex flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-4">
+				<div class="space-y-1">
+					<div class="flex flex-wrap gap-2">
+						{#each sortOptions as option (option.value)}
+							<Button
+								type="button"
+								size="sm"
+								variant={sortBy === option.value ? 'default' : 'outline'}
+								class="h-8 rounded-full px-3 text-xs font-semibold"
+								onclick={() => (sortBy = option.value)}
+							>
+								{option.label}
+							</Button>
+						{/each}
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex flex-wrap gap-2">
+						{#each qualityOptions as option (option.value)}
+							<Button
+								type="button"
+								size="sm"
+								variant={qualityFilter === option.value ? 'default' : 'outline'}
+								class="h-8 rounded-full px-3 text-xs font-semibold"
+								onclick={() => (qualityFilter = option.value)}
+							>
+								{option.label}
+							</Button>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
+	</div>
 
 	<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
 		<span class="font-medium text-foreground">Trending now:</span>
@@ -92,35 +117,50 @@
 	</div>
 
 	{#if searchHistory.length > 0}
-		<div class="space-y-2 rounded-2xl border border-border/40 bg-background/50 p-4">
-			<div class="flex items-center justify-between text-sm font-medium text-foreground">
-				<span class="flex items-center gap-2">
-					<HistoryIcon class="size-4 text-muted-foreground" />
-					Recent searches
-				</span>
-				<Button
-					type="button"
-					variant="ghost"
-					size="sm"
-					class="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
-					onclick={clearHistory}
-				>
-					Clear
-				</Button>
-			</div>
-			<div class="flex flex-wrap gap-2">
-				{#each searchHistory as term (term)}
+		<div class="flex items-center justify-start text-sm">
+			<Button
+				type="button"
+				variant="ghost"
+				size="sm"
+				class="h-8 gap-1 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground"
+				onclick={() => (showHistory = !showHistory)}
+			>
+				<HistoryIcon class="size-3.5" />
+				{showHistory ? 'Hide' : 'Show'} recent searches
+			</Button>
+		</div>
+
+		{#if showHistory}
+			<div class="space-y-2 rounded-2xl border border-border/40 bg-background/50 p-4">
+				<div class="flex items-center justify-between text-sm font-medium text-foreground">
+					<span class="flex items-center gap-2">
+						<HistoryIcon class="size-4 text-muted-foreground" />
+						Recent searches
+					</span>
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
-						class="h-8 rounded-full border border-transparent bg-background/80 px-3 text-xs font-medium text-foreground hover:border-border/40 hover:bg-background"
-						onclick={() => handleQuickSearch(term)}
+						class="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+						onclick={clearHistory}
 					>
-						{term}
+						Clear
 					</Button>
-				{/each}
+				</div>
+				<div class="flex flex-wrap gap-2">
+					{#each searchHistory as term (term)}
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							class="h-8 rounded-full border border-transparent bg-background/80 px-3 text-xs font-medium text-foreground hover:border-border/40 hover:bg-background"
+							onclick={() => handleQuickSearch(term)}
+						>
+							{term}
+						</Button>
+					{/each}
+				</div>
 			</div>
-		</div>
+		{/if}
 	{/if}
 </section>

@@ -18,7 +18,7 @@
 		<div class="relative z-10 flex h-full flex-col justify-end gap-4 p-8 text-left">
 			<Skeleton class="h-6 w-32 rounded" />
 			<Skeleton class="h-14 w-3/4 rounded" />
-			{#each heroLines as _, index}
+			{#each heroLines as index (index)}
 				<Skeleton class="h-4 w-[clamp(12rem,40vw,28rem)] rounded" data-index={index} />
 			{/each}
 			<div class="mt-2 flex gap-3">
@@ -35,7 +35,7 @@
 
 		<div class="px-[5%]">
 			<div class="flex gap-4 overflow-hidden">
-				{#each carouselPlaceholders as _, index}
+				{#each carouselPlaceholders as index (index)}
 					<div class="basis-auto pl-4" data-index={index}>
 						<MovieCard movie={null} />
 					</div>
@@ -43,11 +43,11 @@
 			</div>
 		</div>
 
-		{#each sectionPlaceholders as _, sectionIndex}
+		{#each sectionPlaceholders as sectionIndex (sectionIndex)}
 			<div class="mt-10 space-y-4" data-section={sectionIndex}>
 				<Skeleton class="h-8 w-64 rounded" />
 				<div class="flex gap-4 overflow-hidden">
-					{#each carouselPlaceholders as _, itemIndex}
+					{#each carouselPlaceholders as itemIndex (itemIndex)}
 						<div class="basis-auto pl-4" data-item={itemIndex}>
 							<MovieCard movie={null} />
 						</div>

@@ -85,14 +85,6 @@
 	let subOrDub = $state<'sub' | 'dub'>('sub');
 	let activeTab = $state<'suggested' | 'details'>('suggested');
 
-	const selectedEpisodeRuntime = $derived.by(() => {
-		if (mediaType !== 'tv' && mediaType !== 'anime') return null;
-		const ep = episodeService.episodesList.find(
-			(e) => e.episodeNumber === episodeService.selectedEpisode
-		);
-		return ep?.runtime ?? null;
-	});
-
 	$effect(() => {
 		if (movie) {
 			streamingService.setCurrentMedia({
@@ -117,10 +109,6 @@
 			}
 		}
 	});
-
-	function handleProviderSelectionChange(providerId: string) {
-		streamingService.selectProvider(providerId);
-	}
 
 	async function handlePlayClick() {
 		if (!streamingService.currentProviderId) {
@@ -147,7 +135,7 @@
 			tmdbId: Number(movie?.tmdbId),
 			mediaType: mediaType,
 			imdbId: movie?.imdbId ?? undefined,
-			malId: (movie as any)?.malId ?? undefined,
+			malId: (movie as { malId?: number })?.malId ?? undefined,
 			subOrDub: mediaType === 'anime' ? subOrDub : undefined,
 			season:
 				mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedSeason : undefined,
@@ -520,15 +508,6 @@
 				: null
 	);
 
-	const parseReleaseYear = (value: string | null) => {
-		if (!value) return 'N/A';
-		const date = new Date(value);
-		const year = date.getFullYear();
-		return Number.isFinite(year) ? year : 'N/A';
-	};
-
-	const releaseYear = $derived(parseReleaseYear(movie?.releaseDate ?? null));
-
 	const notFoundHeading = $derived(
 		mediaType === 'tv' || mediaType === 'anime' ? 'Series Not Found' : 'Movie Not Found'
 	);
@@ -537,18 +516,6 @@
 			? 'The show you are looking for does not exist.'
 			: 'The movie you are looking for does not exist.'
 	);
-
-	const breadcrumbItems = $derived.by(() => {
-		if (!movie) return [];
-		const items = [
-			{
-				label: mediaType === 'tv' ? 'TV Shows' : mediaType === 'anime' ? 'Anime' : 'Movies',
-				href: `/explore/${mediaType === 'tv' ? 'tv-shows' : mediaType === 'anime' ? 'anime' : 'movies'}`
-			},
-			{ label: movie.title, href: `/${mediaType}/${movie.id}` }
-		];
-		return items;
-	});
 
 	const availableProviders = $derived(
 		streamingService.state.resolutions.length > 0
@@ -631,13 +598,19 @@
 				<div class="px-[5%]">
 					<div class="mb-2 flex gap-2">
 						<button
-							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'suggested' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}"
-							onclick={() => activeTab = 'suggested'}>
+							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'suggested'
+								? 'text-primary'
+								: 'text-muted-foreground hover:text-foreground'}"
+							onclick={() => (activeTab = 'suggested')}
+						>
 							Suggested
 						</button>
 						<button
-							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'details' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}"
-							onclick={() => activeTab = 'details'}>
+							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'details'
+								? 'text-primary'
+								: 'text-muted-foreground hover:text-foreground'}"
+							onclick={() => (activeTab = 'details')}
+						>
 							Details
 						</button>
 					</div>
@@ -649,7 +622,9 @@
 						{#if data.recommendations && data.recommendations.length > 0}
 							<MovieScrollContainer title="" movies={data.recommendations} />
 						{:else}
-							<div class="py-12 text-center text-muted-foreground">No recommendations available.</div>
+							<div class="py-12 text-center text-muted-foreground">
+								No recommendations available.
+							</div>
 						{/if}
 					</div>
 				{:else if activeTab === 'details'}
@@ -676,7 +651,7 @@
 									productionCompanies={movie.productionCompanies}
 									posterPath={movie.posterPath}
 									title={movie.title}
-									overview={movie.overview}
+									overview={movie.overview ?? null}
 								/>
 							</div>
 						</section>

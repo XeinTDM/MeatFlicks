@@ -37,9 +37,9 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		const preferredProviders = queryParams.preferred
 			? queryParams.preferred
-				.split(',')
-				.map((entry) => entry.trim())
-				.filter(Boolean)
+					.split(',')
+					.map((entry) => entry.trim())
+					.filter(Boolean)
 			: undefined;
 
 		const input = {

@@ -18,16 +18,16 @@
 	import type { PageData } from './$types';
 	import type { MovieFilters, SortOptions } from '$lib/types/filters';
 	import type { PaginationParams } from '$lib/types/pagination';
-	import { combineURLParams, parseAllFromURL } from '$lib/utils/filterUrl';
+	import { combineURLParams } from '$lib/utils/filterUrl';
 	import { DEFAULT_PAGE_SIZE } from '$lib/types/pagination';
 	import { hasActiveFilters } from '$lib/types/filters';
 
 	let { data } = $props<{ data: PageData }>();
 
 	const categoryTitle = $derived(data.categoryTitle ?? 'Explore');
-	const genreData = $derived(Array.isArray(data.genreData) ? data.genreData : []);
+	const genreData = $derived(Array.isArray(data.genreData) ? genreData : []);
 	const useFilters = $derived(Boolean(data.useFilters));
-	const movies = $derived(Array.isArray(data.movies) ? data.movies : []);
+	const movies = $derived(Array.isArray(data.movies) ? movies : []);
 	const pagination = $derived(data.pagination);
 	const filters = $derived((data.filters as MovieFilters) || ({} as MovieFilters));
 	const sort = $derived(
@@ -137,10 +137,14 @@
 	});
 
 	function updateURL() {
-		const params = combineURLParams(currentFilters, currentSort, currentPagination, currentIncludeAnime);
-		const url = new URL(window.location.href);
-		url.search = params.toString();
-		goto(url.pathname + url.search, { keepFocus: true, noScroll: true });
+		const params = combineURLParams(
+			currentFilters,
+			currentSort,
+			currentPagination,
+			currentIncludeAnime
+		);
+		const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+		goto(url, { keepFocus: true, noScroll: true });
 	}
 
 	function handleFiltersChange(newFilters: MovieFilters) {

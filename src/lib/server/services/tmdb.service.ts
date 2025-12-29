@@ -316,7 +316,8 @@ export async function fetchTmdbTvDetails(
 						(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
 				);
 
-				const logo = data.images?.logos?.find((l) => l.iso_639_1 === 'en') || data.images?.logos?.[0];
+				const logo =
+					data.images?.logos?.find((l) => l.iso_639_1 === 'en') || data.images?.logos?.[0];
 
 				const seasons = (data.seasons || [])
 					.filter((s) => s.season_number > 0)
@@ -331,14 +332,23 @@ export async function fetchTmdbTvDetails(
 								const mapped = mapTmdbSeason(parsed);
 
 								// Prime individual cache for this season
-								const seasonCacheKey = buildCacheKey('tmdb', 'tv', tmdbId, 'season', s.season_number);
+								const seasonCacheKey = buildCacheKey(
+									'tmdb',
+									'tv',
+									tmdbId,
+									'season',
+									s.season_number
+								);
 								setImmediate(() => {
-									setCachedValue(seasonCacheKey, mapped, DETAILS_TTL).catch(() => { });
+									setCachedValue(seasonCacheKey, mapped, DETAILS_TTL).catch(() => {});
 								});
 
 								return mapped;
 							} catch (e) {
-								console.warn(`[fetchTmdbTvDetails] Failed to parse appended season ${s.season_number}:`, e);
+								console.warn(
+									`[fetchTmdbTvDetails] Failed to parse appended season ${s.season_number}:`,
+									e
+								);
 							}
 						}
 
@@ -454,11 +464,14 @@ export async function fetchTmdbTvSeasonsBatch(
 
 						// Optimistically prime the individual season cache
 						const seasonCacheKey = buildCacheKey('tmdb', 'tv', tmdbId, 'season', n);
-						await setCachedValue(seasonCacheKey, mapped, DETAILS_TTL).catch(() => { });
+						await setCachedValue(seasonCacheKey, mapped, DETAILS_TTL).catch(() => {});
 					}
 				}
 			} catch (error) {
-				console.error(`[fetchTmdbTvSeasonsBatch] Failed for batch ${batch} on show ${tmdbId}:`, error);
+				console.error(
+					`[fetchTmdbTvSeasonsBatch] Failed for batch ${batch} on show ${tmdbId}:`,
+					error
+				);
 			}
 		})
 	);
@@ -469,70 +482,78 @@ export async function fetchTmdbTvSeasonsBatch(
 export async function fetchTmdbMovieDetails(tmdbId: number): Promise<TmdbMovieDetails> {
 	const cacheKey = buildCacheKey('tmdb', 'movie', tmdbId);
 
-	return withCache(cacheKey, DETAILS_TTL, async () => {
-		try {
-			const rawData = await tmdbRateLimiter.schedule('tmdb-movie-details', () =>
-				api(`/movie/${tmdbId}`, {
-					query: { append_to_response: 'credits,videos,images' }
-				})
-			);
+	return withCache(
+		cacheKey,
+		DETAILS_TTL,
+		async () => {
+			try {
+				const rawData = await tmdbRateLimiter.schedule('tmdb-movie-details', () =>
+					api(`/movie/${tmdbId}`, {
+						query: { append_to_response: 'credits,videos,images' }
+					})
+				);
 
-			const data = TmdbMovieSchema.parse(rawData);
+				const data = TmdbMovieSchema.parse(rawData);
 
-			const trailer = data.videos?.results.find(
-				(v) =>
-					v.site.toLowerCase() === 'youtube' &&
-					(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
-			);
+				const trailer = data.videos?.results.find(
+					(v) =>
+						v.site.toLowerCase() === 'youtube' &&
+						(v.type.toLowerCase() === 'trailer' || v.type.toLowerCase() === 'teaser')
+				);
 
-			const logo = data.images?.logos?.find((l) => l.iso_639_1 === 'en') || data.images?.logos?.[0];
+				const logo =
+					data.images?.logos?.find((l) => l.iso_639_1 === 'en') || data.images?.logos?.[0];
 
-			return {
-				found: true,
-				tmdbId: data.id,
-				imdbId: data.imdb_id || null,
-				cast: (data.credits?.cast || []).slice(0, 10).map((c) => ({
-					id: c.id,
-					name: c.name,
-					character: c.character || null,
-					profilePath: buildImageUrl(c.profile_path, env.TMDB_POSTER_SIZE)
-				})),
-				trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
-				runtime: data.runtime || null,
-				releaseDate: data.release_date || null,
-				title: data.title || data.original_title || null,
-				overview: data.overview || null,
-				posterPath: buildImageUrl(data.poster_path, env.TMDB_POSTER_SIZE),
-				backdropPath: buildImageUrl(data.backdrop_path, env.TMDB_BACKDROP_SIZE),
-				rating: data.vote_average || null,
-				voteCount: data.vote_count || null,
-				genres: data.genres || [],
-				productionCompanies: (data.production_companies || []).map((c) => ({
-					id: c.id,
-					name: c.name,
-					logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
-				})),
-				productionCountries: (data.production_countries || []).map((c) => ({
-					iso: c.iso_3166_1,
-					name: c.name
-				})),
-				logoPath: logo ? buildImageUrl(logo.file_path, env.TMDB_POSTER_SIZE) : null
-			};
-		} catch (error) {
-			console.error(`[fetchTmdbMovieDetails] Error for tmdbId ${tmdbId}:`, error);
-			if (error instanceof ApiError && error.statusCode === 404) {
-				return { found: false, tmdbId } as TmdbMovieDetails;
+				return {
+					found: true,
+					tmdbId: data.id,
+					imdbId: data.imdb_id || null,
+					cast: (data.credits?.cast || []).slice(0, 10).map((c) => ({
+						id: c.id,
+						name: c.name,
+						character: c.character || null,
+						profilePath: buildImageUrl(c.profile_path, env.TMDB_POSTER_SIZE)
+					})),
+					trailerUrl: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
+					runtime: data.runtime || null,
+					releaseDate: data.release_date || null,
+					title: data.title || data.original_title || null,
+					overview: data.overview || null,
+					posterPath: buildImageUrl(data.poster_path, env.TMDB_POSTER_SIZE),
+					backdropPath: buildImageUrl(data.backdrop_path, env.TMDB_BACKDROP_SIZE),
+					rating: data.vote_average || null,
+					voteCount: data.vote_count || null,
+					genres: data.genres || [],
+					productionCompanies: (data.production_companies || []).map((c) => ({
+						id: c.id,
+						name: c.name,
+						logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
+					})),
+					productionCountries: (data.production_countries || []).map((c) => ({
+						iso: c.iso_3166_1,
+						name: c.name
+					})),
+					logoPath: logo ? buildImageUrl(logo.file_path, env.TMDB_POSTER_SIZE) : null
+				};
+			} catch (error) {
+				console.error(`[fetchTmdbMovieDetails] Error for tmdbId ${tmdbId}:`, error);
+				if (error instanceof ApiError && error.statusCode === 404) {
+					return { found: false, tmdbId } as TmdbMovieDetails;
+				}
+				throw error;
 			}
-			throw error;
-		}
-	}, { swrSeconds: DETAILS_TTL / 2 });
+		},
+		{ swrSeconds: DETAILS_TTL / 2 }
+	);
 }
 
 export async function fetchTrendingMovieIds(limit = 20): Promise<number[]> {
 	const cacheKey = buildCacheKey('tmdb', 'trending', 'movie', limit);
 
-	return withCache(cacheKey, LIST_TTL, () =>
-		fetchTmdbListIds('/trending/movie/week', {}, limit, 'tmdb-trending-movie'),
+	return withCache(
+		cacheKey,
+		LIST_TTL,
+		() => fetchTmdbListIds('/trending/movie/week', {}, limit, 'tmdb-trending-movie'),
 		{ swrSeconds: LIST_TTL / 2 }
 	);
 }
@@ -540,8 +561,10 @@ export async function fetchTrendingMovieIds(limit = 20): Promise<number[]> {
 export async function fetchTrendingTvIds(limit = 20): Promise<number[]> {
 	const cacheKey = buildCacheKey('tmdb', 'trending', 'tv', limit);
 
-	return withCache(cacheKey, LIST_TTL, () =>
-		fetchTmdbListIds('/trending/tv/week', {}, limit, 'tmdb-trending-tv'),
+	return withCache(
+		cacheKey,
+		LIST_TTL,
+		() => fetchTmdbListIds('/trending/tv/week', {}, limit, 'tmdb-trending-tv'),
 		{ swrSeconds: LIST_TTL / 2 }
 	);
 }
@@ -549,8 +572,10 @@ export async function fetchTrendingTvIds(limit = 20): Promise<number[]> {
 export async function fetchPopularMovieIds(limit = 20): Promise<number[]> {
 	const cacheKey = buildCacheKey('tmdb', 'popular', 'movie', limit);
 
-	return withCache(cacheKey, LIST_TTL, () =>
-		fetchTmdbListIds('/movie/popular', { region: 'US' }, limit, 'tmdb-popular-movie'),
+	return withCache(
+		cacheKey,
+		LIST_TTL,
+		() => fetchTmdbListIds('/movie/popular', { region: 'US' }, limit, 'tmdb-popular-movie'),
 		{ swrSeconds: LIST_TTL / 2 }
 	);
 }
@@ -558,8 +583,10 @@ export async function fetchPopularMovieIds(limit = 20): Promise<number[]> {
 export async function fetchPopularTvIds(limit = 20): Promise<number[]> {
 	const cacheKey = buildCacheKey('tmdb', 'popular', 'tv', limit);
 
-	return withCache(cacheKey, LIST_TTL, () =>
-		fetchTmdbListIds('/tv/popular', {}, limit, 'tmdb-popular-tv'),
+	return withCache(
+		cacheKey,
+		LIST_TTL,
+		() => fetchTmdbListIds('/tv/popular', {}, limit, 'tmdb-popular-tv'),
 		{ swrSeconds: LIST_TTL / 2 }
 	);
 }
@@ -588,8 +615,10 @@ export async function discoverMovieIds(options: DiscoverMovieOptions = {}): Prom
 
 	const cacheKey = buildCacheKey('tmdb', 'discover', 'movie', JSON.stringify(params), limit);
 
-	return withCache(cacheKey, LIST_TTL, () =>
-		fetchTmdbListIds('/discover/movie', params, limit, 'tmdb-discover-movie'),
+	return withCache(
+		cacheKey,
+		LIST_TTL,
+		() => fetchTmdbListIds('/discover/movie', params, limit, 'tmdb-discover-movie'),
 		{ swrSeconds: LIST_TTL / 2 }
 	);
 }
@@ -618,8 +647,10 @@ export async function discoverTvIds(options: DiscoverMovieOptions = {}): Promise
 
 	const cacheKey = buildCacheKey('tmdb', 'discover', 'tv', JSON.stringify(params), limit);
 
-	return withCache(cacheKey, LIST_TTL, () =>
-		fetchTmdbListIds('/discover/tv', params, limit, 'tmdb-discover-tv'),
+	return withCache(
+		cacheKey,
+		LIST_TTL,
+		() => fetchTmdbListIds('/discover/tv', params, limit, 'tmdb-discover-tv'),
 		{ swrSeconds: LIST_TTL / 2 }
 	);
 }
@@ -932,7 +963,7 @@ export async function fetchMalId(title: string, year?: string): Promise<number |
 				const releaseYear = year.split('-')[0];
 				if (releaseYear) {
 					// Some anime might have slightly different start dates, but year usually works
-					// query.start_date = `${releaseYear}-01-01`; 
+					// query.start_date = `${releaseYear}-01-01`;
 				}
 			}
 

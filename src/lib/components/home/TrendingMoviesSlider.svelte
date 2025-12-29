@@ -24,12 +24,17 @@
 	let hasMultipleMovies = $derived(moviesCount > 1);
 
 	const carouselOpts = { align: 'start' } as const;
+
+	function getResolvedPath(path: string | undefined): string {
+		if (!path) return '/#'; // Fallback to a valid hash link
+		return path.startsWith('/') ? path : `/${path}`;
+	}
 </script>
 
 <div class="px-[5%] py-8">
 	{#if linkTo}
 		<a
-			href={linkTo}
+			href={getResolvedPath(linkTo)}
 			data-sveltekit-preload-data="hover"
 			class="group mb-6 flex w-full items-center justify-start text-foreground transition-colors duration-300 hover:text-primary"
 		>

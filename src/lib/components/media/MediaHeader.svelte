@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Star, Film, Play, Bookmark, BookmarkMinus } from '@lucide/svelte';
@@ -13,7 +12,20 @@
 		providers = [],
 		onProviderSelect
 	} = $props<{
-		movie: any;
+		movie: {
+			id: string;
+			title: string;
+			backdropPath?: string | null;
+			releaseDate?: string | number | null;
+			rating?: number | null;
+			overview?: string | null;
+			trailerUrl?: string | null;
+			mediaType?: string;
+			durationMinutes?: number;
+			currentEpisodeRuntime?: number;
+			episodeRuntimes?: number[];
+			genres?: { id: number; name: string }[];
+		};
 		logoPath?: string | null;
 		providers?: ProviderResolution[];
 		onProviderSelect?: (providerId: string) => void;
@@ -35,7 +47,7 @@
 		}
 	}
 
-	const parseReleaseYear = (value: string | number) => {
+	const parseReleaseYear = (value: string | number | null | undefined) => {
 		if (typeof value === 'number') return value;
 		if (!value) return 'N/A';
 		const date = new Date(value);
@@ -73,13 +85,13 @@
 		return null;
 	}
 
-		const runtimeLabel = $derived(getRuntimeLabel());
+	const runtimeLabel = $derived(getRuntimeLabel());
 
-		let showFullOverview = $state(false);
+	let showFullOverview = $state(false);
 
-		function toggleOverview() {
-			showFullOverview = !showFullOverview;
-		}
+	function toggleOverview() {
+		showFullOverview = !showFullOverview;
+	}
 </script>
 
 <div class="relative mb-8 h-[32rem] w-full">
@@ -130,11 +142,12 @@
 							{movie.overview}
 						</p>
 					{:else}
-						<p class="text-lg leading-relaxed text-muted-foreground line-clamp-1">
+						<p class="line-clamp-1 text-lg leading-relaxed text-muted-foreground">
 							{movie.overview}
 						</p>
 					{/if}
-					{#if movie.overview.length > 100} <!-- Simple heuristic for when to show button -->
+					{#if movie.overview.length > 100}
+						<!-- Simple heuristic for when to show button -->
 						<Button
 							variant="link"
 							class="h-auto p-0 text-sm text-muted-foreground hover:text-foreground"
@@ -166,7 +179,7 @@
 						{#if providers.length > 0}
 							<DropdownMenu.Label>Select Provider</DropdownMenu.Label>
 							<DropdownMenu.Separator />
-							{#each providers as provider}
+							{#each providers as provider (provider.providerId)}
 								<DropdownMenu.Item onclick={() => onProviderSelect?.(provider.providerId)}>
 									{provider.providerId.charAt(0).toUpperCase() + provider.providerId.slice(1)}
 								</DropdownMenu.Item>

@@ -32,7 +32,8 @@
 	});
 
 	function handleNavigate(path: string) {
-		goto(path);
+		const getResolvedPath = (p: string) => (p.startsWith('/') ? p : `/${p}`);
+		goto(getResolvedPath(path));
 	}
 </script>
 

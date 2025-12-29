@@ -31,7 +31,7 @@
 		<h2 class="text-3xl font-semibold text-foreground">{title}</h2>
 		{#if linkTo}
 			<a
-				href={linkTo}
+				href={`/${linkTo}`}
 				data-sveltekit-preload-data="hover"
 				class="group flex items-center text-foreground transition-colors duration-300 hover:text-primary"
 			>

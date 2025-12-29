@@ -1,16 +1,15 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
 	import type { TmdbPersonDetails } from '$lib/server/services/tmdb.service';
 
 	let { data }: { data: { person: TmdbPersonDetails } } = $props();
 	const person = $derived(data.person);
 
 	function handleCreditClick(mediaType: string, id: number) {
+		const getResolvedPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
 		if (mediaType === 'movie') {
-			goto(`/movie/${id}`);
+			goto(getResolvedPath(`/movie/${id}`));
 		} else if (mediaType === 'tv') {
-			goto(`/tv/${id}`);
+			goto(getResolvedPath(`/tv/${id}`));
 		}
 	}
 </script>
@@ -78,7 +77,7 @@
 					<section>
 						<h2 class="mb-4 text-2xl font-semibold">Known For</h2>
 						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-							{#each person.knownFor as credit}
+							{#each person.knownFor as credit (credit.id)}
 								<button
 									class="group relative flex aspect-[2/3] flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground transition-all hover:scale-105 hover:shadow-xl"
 									onclick={() => handleCreditClick(credit.mediaType, credit.id)}

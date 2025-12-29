@@ -9,8 +9,7 @@
 		Plus,
 		Star,
 		Clapperboard,
-		RefreshCcw,
-		LoaderCircle
+		RefreshCcw
 	} from '@lucide/svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { watchlist } from '$lib/state/stores/watchlistStore';
@@ -169,10 +168,6 @@
 		return source.startsWith('http') ? source : `https://image.tmdb.org/t/p/original${source}`;
 	});
 
-	const backgroundStyle = $derived(
-		backgroundImageUrl ? `background-image: url(${backgroundImageUrl})` : undefined
-	);
-
 	const trailerVideoId = $derived(extractYouTubeVideoId(activeMovie?.trailerUrl ?? ''));
 
 	const trailerEmbedUrl = $derived.by(() => {
@@ -326,7 +321,7 @@
 		class="rounded-b-0 relative min-h-[60vh] overflow-hidden border-0 bg-black bg-cover bg-center bg-no-repeat p-0 md:min-h-[65vh] lg:min-h-[70vh]"
 		role="region"
 		aria-label="Featured content spotlight"
-		tabindex={isMultiSlide ? 0 : -1}
+		tabindex="-1"
 	>
 		<div bind:this={heroElement} class="contents">
 			{#if backgroundImageUrl}

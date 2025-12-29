@@ -28,7 +28,7 @@ export async function syncPersonFromTmdb(tmdbId: number) {
 			return null;
 		}
 
-		const [insertedPerson] = await db
+		await db
 			.insert(people)
 			.values({
 				tmdbId: tmdbPerson.id,
@@ -43,9 +43,11 @@ export async function syncPersonFromTmdb(tmdbId: number) {
 				createdAt: Date.now(),
 				updatedAt: Date.now()
 			})
-			.returning();
+			.onConflictDoNothing();
 
-		return insertedPerson;
+		const person = await db.select().from(people).where(eq(people.tmdbId, tmdbId)).get();
+
+		return person ?? null;
 	} catch (error) {
 		console.error(`Failed to sync person ${tmdbId}:`, error);
 		return null;

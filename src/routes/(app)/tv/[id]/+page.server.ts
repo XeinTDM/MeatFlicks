@@ -106,7 +106,10 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		try {
 			recommendations = await fetchTmdbRecommendations(Number(tvShow.tmdbId), 'tv');
 		} catch (recommendationError) {
-			console.warn('[tv][load] Failed to fetch recommendations, but continuing with streaming data', recommendationError);
+			console.warn(
+				'[tv][load] Failed to fetch recommendations, but continuing with streaming data',
+				recommendationError
+			);
 			// Continue with empty recommendations rather than failing the whole request
 		}
 

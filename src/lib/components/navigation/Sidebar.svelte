@@ -17,12 +17,7 @@
 	import SettingsDialog from '$lib/components/global/SettingsDialog.svelte';
 	import NavigationMenu from '$lib/components/navigation/NavigationMenu.svelte';
 	import UserProfile from '$lib/components/navigation/UserProfile.svelte';
-	import {
-		browseNav,
-		primaryNav,
-		libraryNav,
-		type NavigationItem
-	} from '$lib/components/navigation';
+	import { browseNav, primaryNav, type NavigationItem } from '$lib/components/navigation';
 	import { media } from 'svelte-match-media';
 
 	let isSettingsOpen = $state(false);
@@ -40,7 +35,8 @@
 		}
 
 		if (item.href) {
-			void goto(item.href);
+			const getResolvedPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+			void goto(getResolvedPath(item.href));
 		}
 	};
 </script>

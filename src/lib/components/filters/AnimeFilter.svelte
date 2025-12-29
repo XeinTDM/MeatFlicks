@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '$lib/components/ui/select/index';
+	import {
+		Select,
+		SelectContent,
+		SelectGroup,
+		SelectItem,
+		SelectTrigger,
+		SelectValue
+	} from '$lib/components/ui/select/index';
 
 	let { value = 'include' }: { value?: 'include' | 'exclude' | 'only' } = $props();
 
@@ -12,7 +19,7 @@
 		} else {
 			newUrl.searchParams.set('include_anime', selectedValue);
 		}
-		goto(newUrl, { keepData: true, noScroll: true });
+		goto(newUrl.pathname + newUrl.search, { keepData: true, noScroll: true });
 	};
 </script>
 
@@ -20,7 +27,7 @@
 	<label for="anime-filter" class="mb-2 block text-sm font-medium text-gray-300">Anime</label>
 	<Select
 		name="anime-filter"
-		value={value}
+		{value}
 		onValueChange={(e) => {
 			if (e) {
 				updateUrl(e.value);

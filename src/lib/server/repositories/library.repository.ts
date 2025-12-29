@@ -31,7 +31,10 @@ const normalizeOffset = (value: number | undefined): number => {
 export type CollectionWithMovies = CollectionRecord & { movies: MovieSummary[] };
 
 export const libraryRepository = {
-	async findTrendingMovies(limit = 20, mediaType: 'movie' | 'tv' | 'anime' = 'movie'): Promise<MovieSummary[]> {
+	async findTrendingMovies(
+		limit = 20,
+		mediaType: 'movie' | 'tv' | 'anime' = 'movie'
+	): Promise<MovieSummary[]> {
 		const take = toPositiveInteger(limit, 20);
 
 		try {
@@ -182,7 +185,15 @@ export const libraryRepository = {
 		const normalizedGenre = genreName.trim();
 
 		try {
-			const cacheKey = buildCacheKey('movies', 'genre', mediaType, normalizedGenre.toLowerCase(), take, skip, include_anime);
+			const cacheKey = buildCacheKey(
+				'movies',
+				'genre',
+				mediaType,
+				normalizedGenre.toLowerCase(),
+				take,
+				skip,
+				include_anime
+			);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 				let mediaTypeCondition;
 				if (include_anime === 'only') {

@@ -10,7 +10,9 @@ import type { StreamingProvider } from '../types';
 
 const { vidlink } = streamingConfig;
 
-function getCustomParams(context?: Parameters<StreamingProvider['fetchSource']>[0]): URLSearchParams {
+function getCustomParams(
+	context?: Parameters<StreamingProvider['fetchSource']>[0]
+): URLSearchParams {
 	const params = new URLSearchParams({
 		primaryColor: vidlink.primaryColor,
 		secondaryColor: vidlink.secondaryColor,
@@ -128,8 +130,9 @@ async function requestVidlink(context: Parameters<StreamingProvider['fetchSource
 
 	const headers: Record<string, string> = {
 		accept: 'application/json, text/json, */*',
-		'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-		'Referer': vidlink.baseUrl
+		'User-Agent':
+			'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+		Referer: vidlink.baseUrl
 	};
 
 	if (vidlink.apiKey) {

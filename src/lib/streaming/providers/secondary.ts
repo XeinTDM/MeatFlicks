@@ -8,16 +8,9 @@ import {
 } from '../provider-helpers';
 import type { StreamingProvider } from '../types';
 
-const {
-	twoEmbed,
-	hnembedCc,
-	hnembedNet
-} = streamingConfig;
+const { twoEmbed, hnembedCc, hnembedNet } = streamingConfig;
 
-const HNEMBED_DOMAINS = [
-	hnembedCc.baseUrl,
-	hnembedNet.baseUrl
-];
+const HNEMBED_DOMAINS = [hnembedCc.baseUrl, hnembedNet.baseUrl];
 
 function buildHnEmbedUrl(context: Parameters<StreamingProvider['fetchSource']>[0]): string {
 	const mediaId = context.imdbId || context.tmdbId?.toString() || '';
@@ -32,9 +25,7 @@ function buildHnEmbedUrl(context: Parameters<StreamingProvider['fetchSource']>[0
 	return `${hnembedCc.baseUrl}/embed/movie/${mediaId}`;
 }
 
-function fallbackSource(
-	context: Parameters<StreamingProvider['fetchSource']>[0]
-) {
+function fallbackSource(context: Parameters<StreamingProvider['fetchSource']>[0]) {
 	for (const domain of HNEMBED_DOMAINS) {
 		const embedUrl = buildHnEmbedUrl(context).replace(hnembedCc.baseUrl, domain);
 		return {
@@ -65,8 +56,9 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 		const response = await fetchWithTimeout(embedUrl, {
 			headers: {
 				accept: 'text/html, */*',
-				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-				'Referer': hnembedCc.baseUrl
+				'User-Agent':
+					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+				Referer: hnembedCc.baseUrl
 			},
 			timeoutMs: 20000
 		});
@@ -107,8 +99,9 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 		const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
 			headers: {
 				accept: 'application/json, text/json, */*',
-				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-				'Referer': twoEmbed.baseUrl
+				'User-Agent':
+					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+				Referer: twoEmbed.baseUrl
 			},
 			timeoutMs: 20000
 		});

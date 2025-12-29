@@ -72,11 +72,3 @@ export function filterMoviesByQuality(
 	}
 	return movies;
 }
-
-export function filterMoviesByOverview(
-	movies: LibraryMovie[],
-	onlyWithOverview: boolean
-): LibraryMovie[] {
-	if (!onlyWithOverview) return movies;
-	return movies.filter((movie) => Boolean(movie.overview?.trim()));
-}

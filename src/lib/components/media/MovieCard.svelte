@@ -35,11 +35,11 @@
 	}
 
 	const detailsHref = $derived.by(() => {
-		if (!movie) return '#';
-		if (movie.canonicalPath) return movie.canonicalPath;
+		if (!movie) return '/';
+		if (movie.canonicalPath) return `/${movie.canonicalPath.replace(/^\//, '')}`;
 
 		const type = movie.mediaType || movie.media_type || 'movie';
-		const identifier = movie.imdbId || movie.tmdbId || movie.id;
+		const identifier = movie.id;
 
 		return `/${type}/${identifier}`;
 	});

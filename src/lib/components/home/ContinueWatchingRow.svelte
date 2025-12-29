@@ -29,27 +29,35 @@
 			if (response.ok) {
 				const data = await response.json();
 				if (data.continueWatching && Array.isArray(data.continueWatching)) {
-					const moviePromises = data.continueWatching.map(async (progress: any) => {
-						try {
-							const movieResponse = await fetch(`/api/movies/${progress.mediaId}`, {
-								credentials: 'include'
-							});
-							if (movieResponse.ok) {
-								const movieData = await movieResponse.json();
-								return {
-									...movieData.movie,
-									progressPercent: (progress.progress / progress.duration) * 100,
-									progressSeconds: progress.progress,
-									durationSeconds: progress.duration,
-									seasonNumber: progress.seasonNumber,
-									episodeNumber: progress.episodeNumber
-								};
+					const moviePromises = data.continueWatching.map(
+						async (progress: {
+							mediaId: string;
+							progress: number;
+							duration: number;
+							seasonNumber: number;
+							episodeNumber: number;
+						}) => {
+							try {
+								const movieResponse = await fetch(`/api/movies/${progress.mediaId}`, {
+									credentials: 'include'
+								});
+								if (movieResponse.ok) {
+									const movieData = await movieResponse.json();
+									return {
+										...movieData.movie,
+										progressPercent: (progress.progress / progress.duration) * 100,
+										progressSeconds: progress.progress,
+										durationSeconds: progress.duration,
+										seasonNumber: progress.seasonNumber,
+										episodeNumber: progress.episodeNumber
+									};
+								}
+							} catch (error) {
+								console.error(`Failed to fetch movie ${progress.mediaId}:`, error);
 							}
-						} catch (error) {
-							console.error(`Failed to fetch movie ${progress.mediaId}:`, error);
+							return null;
 						}
-						return null;
-					});
+					);
 
 					const serverMovies = (await Promise.all(moviePromises)).filter(
 						(m) => m !== null
@@ -67,7 +75,10 @@
 					});
 
 					continueWatchingMovies = combined.filter((m) => {
-						const movie = m as any;
+						const movie = m as LibraryMovie & {
+							progressSeconds?: number;
+							durationSeconds?: number;
+						};
 						const progress: PlaybackProgress = {
 							mediaId: movie.id.toString(),
 							mediaType: (movie.mediaType as 'movie' | 'tv' | 'anime') || 'movie',

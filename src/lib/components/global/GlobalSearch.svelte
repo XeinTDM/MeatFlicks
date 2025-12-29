@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search as SearchIcon, X, LoaderCircle, Play, Clock } from '@lucide/svelte';
+	import { Search as SearchIcon, X, Play, Clock } from '@lucide/svelte';
 	import { fade, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';

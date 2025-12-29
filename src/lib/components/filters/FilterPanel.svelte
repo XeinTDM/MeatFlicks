@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, ChevronUp, Filter, X } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
+
 	import { Separator } from '$lib/components/ui/separator';
 	import * as Card from '$lib/components/ui/card';
 	import type { MovieFilters } from '$lib/types/filters';

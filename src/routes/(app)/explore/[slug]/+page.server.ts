@@ -43,7 +43,13 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		if (!match) {
 			if (hasActiveFilters) {
 				const mediaType = slug === 'tv-shows' ? 'tv' : 'movie';
-				const result = await libraryRepository.findMoviesWithFilters(filters, sort, pagination, mediaType, include_anime);
+				const result = await libraryRepository.findMoviesWithFilters(
+					filters,
+					sort,
+					pagination,
+					mediaType,
+					include_anime
+				);
 				const availableGenres = await libraryRepository.listGenres();
 				return {
 					categoryTitle: fromSlug(slug),
@@ -82,7 +88,13 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		}
 
 		const mediaType = slug === 'tv-shows' ? 'tv' : 'movie';
-		const result = await libraryRepository.findMoviesWithFilters(finalFilters, sort, pagination, mediaType, include_anime);
+		const result = await libraryRepository.findMoviesWithFilters(
+			finalFilters,
+			sort,
+			pagination,
+			mediaType,
+			include_anime
+		);
 		const availableGenres = await libraryRepository.listGenres();
 
 		return {
@@ -103,7 +115,13 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		genresToFetch.map(async (genreName) => ({
 			genre: genreName,
 			slug: toSlug(genreName),
-			movies: await libraryRepository.findGenreMovies(genreName, undefined, undefined, slug === 'tv-shows' ? 'tv' : 'movie', include_anime)
+			movies: await libraryRepository.findGenreMovies(
+				genreName,
+				undefined,
+				undefined,
+				slug === 'tv-shows' ? 'tv' : 'movie',
+				include_anime
+			)
 		}))
 	);
 

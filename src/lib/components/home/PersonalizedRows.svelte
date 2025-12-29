@@ -13,12 +13,16 @@
 		hasMounted = true;
 	});
 
-	function toLibraryMovie(entry: any): LibraryMovie {
+	function toLibraryMovie(entry: {
+		addedAt?: Date | null;
+		media_type?: string;
+		mediaType?: string;
+	}): LibraryMovie {
 		return {
 			...entry,
 			addedAt: entry.addedAt ?? null,
 			mediaType: entry.media_type ?? entry.mediaType ?? 'movie'
-		};
+		} as LibraryMovie;
 	}
 
 	let libraryHistoryEntries = $derived(historyEntries.map(toLibraryMovie));

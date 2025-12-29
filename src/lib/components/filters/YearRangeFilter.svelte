@@ -16,16 +16,8 @@
 	const currentYear = new Date().getFullYear();
 	const minYear = 1900;
 
-	let fromValue = $state(yearFrom?.toString() || '');
-	let toValue = $state(yearTo?.toString() || '');
-
-	$effect(() => {
-		fromValue = yearFrom?.toString() || '';
-	});
-
-	$effect(() => {
-		toValue = yearTo?.toString() || '';
-	});
+	let fromValue = $derived.by(() => yearFrom?.toString() ?? '');
+	let toValue = $derived.by(() => yearTo?.toString() ?? '');
 
 	function handleFromChange(e: Event) {
 		const input = e.target as HTMLInputElement;

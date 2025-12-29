@@ -24,7 +24,7 @@
 
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { setContext, getContext } from 'svelte';
+	import { setContext } from 'svelte';
 
 	interface Props {
 		type?: 'single' | 'multiple';

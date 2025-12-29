@@ -51,87 +51,90 @@ export const upsertMovieWithGenres = async (
 	return results[0] ?? null;
 };
 
-export const bulkUpsertMovies = async (
-	payloads: UpsertMoviePayload[]
-): Promise<MovieRecord[]> => {
+export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<MovieRecord[]> => {
 	if (payloads.length === 0) return [];
 
-	return await db.transaction(async (tx) => {
-		const results: MovieRecord[] = [];
+	return await db
+		.transaction(async (tx) => {
+			const results: MovieRecord[] = [];
 
-		for (const payload of payloads) {
-			const genreIds: number[] = [];
-			for (const rawName of payload.genreNames) {
-				const name = rawName.trim();
-				if (!name) continue;
+			for (const payload of payloads) {
+				const genreIds: number[] = [];
+				for (const rawName of payload.genreNames) {
+					const name = rawName.trim();
+					if (!name) continue;
 
-				const existing = await tx.select().from(genres).where(eq(genres.name, name)).limit(1);
-				if (existing.length > 0) {
-					genreIds.push(existing[0].id);
-					continue;
+					const existing = await tx.select().from(genres).where(eq(genres.name, name)).limit(1);
+					if (existing.length > 0) {
+						genreIds.push(existing[0].id);
+						continue;
+					}
+
+					const result = await tx.insert(genres).values({ name }).returning({ id: genres.id });
+					genreIds.push(result[0].id);
 				}
 
-				const result = await tx.insert(genres).values({ name }).returning({ id: genres.id });
-				genreIds.push(result[0].id);
+				const mediaType = payload.mediaType || 'movie';
+				const existingMovies = await tx
+					.select()
+					.from(movies)
+					.where(and(eq(movies.tmdbId, payload.tmdbId), eq(movies.mediaType, mediaType)))
+					.limit(1);
+				const existingMovie = existingMovies[0];
+				const movieId = existingMovie?.id ?? randomUUID();
+
+				const movieData = {
+					id: movieId,
+					tmdbId: payload.tmdbId,
+					title: payload.title,
+					overview: payload.overview,
+					posterPath: payload.posterPath,
+					backdropPath: payload.backdropPath,
+					releaseDate: payload.releaseDate,
+					rating: payload.rating,
+					durationMinutes: payload.durationMinutes,
+					is4K: payload.is4K,
+					isHD: payload.isHD,
+					collectionId: payload.collectionId ?? (existingMovie?.collectionId || null),
+					mediaType: payload.mediaType ?? (existingMovie?.mediaType || 'movie'),
+					updatedAt: Date.now()
+				};
+
+				if (existingMovie) {
+					await tx.update(movies).set(movieData).where(eq(movies.tmdbId, payload.tmdbId));
+				} else {
+					await tx.insert(movies).values({ ...movieData, createdAt: Date.now() });
+				}
+
+				await tx.delete(moviesGenres).where(eq(moviesGenres.movieId, movieId));
+				for (const genreId of genreIds) {
+					await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
+				}
+
+				// Add to results
+				const movieClone = {
+					...movieData,
+					createdAt: existingMovie?.createdAt ?? movieData.updatedAt
+				};
+				results.push(movieClone as unknown as MovieRecord);
 			}
 
-			const mediaType = payload.mediaType || 'movie';
-			const existingMovies = await tx
-				.select()
-				.from(movies)
-				.where(and(eq(movies.tmdbId, payload.tmdbId), eq(movies.mediaType, mediaType)))
-				.limit(1);
-			const existingMovie = existingMovies[0];
-			const movieId = existingMovie?.id ?? randomUUID();
-
-			const movieData = {
-				id: movieId,
-				tmdbId: payload.tmdbId,
-				title: payload.title,
-				overview: payload.overview,
-				posterPath: payload.posterPath,
-				backdropPath: payload.backdropPath,
-				releaseDate: payload.releaseDate,
-				rating: payload.rating,
-				durationMinutes: payload.durationMinutes,
-				is4K: payload.is4K,
-				isHD: payload.isHD,
-				collectionId: payload.collectionId ?? (existingMovie?.collectionId || null),
-				mediaType: payload.mediaType ?? (existingMovie?.mediaType || 'movie'),
-				updatedAt: Date.now()
-			};
-
-			if (existingMovie) {
-				await tx.update(movies).set(movieData).where(eq(movies.tmdbId, payload.tmdbId));
-			} else {
-				await tx.insert(movies).values({ ...movieData, createdAt: Date.now() });
+			return results;
+		})
+		.then(async (syncedMovies) => {
+			// Post-transaction person sync (can be slow, so we do it after the main data is safe)
+			// We still do this in serial for now to avoid overloading TMDB Rate Limiter,
+			// but outside the DB transaction.
+			for (const movie of syncedMovies) {
+				try {
+					await syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any);
+					await syncMovieCrew(movie.id, movie.tmdbId!, movie.mediaType as any);
+				} catch (error) {
+					console.warn(`Failed to sync person data for movie ${movie.id}:`, error);
+				}
 			}
-
-			await tx.delete(moviesGenres).where(eq(moviesGenres.movieId, movieId));
-			for (const genreId of genreIds) {
-				await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
-			}
-
-			// Add to results
-			const movieClone = { ...movieData, createdAt: existingMovie?.createdAt ?? movieData.updatedAt };
-			results.push(movieClone as unknown as MovieRecord);
-		}
-
-		return results;
-	}).then(async (syncedMovies) => {
-		// Post-transaction person sync (can be slow, so we do it after the main data is safe)
-		// We still do this in serial for now to avoid overloading TMDB Rate Limiter, 
-		// but outside the DB transaction.
-		for (const movie of syncedMovies) {
-			try {
-				await syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any);
-				await syncMovieCrew(movie.id, movie.tmdbId!, movie.mediaType as any);
-			} catch (error) {
-				console.warn(`Failed to sync person data for movie ${movie.id}:`, error);
-			}
-		}
-		return syncedMovies;
-	});
+			return syncedMovies;
+		});
 };
 
 export const setMovieCollection = async (movieId: string, collectionId: number | null) => {

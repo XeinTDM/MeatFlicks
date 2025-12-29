@@ -1,22 +1,18 @@
 <script lang="ts">
-	import type { LibraryMovie } from '$lib/types/library';
 	import type { MediaType } from '$lib/streaming/types';
 
 	type StructuredDataProps = {
 		media: {
 			id: string;
-			tmdbId: number | null;
 			title: string;
 			overview: string | null;
 			posterPath: string | null;
-			backdropPath: string | null;
 			releaseDate: string | null;
 			rating: number | null;
 			durationMinutes: number | null;
 			genres?: { id: number; name: string }[];
 			cast?: { id: number; name: string; character: string }[];
 			trailerUrl?: string | null;
-			imdbId?: string | null;
 			seasonCount?: number | null;
 			episodeCount?: number | null;
 			voteCount?: number | null;
@@ -43,7 +39,7 @@
 					ratingValue: media.rating.toFixed(1),
 					bestRating: '10',
 					worstRating: '0',
-					ratingCount: media.voteCount || 1000
+					ratingCount: media.voteCount || 1
 				}
 			: null;
 
@@ -149,5 +145,6 @@
 </script>
 
 <svelte:head>
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html '<script type="application/ld+json">' + JSON.stringify(structuredData) + '</script>'}
 </svelte:head>

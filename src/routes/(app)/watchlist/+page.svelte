@@ -586,7 +586,7 @@
 											class="flex flex-col gap-4 rounded-xl border border-border bg-card/50 p-4 shadow-sm transition hover:border-primary/50 md:flex-row md:items-center"
 										>
 											<a
-												href={movie.canonicalPath ?? `/movie/${movie.id}`}
+												href={`/${movie.canonicalPath ?? `movie/${movie.id}`}`}
 												data-sveltekit-preload-data="hover"
 												class="flex w-full gap-4 md:w-auto"
 											>
@@ -610,7 +610,7 @@
 												<div class="flex flex-wrap items-start justify-between gap-2">
 													<div class="space-y-1">
 														<a
-															href={movie.canonicalPath ?? `/movie/${movie.id}`}
+															href={`/${movie.canonicalPath ?? `movie/${movie.id}`}`}
 															data-sveltekit-preload-data="hover"
 															class="text-lg font-semibold hover:text-primary"
 														>

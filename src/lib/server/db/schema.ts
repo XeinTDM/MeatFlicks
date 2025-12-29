@@ -442,7 +442,11 @@ export const episodes = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		unique('unq_episodes_show_season_number').on(table.tvShowId, table.seasonId, table.episodeNumber),
+		unique('unq_episodes_show_season_number').on(
+			table.tvShowId,
+			table.seasonId,
+			table.episodeNumber
+		),
 		index('idx_episodes_tv_show_id').on(table.tvShowId),
 		index('idx_episodes_season_id').on(table.seasonId),
 		index('idx_episodes_episode_number').on(table.episodeNumber),

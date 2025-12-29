@@ -26,7 +26,7 @@
 	}>();
 </script>
 
-<div class="py-8 px-[5%]">
+<div class="px-[5%] py-8">
 	<div class="flex flex-col gap-4 lg:flex-row">
 		<div class="flex-shrink-0 space-y-2 rounded-lg lg:w-[70%]">
 			{#if cast?.length}

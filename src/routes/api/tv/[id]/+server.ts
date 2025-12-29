@@ -23,17 +23,15 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		const queryParams = validateQueryParams(tvQueryParamsSchema, url.searchParams);
 
 		const identifier = pathParams.id;
-		const queryMode = queryParams.by ?? (identifier.startsWith('tt') ? 'imdb' : /^\d+$/.test(identifier) ? 'tmdb' : 'id');
+		const queryMode =
+			queryParams.by ??
+			(identifier.startsWith('tt') ? 'imdb' : /^\d+$/.test(identifier) ? 'tmdb' : 'id');
 
 		let tmdbId: number | null = null;
 		let localShow: any = null;
 
 		if (queryMode === 'id') {
-			const results = await db
-				.select()
-				.from(movies)
-				.where(eq(movies.id, identifier))
-				.limit(1);
+			const results = await db.select().from(movies).where(eq(movies.id, identifier)).limit(1);
 			localShow = results[0];
 			if (localShow) {
 				tmdbId = localShow.tmdbId;

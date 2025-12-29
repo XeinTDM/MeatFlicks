@@ -13,7 +13,6 @@
 		streamingService,
 		mediaType,
 		movieTitle,
-		durationMinutes,
 		onNextEpisode,
 		onOpenInNewTab,
 		onProviderSelect,
