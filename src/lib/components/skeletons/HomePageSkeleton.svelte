@@ -6,5 +6,3 @@
 	const carouselPlaceholders = Array.from({ length: 6 });
 	const sectionPlaceholders = Array.from({ length: 3 });
 </script>
-
-

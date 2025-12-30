@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger
-} from '$lib/components/ui/select/index';
+	import {
+		Select,
+		SelectContent,
+		SelectGroup,
+		SelectItem,
+		SelectTrigger
+	} from '$lib/components/ui/select/index';
 
 	let { value = 'include' }: { value?: 'include' | 'exclude' | 'only' } = $props();
 
@@ -26,7 +26,7 @@ import {
 	<label for="anime-filter" class="mb-2 block text-sm font-medium text-gray-300">Anime</label>
 	<Select
 		name="anime-filter"
-		value={value}
+		{value}
 		type="single"
 		onValueChange={(value) => updateUrl(value as 'include' | 'exclude' | 'only')}
 	>

@@ -1,5 +1,11 @@
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres, tvShows as tvShowsSchema, tvShowsGenres } from '$lib/server/db/schema';
+import {
+	movies,
+	genres,
+	moviesGenres,
+	tvShows as tvShowsSchema,
+	tvShowsGenres
+} from '$lib/server/db/schema';
 import { eq, sql, and, count as drizzleCount } from 'drizzle-orm';
 import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
@@ -70,7 +76,7 @@ const fetchTmdbListIds = async (
 	return ids;
 };
 
-export const fetchTopRatedMovieIds = async (limit = 250): Promise < number[] > => {
+export const fetchTopRatedMovieIds = async (limit = 250): Promise<number[]> => {
 	console.log(`Fetching top ${limit} rated movie IDs from TMDB...`);
 	try {
 		const ids = await fetchTmdbListIds('/movie/top_rated', {}, limit, 'tmdb-top-rated-movies');
@@ -82,7 +88,7 @@ export const fetchTopRatedMovieIds = async (limit = 250): Promise < number[] > =
 	}
 };
 
-const fetchMovieDetailsForIds = async (tmdbIds: number[]): Promise < (TmdbMovieDetails | null)[] > => {
+const fetchMovieDetailsForIds = async (tmdbIds: number[]): Promise<(TmdbMovieDetails | null)[]> => {
 	console.log(`Fetching details for ${tmdbIds.length} movie IDs...`);
 	const details: (TmdbMovieDetails | null)[] = [];
 	const batchSize = 50;
@@ -110,7 +116,9 @@ const fetchMovieDetailsForIds = async (tmdbIds: number[]): Promise < (TmdbMovieD
 	return details;
 };
 
-const prepareMoviePayloads = async (movieDetails: TmdbMovieDetails[]): Promise < UpsertMoviePayload[] > => {
+const prepareMoviePayloads = async (
+	movieDetails: TmdbMovieDetails[]
+): Promise<UpsertMoviePayload[]> => {
 	console.log(`Preparing ${movieDetails.length} movie payloads...`);
 	const payloads: UpsertMoviePayload[] = [];
 
@@ -168,7 +176,7 @@ export const importTopRatedMovies = async () => {
 	}
 };
 
-export const fetchTopRatedTvShowIds = async (limit = 250): Promise < number[] > => {
+export const fetchTopRatedTvShowIds = async (limit = 250): Promise<number[]> => {
 	console.log(`Fetching top ${limit} rated TV show IDs from TMDB...`);
 	try {
 		const ids = await fetchTmdbListIds('/tv/top_rated', {}, limit, 'tmdb-top-rated-tv');
@@ -180,7 +188,7 @@ export const fetchTopRatedTvShowIds = async (limit = 250): Promise < number[] > 
 	}
 };
 
-const fetchTvShowDetailsForIds = async (tmdbIds: number[]): Promise < (TmdbTvDetails | null)[] > => {
+const fetchTvShowDetailsForIds = async (tmdbIds: number[]): Promise<(TmdbTvDetails | null)[]> => {
 	console.log(`Fetching details for ${tmdbIds.length} TV show IDs...`);
 	const details: (TmdbTvDetails | null)[] = [];
 	const batchSize = 50;
@@ -227,7 +235,9 @@ export type UpsertTvShowPayload = {
 	streamingProviders: string | null;
 };
 
-const prepareTvShowPayloads = async (tvShowDetails: TmdbTvDetails[]): Promise < UpsertTvShowPayload[] > => {
+const prepareTvShowPayloads = async (
+	tvShowDetails: TmdbTvDetails[]
+): Promise<UpsertTvShowPayload[]> => {
 	console.log(`Preparing ${tvShowDetails.length} TV show payloads...`);
 	const payloads: UpsertTvShowPayload[] = [];
 
@@ -249,15 +259,21 @@ const prepareTvShowPayloads = async (tvShowDetails: TmdbTvDetails[]): Promise < 
 			genreNames: detail.genres.map((g) => g.name),
 			imdbId: detail.imdbId,
 			trailerUrl: detail.trailerUrl,
-			productionCompanies: detail.productionCompanies ? JSON.stringify(detail.productionCompanies.map(c => ({ name: c.name, logoPath: c.logoPath }))) : null,
-			streamingProviders: null,
+			productionCompanies: detail.productionCompanies
+				? JSON.stringify(
+						detail.productionCompanies.map((c) => ({ name: c.name, logoPath: c.logoPath }))
+					)
+				: null,
+			streamingProviders: null
 		});
 	}
 	console.log(`Prepared ${payloads.length} TV show payloads.`);
 	return payloads;
 };
 
-export const bulkUpsertTvShows = async (payloads: UpsertTvShowPayload[]): Promise<InferSelectModel<typeof tvShowsSchema>[]> => {
+export const bulkUpsertTvShows = async (
+	payloads: UpsertTvShowPayload[]
+): Promise<InferSelectModel<typeof tvShowsSchema>[]> => {
 	if (payloads.length === 0) return [];
 
 	return await db.transaction(async (tx) => {
@@ -309,7 +325,10 @@ export const bulkUpsertTvShows = async (payloads: UpsertTvShowPayload[]): Promis
 			let insertedOrUpdatedTvShow: InferSelectModel<typeof tvShowsSchema> | undefined;
 
 			if (existingTvShow) {
-				await tx.update(tvShowsSchema).set(tvShowData).where(eq(tvShowsSchema.tmdbId, payload.tmdbId));
+				await tx
+					.update(tvShowsSchema)
+					.set(tvShowData)
+					.where(eq(tvShowsSchema.tmdbId, payload.tmdbId));
 				insertedOrUpdatedTvShow = { ...existingTvShow, ...tvShowData };
 			} else {
 				const result = await tx.insert(tvShowsSchema).values(tvShowData).returning(); // Let DB generate primary key 'id'
@@ -324,10 +343,13 @@ export const bulkUpsertTvShows = async (payloads: UpsertTvShowPayload[]): Promis
 
 			// Handle TV Show Genres
 			for (const genreId of genreIds) {
-				await tx.insert(tvShowsGenres).values({
-					tvShowId: insertedOrUpdatedTvShow.id,
-					genreId
-				}).onConflictDoNothing();
+				await tx
+					.insert(tvShowsGenres)
+					.values({
+						tvShowId: insertedOrUpdatedTvShow.id,
+						genreId
+					})
+					.onConflictDoNothing();
 			}
 		}
 		return results;
@@ -443,7 +465,9 @@ export const importFromTmdbIds = async (tmdbIds: number[], mediaType: 'movie' | 
 			}
 
 			const importedMovies = await bulkUpsertMovies(payloads);
-			console.log(`Successfully imported/upserted ${importedMovies.length} movies from provided IDs.`);
+			console.log(
+				`Successfully imported/upserted ${importedMovies.length} movies from provided IDs.`
+			);
 		} else {
 			const tvShowDetails = await fetchTvShowDetailsForIds(tmdbIds);
 			const validTvShowDetails = tvShowDetails.filter((d): d is TmdbTvDetails => d !== null);
@@ -460,7 +484,9 @@ export const importFromTmdbIds = async (tmdbIds: number[], mediaType: 'movie' | 
 			}
 
 			const importedTvShows = await bulkUpsertTvShows(payloads);
-			console.log(`Successfully imported/upserted ${importedTvShows.length} TV shows from provided IDs.`);
+			console.log(
+				`Successfully imported/upserted ${importedTvShows.length} TV shows from provided IDs.`
+			);
 		}
 	} catch (error) {
 		console.error(`Error during import from TMDB IDs for ${mediaType}:`, error);

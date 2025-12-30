@@ -335,8 +335,6 @@
 				/>
 			{/if}
 
-
-
 			<div
 				class="absolute inset-0 bg-gradient-to-t from-background/50 via-background/40 to-transparent"
 			></div>
@@ -463,8 +461,6 @@
 							<Play class="size-4" aria-hidden="true" />
 							Play
 						</Button>
-
-
 
 						<Button
 							type="button"
