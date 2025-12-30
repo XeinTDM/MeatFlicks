@@ -26,12 +26,12 @@
 	const carouselOpts = { align: 'start' } as const;
 
 	function getResolvedPath(path: string | undefined): string {
-		if (!path) return '/#'; // Fallback to a valid hash link
+		if (!path) return '/#';
 		return path.startsWith('/') ? path : `/${path}`;
 	}
 </script>
 
-<div class="px-[5%] py-8">
+<div class="px-[10%] py-8">
 	{#if linkTo}
 		<a
 			href={getResolvedPath(linkTo)}

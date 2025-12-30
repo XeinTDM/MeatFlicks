@@ -36,7 +36,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			if (localShow) {
 				tmdbId = localShow.tmdbId;
 			} else {
-				// If not found as UUID, maybe it's a numeric TMDB id anyway?
 				const parsed = Number.parseInt(identifier, 10);
 				if (Number.isFinite(parsed)) tmdbId = parsed;
 			}

@@ -1,14 +1,14 @@
 {
-	"version": 1,
-	"lastRun": {
-		"trending": 1767019473958,
-		"popular": 1767019627333,
-		"genrePools": 1767019906073,
-		"highRated": 1766589143911,
-		"trendingTv": 1767028920854,
-		"popularTv": 1767028947832,
-		"genrePoolsTv": 1767028969402,
-		"anime": 1767029002106,
-		"animeTv": 1767029031225
-	}
+  "version": 1,
+  "lastRun": {
+    "trending": 1767108482581,
+    "popular": 1767108614478,
+    "genrePools": 1767109497733,
+    "highRated": 1766589143911,
+    "trendingTv": 1767115633477,
+    "popularTv": 1767115744335,
+    "genrePoolsTv": 1767116057534,
+    "anime": 1767116098719,
+    "animeTv": 1767116109860
+  }
 }

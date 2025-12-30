@@ -56,6 +56,7 @@
 				<img
 					src={movie.posterPath}
 					alt={`${movie.title} Poster`}
+					loading="lazy"
 					class="h-full w-full object-cover transition-opacity duration-400 ease-in-out"
 				/>
 			{:else if movie}

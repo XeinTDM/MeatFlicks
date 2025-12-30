@@ -48,11 +48,9 @@ function fallbackSource(context: Parameters<StreamingProvider['fetchSource']>[0]
 }
 
 async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSource']>[0]) {
-	// First try the new HnEmbed URL structure
 	try {
 		const embedUrl = buildHnEmbedUrl(context);
 
-		// Try to fetch the embed page to verify it works
 		const response = await fetchWithTimeout(embedUrl, {
 			headers: {
 				accept: 'text/html, */*',
@@ -76,7 +74,6 @@ async function requestTwoEmbed(context: Parameters<StreamingProvider['fetchSourc
 		console.warn('[streaming][2embed] HnEmbed request failed:', error);
 	}
 
-	// If HnEmbed fails, try the old 2Embed API as fallback
 	try {
 		const params = new URLSearchParams({
 			tmdb: context.tmdbId?.toString() || ''

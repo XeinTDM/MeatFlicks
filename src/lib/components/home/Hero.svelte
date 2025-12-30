@@ -335,20 +335,7 @@
 				/>
 			{/if}
 
-			{#if trailerEmbedUrl}
-				<div
-					class="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-					aria-hidden="true"
-					style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"
-				>
-					<iframe
-						title={`Trailer for ${activeMovie.title}`}
-						src={trailerEmbedUrl}
-						allow="autoplay; fullscreen; picture-in-picture"
-						class="h-full w-full scale-125 md:scale-110"
-					></iframe>
-				</div>
-			{/if}
+
 
 			<div
 				class="absolute inset-0 bg-gradient-to-t from-background/50 via-background/40 to-transparent"
@@ -477,19 +464,7 @@
 							Play
 						</Button>
 
-						{#if trailerWatchUrl}
-							<Button
-								href={trailerWatchUrl}
-								variant="secondary"
-								size="lg"
-								target="_blank"
-								rel="noopener noreferrer"
-								class="gap-2 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
-							>
-								<Clapperboard class="size-4" aria-hidden="true" />
-								Watch Trailer
-							</Button>
-						{/if}
+
 
 						<Button
 							type="button"

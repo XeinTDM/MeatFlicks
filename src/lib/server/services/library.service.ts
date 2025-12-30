@@ -21,7 +21,9 @@ import {
 } from '$lib/server/services/tmdb.service';
 
 const HOME_LIBRARY_CACHE_KEY = 'home-library';
-const HOME_LIBRARY_MOVIES_LIMIT = 20;
+const HOME_LIBRARY_MOVIES_LIMIT = 10;
+const HOME_LIBRARY_COLLECTIONS_LIMIT = 10;
+const HOME_LIBRARY_GENRES_LIMIT = 10;
 
 const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
 	...movie,
@@ -76,7 +78,9 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 					durationMinutes: details.runtime ?? null,
 					is4K: false,
 					isHD: true,
-					genreNames
+					genreNames,
+					imdbId: details.imdbId ?? null,
+					trailerUrl: details.trailerUrl ?? null
 				});
 
 				if (storedMovie) {
@@ -122,6 +126,7 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 
 		return {
 			trendingMovies: fallbackMovies,
+			trendingTv: [],
 			collections: [],
 			genres: []
 		};
@@ -181,13 +186,18 @@ const attachIdentifiers = (
 };
 
 async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
-	const [trendingRaw, collections, genres] = await Promise.all([
-		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT),
+	const [trendingRaw, trendingTvRaw, collectionsRaw, genresRaw] = await Promise.all([
+		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT, 'movie'),
+		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT, 'tv'),
 		libraryRepository.listCollections(),
 		libraryRepository.listGenres()
 	]);
 
+	const collections = collectionsRaw.slice(0, HOME_LIBRARY_COLLECTIONS_LIMIT);
+	const genres = genresRaw.slice(0, HOME_LIBRARY_GENRES_LIMIT);
+
 	const trendingMovies = trendingRaw.map(toLibraryMovie);
+	const trendingTv = trendingTvRaw.map(toLibraryMovie);
 
 	const collectionsWithMovies = await Promise.all(
 		collections.map(async (collection) => {
@@ -216,6 +226,7 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 
 	const extrasMap = await buildExtrasMap([
 		...trendingMovies,
+		...trendingTv,
 		...collectionsWithMovies.flatMap((collection) => collection.movies),
 		...genresWithMovies.flatMap((genre) => genre.movies)
 	]);
@@ -223,6 +234,7 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 	const decorate = (movie: LibraryMovie) => attachIdentifiers(movie, extrasMap);
 
 	const decoratedTrending = trendingMovies.map(decorate);
+	const decoratedTrendingTv = trendingTv.map(decorate);
 	const decoratedCollections = collectionsWithMovies.map((collection) => ({
 		...collection,
 		movies: collection.movies.map(decorate)
@@ -234,6 +246,7 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 
 	return {
 		trendingMovies: decoratedTrending,
+		trendingTv: decoratedTrendingTv,
 		collections: decoratedCollections,
 		genres: decoratedGenres
 	} satisfies HomeLibrary;
@@ -271,11 +284,11 @@ export async function fetchHomeLibrary(
 		try {
 			result = await withCache(HOME_LIBRARY_CACHE_KEY, CACHE_TTL_MEDIUM_SECONDS, async () => {
 				const fallback = await buildFallbackHomeLibrary(HOME_LIBRARY_MOVIES_LIMIT);
-				return fallback ?? { trendingMovies: [], collections: [], genres: [] };
+				return fallback ?? { trendingMovies: [], trendingTv: [], collections: [], genres: [] };
 			});
 		} catch (fallbackError) {
 			logger.error({ error: fallbackError }, '[library] Failed to build fallback library');
-			result = { trendingMovies: [], collections: [], genres: [] };
+			result = { trendingMovies: [], trendingTv: [], collections: [], genres: [] };
 		}
 	}
 

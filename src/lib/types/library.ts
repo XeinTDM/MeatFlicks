@@ -35,4 +35,6 @@ export type HomeLibrary = {
 	trendingMovies: LibraryMovie[];
 	collections: LibraryCollection[];
 	genres: LibraryGenre[];
+	trendingTv?: LibraryMovie[];
+	popularTv?: LibraryMovie[];
 };

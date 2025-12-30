@@ -42,7 +42,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			tmdbId = parsed;
 		}
 
-		// Try to get TV details first (most anime are series)
 		const tvCacheKey = buildCacheKey('tv', tmdbId);
 		let details: any = await withCache<TmdbTvDetails>(tvCacheKey, CACHE_TTL_LONG_SECONDS, () =>
 			fetchTmdbTvDetails(tmdbId!)
@@ -51,7 +50,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		let mediaType: 'tv' | 'movie' = 'tv';
 
 		if (!details.found || !details.name) {
-			// Try movie if TV not found
 			const movieCacheKey = buildCacheKey('movie', tmdbId);
 			details = await withCache<TmdbMovieDetails>(movieCacheKey, CACHE_TTL_LONG_SECONDS, () =>
 				fetchTmdbMovieDetails(tmdbId!)
@@ -66,7 +64,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		const title = details.name || details.title;
 		const releaseDate = details.firstAirDate || details.releaseDate;
 
-		// Fetch MAL ID
 		const malId = await fetchMalId(title, releaseDate);
 
 		return json({

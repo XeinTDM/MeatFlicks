@@ -26,7 +26,7 @@
 	const carouselOpts = { align: 'start' } as const;
 </script>
 
-<div class="px-[5%] py-8">
+<div class="px-[10%] py-8">
 	<div class="mb-6 flex items-center gap-2">
 		<h2 class="text-3xl font-semibold text-foreground">{title}</h2>
 		{#if linkTo}

@@ -77,6 +77,8 @@ const createDatabaseClient = (): Client => {
 			url
 		});
 
+		client.execute('PRAGMA busy_timeout = 30000');
+
 		return client;
 	} catch (error) {
 		logger.error({ error }, 'Failed to create database client');

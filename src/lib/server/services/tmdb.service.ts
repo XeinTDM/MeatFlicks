@@ -160,18 +160,17 @@ export async function fetchTmdbConfig(): Promise<TmdbConfiguration['images']> {
 
 	return withCache(
 		cacheKey,
-		86400, // 24 hours
+		86400,
 		async () => {
 			const rawData = await tmdbRateLimiter.schedule('tmdb-config', () => api('/configuration'));
 			const data = TmdbConfigSchema.parse(rawData);
 			runtimeConfig = data.images;
 			return data.images;
 		},
-		{ swrSeconds: 43200 } // 12 hours
+		{ swrSeconds: 43200 }
 	);
 }
 
-// Background refresh or initial fetch if needed
 if (typeof process !== 'undefined') {
 	fetchTmdbConfig().catch(() => {
 		/* ignore */
@@ -331,7 +330,6 @@ export async function fetchTmdbTvDetails(
 								const parsed = TmdbTvSeasonSchema.parse(detailedSeason);
 								const mapped = mapTmdbSeason(parsed);
 
-								// Prime individual cache for this season
 								const seasonCacheKey = buildCacheKey(
 									'tmdb',
 									'tv',
@@ -917,7 +915,6 @@ export async function fetchTmdbMediaCredits(
 	tmdbId: number,
 	mediaType: 'movie' | 'tv' | 'anime'
 ): Promise<TmdbMediaCredits | null> {
-	// TMDB uses 'movie' for both movies and anime movies usually, or we treat anime as tv/movie
 	const tmdbType = mediaType === 'tv' ? 'tv' : 'movie';
 	const cacheKey = buildCacheKey('tmdb', tmdbType, tmdbId, 'credits');
 
@@ -950,9 +947,6 @@ export async function fetchTmdbMediaCredits(
 	});
 }
 
-/**
- * Fetches MAL ID for a given title and optional release year using Jikan API.
- */
 export async function fetchMalId(title: string, year?: string): Promise<number | null> {
 	const cacheKey = buildCacheKey('mal', 'search', title, year || 'any');
 
@@ -962,8 +956,7 @@ export async function fetchMalId(title: string, year?: string): Promise<number |
 			if (year) {
 				const releaseYear = year.split('-')[0];
 				if (releaseYear) {
-					// Some anime might have slightly different start dates, but year usually works
-					// query.start_date = `${releaseYear}-01-01`;
+					query.start_date = `${releaseYear}`;
 				}
 			}
 
@@ -980,11 +973,9 @@ export async function fetchMalId(title: string, year?: string): Promise<number |
 
 			if (!result) return null;
 
-			// Double check if the title is reasonably close
 			const malTitle = (result.title || '').toLowerCase();
 			if (!malTitle.includes(title.toLowerCase()) && !title.toLowerCase().includes(malTitle)) {
 				console.warn(`[MAL] Title mismatch: ${title} vs ${result.title}`);
-				// Optional: return null if high confidence is needed
 			}
 
 			return result.mal_id || null;

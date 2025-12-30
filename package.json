@@ -15,7 +15,8 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
 		"db:push": "drizzle-kit push",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"import-data": "bun run import-data.js"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",

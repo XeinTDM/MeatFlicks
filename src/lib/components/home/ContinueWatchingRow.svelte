@@ -63,11 +63,14 @@
 						(m) => m !== null
 					) as LibraryMovie[];
 
-					// Combine and deduplicate
-					const combined = [...serverMovies];
+					const dedupedServerMovies = serverMovies.filter((movie, index, self) =>
+						index === self.findIndex(m => m.id === movie.id && (m as any).seasonNumber === (movie as any).seasonNumber && (m as any).episodeNumber === (movie as any).episodeNumber)
+					);
+
+					const combined = [...dedupedServerMovies];
 					localProgress.forEach((local) => {
 						const exists = combined.some(
-							(s) => s.id === local.id && s.season === local.season && s.episode === local.episode
+							(s) => s.id === local.id && (s as any).seasonNumber === (local as any).seasonNumber && (s as any).episodeNumber === (local as any).episodeNumber
 						);
 						if (!exists) {
 							combined.push(local);

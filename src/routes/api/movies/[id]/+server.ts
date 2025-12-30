@@ -43,8 +43,6 @@ const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
 	if (/^tt\d{7,}$/i.test(identifier)) {
 		return 'imdb';
 	}
-	// Default to 'id'. If it's a number and not found as local ID,
-	// the fallback logic will attempt to resolve it as a TMDB ID.
 	return 'id';
 };
 
@@ -241,7 +239,7 @@ const isValidTmdbId = (value: unknown): value is number => {
 
 type MovieWithDetails = MovieRecord & {
 	imdbId: string | null;
-	cast: { id: number; name: string; character: string }[];
+	cast: { id: number; name: string; character: string; profilePath?: string | null }[];
 	trailerUrl: string | null;
 };
 
@@ -295,7 +293,9 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 	return {
 		...movie,
 		imdbId: details.imdbId,
-		cast: details.cast,
+		cast: details.cast
+			.filter(c => c.character && c.character.trim())
+			.map(c => ({ ...c, character: c.character! })),
 		trailerUrl: details.trailerUrl
 	};
 }
@@ -348,7 +348,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			releaseDate: movie.releaseDate ?? (extras?.releaseDate ? new Date(extras.releaseDate) : null),
 			durationMinutes: movie.durationMinutes ?? extras?.runtime ?? null,
 			imdbId: extras?.imdbId ?? movie.imdbId ?? null,
-			cast: extras?.cast ?? [],
+			cast: (extras?.cast ?? [])
+				.filter(c => c.character && c.character.trim())
+				.map(c => ({ ...c, character: c.character! })),
 			trailerUrl: extras?.trailerUrl ?? movie.trailerUrl ?? null,
 			productionCompanies: extras?.productionCompanies ?? [],
 			productionCountries: extras?.productionCountries ?? [],

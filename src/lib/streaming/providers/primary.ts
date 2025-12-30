@@ -81,7 +81,6 @@ function fallbackSource(
 async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource']>[0]) {
 	const params = buildQuery(context);
 
-	// Try multiple endpoint structures to handle API changes
 	const endpoints = [
 		`${vidsrc.baseUrl}/api/${context.mediaType}`,
 		`${vidsrc.baseUrl}/embed/${context.mediaType}`,
@@ -107,20 +106,18 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 	}
 
 	try {
-		// Try each endpoint in sequence
 		for (const endpoint of endpoints) {
 			try {
 				const response = await fetchWithTimeout(`${endpoint}?${params.toString()}`, {
 					headers,
-					timeoutMs: 15000, // Increased timeout
+					timeoutMs: 15000,
 					redirect: 'follow'
 				});
 
 				if (!response.ok) {
 					if (response.status === 404) {
-						continue; // Try next endpoint for 404 errors
+						continue;
 					} else if (response.status === 403) {
-						// If we get 403, try with different headers
 						const retryHeaders = {
 							...headers,
 							'x-requested-with': 'XMLHttpRequest'
@@ -132,7 +129,6 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 						});
 
 						if (retryResponse.ok) {
-							// Process the successful retry response
 							const contentType = retryResponse.headers.get('content-type') ?? '';
 							if (contentType.includes('json')) {
 								const payload = await retryResponse.json();
@@ -159,15 +155,14 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 								}
 							}
 						}
-						continue; // Try next endpoint
+						continue;
 					} else {
-						continue; // Try next endpoint for other errors
+						continue;
 					}
 				}
 
 				const contentType = response.headers.get('content-type') ?? '';
 				if (!contentType.includes('json')) {
-					// If we get HTML, try to extract embed URL from it
 					if (contentType.includes('html')) {
 						const html = await response.text();
 						const embedMatch = html.match(/https?:\/\/[^\s"']+\/embed\/[^\s"']+/);
@@ -181,7 +176,7 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 							} as const;
 						}
 					}
-					continue; // Try next endpoint
+					continue;
 				}
 
 				const payload = await response.json();
@@ -208,11 +203,10 @@ async function requestVidsrc(context: Parameters<StreamingProvider['fetchSource'
 				}
 			} catch (endpointError) {
 				console.warn(`[streaming][vidsrc] Endpoint ${endpoint} failed:`, endpointError);
-				continue; // Try next endpoint
+				continue;
 			}
 		}
 
-		// If all endpoints fail, return fallback
 		return fallbackSource(context, params);
 	} catch (error) {
 		console.warn('[streaming][vidsrc]', error);

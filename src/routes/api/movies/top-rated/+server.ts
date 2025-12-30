@@ -7,7 +7,7 @@ import { errorHandler } from '$lib/server';
 import type { LibraryMovie } from '$lib/types/library';
 
 const topRatedQueryParamsSchema = z.object({
-	limit: z.coerce.number().int().positive().max(100).default(20),
+	limit: z.coerce.number().int().positive().max(100).default(50),
 	offset: z.coerce.number().int().min(0).default(0)
 });
 
@@ -20,7 +20,6 @@ export const GET: RequestHandler = async ({ url }) => {
 			{ page: Math.floor(queryParams.offset / queryParams.limit) + 1, pageSize: queryParams.limit }
 		);
 
-		// Set canonical paths for consistency
 		const moviesWithPaths = movies.items.map(
 			(movie): LibraryMovie => ({
 				...movie,

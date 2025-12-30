@@ -28,7 +28,7 @@ export const loadMovieByTmdb = async (tmdbId: number): Promise<MovieRecord | nul
 	return movie ?? null;
 };
 
-type UpsertMoviePayload = {
+export type UpsertMoviePayload = {
 	tmdbId: number;
 	title: string;
 	overview: string | null;
@@ -42,6 +42,8 @@ type UpsertMoviePayload = {
 	genreNames: string[];
 	collectionId?: number | null;
 	mediaType?: 'movie' | 'tv' | 'anime';
+	imdbId: string | null;
+	trailerUrl: string | null;
 };
 
 export const upsertMovieWithGenres = async (
@@ -111,7 +113,6 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 					await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
 				}
 
-				// Add to results
 				const movieClone = {
 					...movieData,
 					createdAt: existingMovie?.createdAt ?? movieData.updatedAt
@@ -122,9 +123,6 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 			return results;
 		})
 		.then(async (syncedMovies) => {
-			// Post-transaction person sync (can be slow, so we do it after the main data is safe)
-			// We still do this in serial for now to avoid overloading TMDB Rate Limiter,
-			// but outside the DB transaction.
 			for (const movie of syncedMovies) {
 				try {
 					await syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any);

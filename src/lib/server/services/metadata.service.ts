@@ -233,8 +233,6 @@ export async function getMoviesByMetadata(
 	const { limit = 20, offset = 0, sortBy = 'rating', sortOrder = 'desc' } = options;
 
 	try {
-		// Build queries using Drizzle's template literals with direct interpolation
-		// This is the correct approach for Drizzle ORM
 		const whereConditions = [];
 		if (mediaType) {
 			whereConditions.push(sql`m.mediaType = ${mediaType}`);
@@ -325,8 +323,6 @@ export async function updateMovieMetadata(
 	}
 ): Promise<void> {
 	try {
-		// Build the update query using Drizzle's approach
-		// Use direct interpolation with sql template literals
 		const setParts = [];
 		if (metadata.trailerUrl !== undefined) {
 			setParts.push(sql`trailerUrl = ${metadata.trailerUrl}`);

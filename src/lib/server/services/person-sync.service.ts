@@ -1,22 +1,18 @@
 import { fetchTmdbPersonDetails, fetchTmdbMediaCredits } from './tmdb.service';
-import { db } from '$lib/server/db';
+import { db, executeWithRetry } from '$lib/server/db';
 import { people, moviePeople } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
-/**
- * Service to sync person data from TMDB to local database
- * This allows us to have local person data for faster searches
- * while still leveraging TMDB's comprehensive data
- */
-
 export async function syncPersonFromTmdb(tmdbId: number) {
 	try {
-		const existingPerson = await db
-			.select()
-			.from(people)
-			.where(eq(people.tmdbId, tmdbId))
-			.limit(1)
-			.get();
+		const existingPerson = await executeWithRetry(() =>
+			db
+				.select()
+				.from(people)
+				.where(eq(people.tmdbId, tmdbId))
+				.limit(1)
+				.get()
+		);
 
 		if (existingPerson) {
 			return existingPerson;
@@ -28,24 +24,28 @@ export async function syncPersonFromTmdb(tmdbId: number) {
 			return null;
 		}
 
-		await db
-			.insert(people)
-			.values({
-				tmdbId: tmdbPerson.id,
-				name: tmdbPerson.name,
-				biography: tmdbPerson.biography,
-				birthday: tmdbPerson.birthday,
-				deathday: tmdbPerson.deathday,
-				placeOfBirth: tmdbPerson.placeOfBirth,
-				profilePath: tmdbPerson.profilePath,
-				popularity: (tmdbPerson as any).popularity || 0,
-				knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
-				createdAt: Date.now(),
-				updatedAt: Date.now()
-			})
-			.onConflictDoNothing();
+		await executeWithRetry(() =>
+			db
+				.insert(people)
+				.values({
+					tmdbId: tmdbPerson.id,
+					name: tmdbPerson.name,
+					biography: tmdbPerson.biography,
+					birthday: tmdbPerson.birthday,
+					deathday: tmdbPerson.deathday,
+					placeOfBirth: tmdbPerson.placeOfBirth,
+					profilePath: tmdbPerson.profilePath,
+					popularity: (tmdbPerson as any).popularity || 0,
+					knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
+					createdAt: Date.now(),
+					updatedAt: Date.now()
+				})
+				.onConflictDoNothing()
+		);
 
-		const person = await db.select().from(people).where(eq(people.tmdbId, tmdbId)).get();
+		const person = await executeWithRetry(() =>
+			db.select().from(people).where(eq(people.tmdbId, tmdbId)).get()
+		);
 
 		return person ?? null;
 	} catch (error) {
@@ -54,9 +54,6 @@ export async function syncPersonFromTmdb(tmdbId: number) {
 	}
 }
 
-/**
- * Sync movie-cast relationships from TMDB data
- */
 export async function syncMovieCast(
 	movieId: string,
 	tmdbMovieId: number,
@@ -91,7 +88,9 @@ export async function syncMovieCast(
 			});
 
 		if (relationships.length > 0) {
-			await db.insert(moviePeople).values(relationships).onConflictDoNothing();
+			await executeWithRetry(() =>
+				db.insert(moviePeople).values(relationships).onConflictDoNothing()
+			);
 		}
 
 		return relationships.length;
@@ -101,9 +100,6 @@ export async function syncMovieCast(
 	}
 }
 
-/**
- * Sync movie-crew relationships (directors, writers, etc.) from TMDB data
- */
 export async function syncMovieCrew(
 	movieId: string,
 	tmdbMovieId: number,
@@ -116,7 +112,6 @@ export async function syncMovieCrew(
 			return 0;
 		}
 
-		// Filter for key crew members to avoid syncing hundreds of people
 		const relevantCrew = credits.crew
 			.filter((member) =>
 				['directing', 'writing', 'production', 'editing', 'sound', 'art'].includes(
@@ -149,7 +144,9 @@ export async function syncMovieCrew(
 			.filter((r): r is NonNullable<typeof r> => r !== null);
 
 		if (relationships.length > 0) {
-			await db.insert(moviePeople).values(relationships).onConflictDoNothing();
+			await executeWithRetry(() =>
+				db.insert(moviePeople).values(relationships).onConflictDoNothing()
+			);
 		}
 
 		return relationships.length;

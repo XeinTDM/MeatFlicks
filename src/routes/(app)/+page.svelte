@@ -103,24 +103,27 @@
 
 <div class="min-h-screen text-foreground">
 	<div class="mx-auto w-full py-2 pr-2 pl-0 sm:pr-2 sm:pl-0 lg:pr-2 lg:pl-0">
-		{#if homeLibraryPromise}
-			{#await homeLibraryPromise}
-				<HomePageSkeleton />
-			{:then resolved}
-				{#if !resolved}
+		<main
+			class="flex min-h-[calc(100vh-2rem)] flex-col gap-12 overflow-hidden rounded-lg bg-card/80 shadow-xl backdrop-blur"
+		>
+			{#if homeLibraryPromise}
+				{#await homeLibraryPromise}
 					<HomePageSkeleton />
-				{:else}
-					{@const library = resolved}
-					{@const trendingMovies = Array.isArray(library?.trendingMovies)
-						? library.trendingMovies
-						: []}
-					{@const collections = Array.isArray(library?.collections) ? library.collections : []}
-					{@const genres = Array.isArray(library?.genres) ? library.genres : []}
-					{@const featuredMovie = trendingMovies.at(0) ?? null}
+				{:then resolved}
+					{#if !resolved}
+						<HomePageSkeleton />
+					{:else}
+						{@const library = resolved}
+						{@const trendingMovies = Array.isArray(library?.trendingMovies)
+							? library.trendingMovies
+							: []}
+						{@const trendingTv = Array.isArray(library?.trendingTv)
+							? library.trendingTv
+							: []}
+						{@const collections = Array.isArray(library?.collections) ? library.collections : []}
+						{@const genres = Array.isArray(library?.genres) ? library.genres : []}
+						{@const featuredMovie = trendingMovies.at(0) ?? null}
 
-					<main
-						class="flex min-h-[calc(100vh-2rem)] flex-col gap-12 overflow-hidden rounded-lg bg-card/80 shadow-xl backdrop-blur"
-					>
 						<Hero
 							movie={featuredMovie}
 							movies={trendingMovies}
@@ -139,7 +142,11 @@
 							</div>
 
 							{#if trendingMovies.length > 0}
-								<TrendingMoviesSlider title="Trending Now" movies={trendingMovies} />
+								<TrendingMoviesSlider title="Trending Movies" movies={trendingMovies} />
+							{/if}
+
+							{#if trendingTv.length > 0}
+								<TrendingMoviesSlider title="Trending TV Series" movies={trendingTv} />
 							{/if}
 
 							<RecentlyAddedRow />
@@ -171,13 +178,13 @@
 								{/if}
 							{/each}
 						</div>
-					</main>
-				{/if}
-			{:catch}
+					{/if}
+				{:catch}
+					<HomePageSkeleton />
+				{/await}
+			{:else}
 				<HomePageSkeleton />
-			{/await}
-		{:else}
-			<HomePageSkeleton />
-		{/if}
+			{/if}
+		</main>
 	</div>
 </div>

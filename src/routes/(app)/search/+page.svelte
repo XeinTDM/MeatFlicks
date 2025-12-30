@@ -27,7 +27,7 @@
 
 	const SKELETON_COUNT_INITIAL = 12;
 	const SKELETON_COUNT_MORE = 6;
-	const DEBOUNCE_DELAY = 300;
+	const DEBOUNCE_DELAY = 600;
 	const API_FETCH_LIMIT = 24;
 
 	let query = $state('');
@@ -62,7 +62,6 @@
 			const url = `/api/search?q=${encodeURIComponent(
 				searchTerm
 			)}&page=${pageToLoad}&limit=${API_FETCH_LIMIT}`;
-			// Fix: Added optional chaining for controller
 			const res = await fetch(url, { signal: controller?.signal, credentials: 'include' });
 
 			if (!res.ok) throw new Error('Failed to fetch search results');
@@ -124,7 +123,7 @@
 	});
 
 	onMount(() => {
-		void performSearch('');
+		void performSearch(query);
 	});
 
 	onDestroy(() => {

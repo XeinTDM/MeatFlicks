@@ -204,7 +204,6 @@
 	async function handleHeaderPlay(providerId: string) {
 		streamingService.selectProvider(providerId);
 
-		// Optimistic open to bypass popup blocker
 		const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
 
 		try {
@@ -271,7 +270,6 @@
 				async (progress) => {
 					if (!movie) return;
 
-					// Save to local storage store first
 					playbackStore.saveProgress({
 						mediaId: movie.id,
 						mediaType,
@@ -322,8 +320,6 @@
 
 							if (!response.ok) {
 								if (response.status === 401 || response.status === 403) {
-									// User is not authenticated or CSRF validation failed
-									// This is expected for unauthenticated users, so we silently ignore
 									return;
 								}
 								console.error(
@@ -332,7 +328,6 @@
 							}
 						}
 					} catch (error) {
-						// Network errors or other issues - log but don't spam
 						console.error('Failed to save playback progress:', error);
 					}
 				}
@@ -555,7 +550,7 @@
 	</div>
 {:else}
 	<div class="min-h-screen bg-background text-foreground">
-		<main class="container mx-auto">
+		<main class="mx-auto">
 			<MediaHeader
 				{movie}
 				logoPath={movie.logoPath}
@@ -595,7 +590,7 @@
 			{/if}
 
 			<div class="mt-8 w-full">
-				<div class="px-[5%]">
+				<div class="px-[10%]">
 					<div class="mb-2 flex gap-2">
 						<button
 							class="px-3 py-1 text-sm font-medium transition-colors {activeTab === 'suggested'

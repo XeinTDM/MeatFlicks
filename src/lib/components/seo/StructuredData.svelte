@@ -77,7 +77,6 @@
 			}
 
 			if (media.trailerUrl) {
-				// Convert watch URL to embed URL for schema
 				let embedUrl = media.trailerUrl;
 				if (media.trailerUrl.includes('youtube.com/watch?v=')) {
 					embedUrl = media.trailerUrl.replace('watch?v=', 'embed/');
@@ -124,7 +123,6 @@
 			}
 
 			if (media.trailerUrl) {
-				// Convert watch URL to embed URL for schema
 				let embedUrl = media.trailerUrl;
 				if (media.trailerUrl.includes('youtube.com/watch?v=')) {
 					embedUrl = media.trailerUrl.replace('watch?v=', 'embed/');

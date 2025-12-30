@@ -147,7 +147,7 @@ async function getCacheEntry<T>(key: string): Promise<CacheEntry<T> | undefined>
 	const memHit = lruStore.get(key);
 	if (memHit !== undefined) {
 		if (isCacheEntry<T>(memHit)) return memHit;
-		return { v: memHit as T, t: Date.now() }; // Legacy support
+		return { v: memHit as T, t: Date.now() };
 	}
 
 	const val = await cache.get(key);
@@ -197,7 +197,6 @@ export async function withCache<T>(
 	const entry = await getCacheEntry<T>(key);
 
 	if (entry !== undefined) {
-		// If data is stale but SWR is enabled, return stale and update in background
 		if (swrSeconds !== undefined && Date.now() - entry.t > swrSeconds * 1000) {
 			const pendingRefresh = inflight.get(key);
 			if (!pendingRefresh) {

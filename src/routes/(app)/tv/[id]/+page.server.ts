@@ -94,14 +94,12 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	}
 
 	try {
-		// Try to resolve streaming first - this is critical
 		const streaming = await resolveStreaming({
 			mediaType: 'tv',
 			tmdbId: Number(tvShow.tmdbId),
 			imdbId: tvShow.imdbId ?? undefined
 		});
 
-		// Try to get recommendations, but don't fail if this doesn't work
 		let recommendations: any[] = [];
 		try {
 			recommendations = await fetchTmdbRecommendations(Number(tvShow.tmdbId), 'tv');
@@ -110,7 +108,6 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 				'[tv][load] Failed to fetch recommendations, but continuing with streaming data',
 				recommendationError
 			);
-			// Continue with empty recommendations rather than failing the whole request
 		}
 
 		return {

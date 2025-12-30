@@ -47,6 +47,7 @@ export const movies = sqliteTable(
 		canonicalPath: text('canonicalPath'),
 		addedAt: integer('addedAt'),
 		mediaType: text('mediaType').notNull().default('movie'),
+		streamingProviders: text('streamingProviders'),
 		createdAt: integer('createdAt')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -325,7 +326,8 @@ export const moviesRelations = relations(movies, ({ one, many }) => ({
 }));
 
 export const genresRelations = relations(genres, ({ many }) => ({
-	moviesGenres: many(moviesGenres)
+	moviesGenres: many(moviesGenres),
+	tvShowsGenres: many(tvShowsGenres)
 }));
 
 export const moviesGenresRelations = relations(moviesGenres, ({ one }) => ({
@@ -371,6 +373,7 @@ export const tvShows = sqliteTable(
 		numberOfEpisodes: integer('number_of_episodes'),
 		status: text('status'),
 		productionCompanies: text('production_companies'),
+		streamingProviders: text('streamingProviders'),
 		createdAt: integer('created_at')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -548,7 +551,8 @@ export const tvShowWatchStatus = sqliteTable(
 export const tvShowsRelations = relations(tvShows, ({ many }) => ({
 	seasons: many(seasons),
 	episodes: many(episodes),
-	tvShowWatchStatus: many(tvShowWatchStatus)
+	tvShowWatchStatus: many(tvShowWatchStatus),
+	tvShowsGenres: many(tvShowsGenres)
 }));
 
 export const seasonsRelations = relations(seasons, ({ one, many }) => ({
@@ -591,6 +595,34 @@ export const seasonWatchStatusRelations = relations(seasonWatchStatus, ({ one })
 	season: one(seasons, {
 		fields: [seasonWatchStatus.seasonId],
 		references: [seasons.id]
+	})
+}));
+
+export const tvShowsGenres = sqliteTable(
+	'tv_shows_genres',
+	{
+		tvShowId: integer('tv_show_id')
+			.notNull()
+			.references(() => tvShows.id, { onDelete: 'cascade' }),
+		genreId: integer('genre_id')
+			.notNull()
+			.references(() => genres.id, { onDelete: 'cascade' })
+	},
+	(table) => [
+		primaryKey({ columns: [table.tvShowId, table.genreId] }),
+		index('idx_tv_shows_genres_tv_show').on(table.tvShowId),
+		index('idx_tv_shows_genres_genre').on(table.genreId)
+	]
+);
+
+export const tvShowsGenresRelations = relations(tvShowsGenres, ({ one }) => ({
+	tvShow: one(tvShows, {
+		fields: [tvShowsGenres.tvShowId],
+		references: [tvShows.id]
+	}),
+	genre: one(genres, {
+		fields: [tvShowsGenres.genreId],
+		references: [genres.id]
 	})
 }));
 

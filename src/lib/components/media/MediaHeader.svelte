@@ -94,15 +94,18 @@
 	}
 </script>
 
-<div class="relative mb-8 h-[32rem] w-full">
-	{#if movie?.backdropPath}
-		<img src={movie.backdropPath} alt={movie.title} class="h-full w-full rounded-lg object-cover" />
-	{/if}
-	<div
-		class="absolute inset-0 rounded-lg bg-gradient-to-t from-background via-background/60 to-transparent"
-	></div>
+<div class="relative mb-8 h-[32rem] w-full overflow-hidden">
+	<div class="absolute -left-[5%] -right-[5%] top-0 h-full w-[calc(100%+10%)]">
+		{#if movie?.backdropPath}
+			<img src={movie.backdropPath} alt={movie.title} class="h-full w-full object-cover rounded-lg" />
+		{/if}
+		<div
+			class="absolute inset-0 rounded-lg bg-gradient-to-t from-background via-background/60 to-transparent"
+		></div>
+	</div>
 
-	<div class="absolute bottom-10 max-w-4xl px-[5%]">
+	<div class="relative z-10 h-full">
+		<div class="absolute bottom-10 max-w-4xl ml-[10%]">
 		<div class="flex flex-col gap-6">
 			{#if logoPath}
 				<img src={logoPath} alt={movie.title} class="h-32 w-auto origin-left object-contain" />
@@ -147,7 +150,6 @@
 						</p>
 					{/if}
 					{#if movie.overview.length > 100}
-						<!-- Simple heuristic for when to show button -->
 						<Button
 							variant="link"
 							class="h-auto p-0 text-sm text-muted-foreground hover:text-foreground"
@@ -211,5 +213,6 @@
 				</Button>
 			</div>
 		</div>
+	</div>
 	</div>
 </div>
