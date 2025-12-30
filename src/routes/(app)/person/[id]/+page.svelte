@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import type { TmdbPersonDetails } from '$lib/server/services/tmdb.service';
 
 	let { data }: { data: { person: TmdbPersonDetails } } = $props();

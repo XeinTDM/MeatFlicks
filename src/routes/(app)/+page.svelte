@@ -1,14 +1,58 @@
 <script lang="ts">
 	import Hero from '$lib/components/home/Hero.svelte';
-	import { TrendingMoviesSlider, PersonalizedRows } from '$lib/components/home';
+	import { PersonalizedRows } from '$lib/components/home';
 	import { MovieScrollContainer } from '$lib/components/media';
-	import ContinueWatchingRow from '$lib/components/home/ContinueWatchingRow.svelte';
-	import RecentlyAddedRow from '$lib/components/home/RecentlyAddedRow.svelte';
-	import TopRatedRow from '$lib/components/home/TopRatedRow.svelte';
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
 	import { SEOHead } from '$lib/components/seo';
+	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad';
+
+	let ContinueWatchingRow: any = $state(null);
+	let TrendingMoviesSlider: any = $state(null);
+	let RecentlyAddedRow: any = $state(null);
+	let TopRatedRow: any = $state(null);
+
+	let continueWatchingRef = $state({ value: null as HTMLElement | null });
+	let trendingMoviesRef = $state({ value: null as HTMLElement | null });
+	let recentlyAddedRef = $state({ value: null as HTMLElement | null });
+	let topRatedRef = $state({ value: null as HTMLElement | null });
+
+	const continueWatchingLazy = useLazyComponentOnVisible(
+		continueWatchingRef,
+		() => import('$lib/components/home/ContinueWatchingRow.svelte')
+	);
+
+	const trendingLazy = useLazyComponentOnVisible(
+		trendingMoviesRef,
+		() => import('$lib/components/home/TrendingMoviesSlider.svelte')
+	);
+
+	const recentlyAddedLazy = useLazyComponentOnVisible(
+		recentlyAddedRef,
+		() => import('$lib/components/home/RecentlyAddedRow.svelte')
+	);
+
+	const topRatedLazy = useLazyComponentOnVisible(
+		topRatedRef,
+		() => import('$lib/components/home/TopRatedRow.svelte')
+	);
+
+	$effect(() => {
+		ContinueWatchingRow = continueWatchingLazy.component;
+	});
+
+	$effect(() => {
+		TrendingMoviesSlider = trendingLazy.component;
+	});
+
+	$effect(() => {
+		RecentlyAddedRow = recentlyAddedLazy.component;
+	});
+
+	$effect(() => {
+		TopRatedRow = topRatedLazy.component;
+	});
 
 	let { data }: { data: PageData } = $props();
 
@@ -135,20 +179,41 @@
 
 						<div class="p-6 sm:p-5 lg:p-5">
 							<div class="mb-12">
-								<ContinueWatchingRow />
+								{#if ContinueWatchingRow}
+									<ContinueWatchingRow />
+								{:else}
+									<div bind:this={continueWatchingRef.value} class="h-32 bg-muted/50 rounded-lg animate-pulse"></div>
+								{/if}
 								<PersonalizedRows />
 							</div>
 
 							{#if trendingMovies.length > 0}
-								<TrendingMoviesSlider title="Trending Movies" movies={trendingMovies} />
+								{#if TrendingMoviesSlider}
+									<TrendingMoviesSlider title="Trending Movies" movies={trendingMovies} />
+								{:else}
+									<div bind:this={trendingMoviesRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+								{/if}
 							{/if}
 
 							{#if trendingTv.length > 0}
-								<TrendingMoviesSlider title="Trending TV Series" movies={trendingTv} />
+								{#if TrendingMoviesSlider}
+									<TrendingMoviesSlider title="Trending TV Series" movies={trendingTv} />
+								{:else}
+									<div bind:this={trendingMoviesRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+								{/if}
 							{/if}
 
-							<RecentlyAddedRow />
-							<TopRatedRow />
+							{#if RecentlyAddedRow}
+								<RecentlyAddedRow />
+							{:else}
+								<div bind:this={recentlyAddedRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+							{/if}
+
+							{#if TopRatedRow}
+								<TopRatedRow />
+							{:else}
+								<div bind:this={topRatedRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+							{/if}
 
 							{#if trendingMovies.length === 0 && collections.length === 0 && genres.length === 0}
 								<p class="text-sm text-foreground/70">

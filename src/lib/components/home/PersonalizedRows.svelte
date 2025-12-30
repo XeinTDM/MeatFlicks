@@ -14,13 +14,14 @@
 	});
 
 	function toLibraryMovie(entry: {
-		addedAt?: Date | null;
+		addedAt?: string | null;
+		watchedAt?: string | null;
 		media_type?: string;
 		mediaType?: string;
 	}): LibraryMovie {
 		return {
 			...entry,
-			addedAt: entry.addedAt ?? null,
+			addedAt: entry.addedAt ?? entry.watchedAt ?? null,
 			mediaType: entry.media_type ?? entry.mediaType ?? 'movie'
 		} as LibraryMovie;
 	}

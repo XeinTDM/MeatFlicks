@@ -1,16 +1,19 @@
 <script lang="ts">
-	import { Search as SearchIcon, X, Play, Clock } from '@lucide/svelte';
+	import { Search as SearchIcon, X, Play, Clock, WifiOff } from '@lucide/svelte';
 	import { fade, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { searchHistory } from '$lib/state/stores/searchHistoryStore';
 	import { Spinner } from '$lib/components/ui/spinner/index';
+	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import { watchHistory } from '$lib/state/stores/historyStore';
 
 	let query = $state('');
 	let results = $state<LibraryMovie[]>([]);
 	let isLoading = $state(false);
 	let isFocused = $state(false);
+	let isOffline = $state(!navigator.onLine);
 	let searchTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
 	let containerRef = $state<HTMLElement | null>(null);
 
@@ -19,6 +22,21 @@
 			// Ignore
 		});
 		return unsubscribe;
+	});
+
+	$effect(() => {
+		const handleOnline = () => { isOffline = false; };
+		const handleOffline = () => { isOffline = true; };
+
+		if (typeof window !== 'undefined') {
+			window.addEventListener('online', handleOnline);
+			window.addEventListener('offline', handleOffline);
+
+			return () => {
+				window.removeEventListener('online', handleOnline);
+				window.removeEventListener('offline', handleOffline);
+			};
+		}
 	});
 
 	async function fetchResults(q: string) {
@@ -34,12 +52,74 @@
 			});
 			if (res.ok) {
 				results = await res.json();
+			} else {
+				throw new Error('Search failed');
 			}
 		} catch (error) {
-			console.error('[global-search] error', error);
+			console.error('[global-search] Online search failed, trying offline search', error);
+			results = performOfflineSearch(q);
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	function performOfflineSearch(query: string): LibraryMovie[] {
+		const searchTerm = query.toLowerCase().trim();
+		if (!searchTerm) return [];
+
+		const watchlistMovies = $watchlist.watchlist.map(movie => ({
+			id: movie.id,
+			tmdbId: movie.tmdbId || null,
+			title: movie.title,
+			overview: movie.overview,
+			posterPath: movie.posterPath,
+			backdropPath: movie.backdropPath,
+			releaseDate: movie.releaseDate,
+			rating: movie.rating,
+			durationMinutes: movie.durationMinutes || null,
+			genres: movie.genres,
+			is4K: movie.is4K || false,
+			isHD: movie.isHD || false,
+			canonicalPath: movie.canonicalPath || `/movie/${movie.id}`,
+			mediaType: movie.media_type || movie.mediaType || 'movie',
+			addedAt: Date.parse(movie.addedAt) || Date.now()
+		} as LibraryMovie));
+
+		const historyMovies = $watchHistory.entries.map(entry => ({
+			id: entry.id,
+			tmdbId: entry.tmdbId || null,
+			title: entry.title,
+			overview: entry.overview,
+			posterPath: entry.posterPath,
+			backdropPath: entry.backdropPath,
+			releaseDate: entry.releaseDate,
+			rating: entry.rating,
+			durationMinutes: entry.durationMinutes || null,
+			genres: entry.genres,
+			is4K: entry.is4K || false,
+			isHD: entry.isHD || false,
+			canonicalPath: entry.canonicalPath || `/movie/${entry.id}`,
+			mediaType: entry.media_type || entry.mediaType || 'movie',
+			addedAt: Date.parse(entry.watchedAt) || Date.now()
+		} as LibraryMovie));
+
+		const allMovies = [...watchlistMovies, ...historyMovies];
+
+		const uniqueMovies = allMovies.filter((movie, index, arr) =>
+			arr.findIndex(m => m.id === movie.id) === index
+		);
+
+		return uniqueMovies
+			.filter(movie => {
+				const title = movie.title?.toLowerCase() || '';
+				const overview = movie.overview?.toLowerCase() || '';
+				const genres = movie.genres?.join(' ').toLowerCase() || '';
+
+				return title.includes(searchTerm) ||
+					   overview.includes(searchTerm) ||
+					   genres.includes(searchTerm);
+			})
+			.slice(0, 5);
 	}
 
 	async function saveSearch(query: string) {
@@ -183,46 +263,56 @@
 					<Spinner class="size-6" />
 				</div>
 			{:else if results.length > 0}
-				<ul class="space-y-1">
-					{#each results.slice(0, 5) as movie (movie.id)}
-						<li>
-							<button
-								onclick={() => handleNavigate(movie)}
-								class="group flex w-full items-center gap-4 rounded-xl p-2 text-left transition-colors hover:bg-primary/10"
-							>
-								<div class="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-									{#if movie.posterPath}
-										<img src={movie.posterPath} alt="" class="h-full w-full object-cover" />
-									{/if}
-								</div>
-								<div class="min-w-0 flex-1">
-									<h4
-										class="truncate text-sm font-semibold transition-colors group-hover:text-primary"
-									>
-										{movie.title}
-									</h4>
-									<p class="truncate text-xs text-muted-foreground">
-										{movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'} • {movie.media_type ===
-										'tv'
-											? 'TV'
-											: 'Movie'}
-									</p>
-								</div>
-								<Play
-									class="size-4 text-primary opacity-0 transition-opacity group-hover:opacity-100"
-								/>
-							</button>
-						</li>
-					{/each}
-					<li class="mt-1 border-t border-border/40 pt-2">
-						<button
-							onclick={handleGlobalSearch}
-							class="w-full p-2 text-center text-xs font-bold text-primary hover:underline"
-						>
-							View all results for "{query}"
-						</button>
-					</li>
-				</ul>
+				<div class="space-y-1">
+					{#if isOffline}
+						<div class="flex items-center gap-2 px-2 py-1 text-xs text-amber-600 bg-amber-50 rounded-md border border-amber-200">
+							<WifiOff class="size-3" />
+							Offline results from your watchlist & history
+						</div>
+					{/if}
+					<ul class="space-y-1">
+						{#each results.slice(0, 5) as movie (movie.id)}
+							<li>
+								<button
+									onclick={() => handleNavigate(movie)}
+									class="group flex w-full items-center gap-4 rounded-xl p-2 text-left transition-colors hover:bg-primary/10"
+								>
+									<div class="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+										{#if movie.posterPath}
+											<img src={movie.posterPath} alt="" class="h-full w-full object-cover" />
+										{/if}
+									</div>
+									<div class="min-w-0 flex-1">
+										<h4
+											class="truncate text-sm font-semibold transition-colors group-hover:text-primary"
+										>
+											{movie.title}
+										</h4>
+										<p class="truncate text-xs text-muted-foreground">
+											{movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'} • {movie.mediaType ===
+											'tv'
+												? 'TV'
+												: 'Movie'}
+										</p>
+									</div>
+									<Play
+										class="size-4 text-primary opacity-0 transition-opacity group-hover:opacity-100"
+									/>
+								</button>
+							</li>
+						{/each}
+						{#if !isOffline}
+							<li class="mt-1 border-t border-border/40 pt-2">
+								<button
+									onclick={handleGlobalSearch}
+									class="w-full p-2 text-center text-xs font-bold text-primary hover:underline"
+								>
+									View all results for "{query}"
+								</button>
+							</li>
+						{/if}
+					</ul>
+				</div>
 			{/if}
 		</div>
 	{/if}

@@ -220,12 +220,32 @@ function createWatchlistStore() {
 
 	if (typeof window !== 'undefined') {
 		syncFromServer();
+
 		window.addEventListener('storage', (event) => {
 			if (event.key === STORAGE_KEY) {
 				const stored = readStorage();
 				store.update((state) => ({ ...state, watchlist: stored }));
 			}
 		});
+
+		window.addEventListener('online', () => {
+			if ('serviceWorker' in navigator && 'sync' in (window as any).ServiceWorkerRegistration?.prototype) {
+				navigator.serviceWorker.ready.then((registration) => {
+					(registration as any).sync.register('sync-watchlist');
+				});
+			} else {
+				syncFromServer();
+			}
+		});
+
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.addEventListener('message', (event) => {
+				if (event.data && event.data.type === 'SYNC_WATCHLIST') {
+					console.log('[watchlist] Received sync request from service worker');
+					syncFromServer();
+				}
+			});
+		}
 	}
 
 	const setError = (message: string) => {

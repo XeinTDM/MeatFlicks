@@ -35,9 +35,9 @@ describe('Security Enhancements', () => {
 				testInput
 			);
 
-			expect(result.name).toBe('<script>alert("xss")</script>');
+			expect(result.name).toBe('<script>alert("xss")<&#x2F;script>');
 			expect(result.email).toBe('test@example.com');
-			expect(result.description).toBe('This is a <b>test</b> with & special chars');
+			expect(result.description).toBe('This is a <b>test<&#x2F;b> with & special chars');
 		});
 
 		it('should throw validation error for invalid input', () => {

@@ -434,7 +434,6 @@ export async function fetchTmdbTvSeasonsBatch(
 	const result = new Map<number, TmdbTvSeason>();
 	if (seasonNumbers.length === 0) return result;
 
-	// TMDB allows up to 20 items in append_to_response
 	const BATCH_SIZE = 20;
 	const batches: number[][] = [];
 	for (let i = 0; i < seasonNumbers.length; i += BATCH_SIZE) {
@@ -460,7 +459,6 @@ export async function fetchTmdbTvSeasonsBatch(
 						const mapped = mapTmdbSeason(parsed);
 						result.set(n, mapped);
 
-						// Optimistically prime the individual season cache
 						const seasonCacheKey = buildCacheKey('tmdb', 'tv', tmdbId, 'season', n);
 						await setCachedValue(seasonCacheKey, mapped, DETAILS_TTL).catch(() => {});
 					}

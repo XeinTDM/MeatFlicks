@@ -331,7 +331,7 @@ export const bulkUpsertTvShows = async (
 					.where(eq(tvShowsSchema.tmdbId, payload.tmdbId));
 				insertedOrUpdatedTvShow = { ...existingTvShow, ...tvShowData };
 			} else {
-				const result = await tx.insert(tvShowsSchema).values(tvShowData).returning(); // Let DB generate primary key 'id'
+				const result = await tx.insert(tvShowsSchema).values(tvShowData).returning();
 				insertedOrUpdatedTvShow = result[0];
 			}
 
@@ -341,7 +341,6 @@ export const bulkUpsertTvShows = async (
 			}
 			results.push(insertedOrUpdatedTvShow);
 
-			// Handle TV Show Genres
 			for (const genreId of genreIds) {
 				await tx
 					.insert(tvShowsGenres)

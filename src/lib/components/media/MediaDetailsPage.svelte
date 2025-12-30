@@ -554,7 +554,6 @@
 			<MediaHeader
 				{movie}
 				logoPath={movie.logoPath}
-				overview={movie.overview}
 				providers={availableProviders}
 				onProviderSelect={handleHeaderPlay}
 			/>

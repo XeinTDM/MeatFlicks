@@ -5,6 +5,7 @@
 	import Footer from '$lib/components/navigation/Footer.svelte';
 	import GlobalErrorDisplay from '$lib/components/global/GlobalErrorDisplay.svelte';
 	import { NotificationPortal } from '$lib/components/global';
+	import { OfflineIndicator } from '$lib/components/ui';
 	import ThemeContext from '$lib/state/contexts/ThemeContext.svelte';
 	import WatchlistContext from '$lib/state/contexts/WatchlistContext.svelte';
 	import ErrorContext from '$lib/state/contexts/ErrorContext.svelte';
@@ -43,6 +44,7 @@
 			</AppShell>
 			<GlobalErrorDisplay />
 			<NotificationPortal />
+			<OfflineIndicator />
 		</ErrorContext>
 	</WatchlistContext>
 </ThemeContext>

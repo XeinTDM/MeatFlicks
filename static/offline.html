@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeatFlicks - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.7;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #f8fafc;
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+
+        .features {
+            text-align: left;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0.5rem;
+        }
+
+        .features h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #60a5fa;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            opacity: 0.9;
+        }
+
+        .features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .status {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .status.connecting {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .status.offline {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📺</div>
+        <h1>You're Offline</h1>
+        <p>You can still enjoy MeatFlicks! Your watchlist and viewing history are saved locally and will sync when you're back online.</p>
+
+        <div class="features">
+            <h3>Available Offline:</h3>
+            <ul>
+                <li>Browse your saved watchlist</li>
+                <li>View your watch history</li>
+                <li>Search cached content</li>
+                <li>Access app settings</li>
+            </ul>
+        </div>
+
+        <button class="retry-btn" onclick="window.location.reload()">
+            Try Again
+        </button>
+
+        <div class="status offline">
+            <strong>Status:</strong> Offline - Some features may be limited
+        </div>
+    </div>
+
+    <script>
+        function updateConnectionStatus() {
+            const statusEl = document.querySelector('.status');
+
+            if (navigator.onLine) {
+                statusEl.className = 'status connecting';
+                statusEl.innerHTML = '<strong>Status:</strong> Reconnecting...';
+
+                setTimeout(() => {
+                    if (navigator.onLine) {
+                        window.location.reload();
+                    }
+                }, 2000);
+            } else {
+                statusEl.className = 'status offline';
+                statusEl.innerHTML = '<strong>Status:</strong> Offline - Some features may be limited';
+            }
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        updateConnectionStatus();
+
+        setInterval(() => {
+            if (navigator.onLine) {
+                fetch(window.location.origin + '/favicon.png', {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                })
+                .then(() => {
+                    updateConnectionStatus();
+                })
+                .catch(() => {
+                    // Silent
+                });
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

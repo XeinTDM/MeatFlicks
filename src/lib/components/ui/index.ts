@@ -22,3 +22,5 @@ export * as Spinner from './spinner';
 export * as Switch from './switch';
 export * as Tabs from './tabs';
 export * as Tooltip from './tooltip';
+export { default as OfflineIndicator } from './offline-indicator.svelte';
+export { default as OfflinePage } from './offline-page.svelte';

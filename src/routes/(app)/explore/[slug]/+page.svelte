@@ -25,9 +25,9 @@
 	let { data } = $props<{ data: PageData }>();
 
 	const categoryTitle = $derived(data.categoryTitle ?? 'Explore');
-	const genreData = $derived(Array.isArray(data.genreData) ? genreData : []);
+	const genreData = $derived(Array.isArray(data.genreData) ? data.genreData : []);
 	const useFilters = $derived(Boolean(data.useFilters));
-	const movies = $derived(Array.isArray(data.movies) ? movies : []);
+	const movies = $derived(Array.isArray(data.movies) ? data.movies : []);
 	const pagination = $derived(data.pagination);
 	const filters = $derived((data.filters as MovieFilters) || ({} as MovieFilters));
 	const sort = $derived(
