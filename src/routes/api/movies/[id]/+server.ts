@@ -294,8 +294,8 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 		...movie,
 		imdbId: details.imdbId,
 		cast: details.cast
-			.filter(c => c.character && c.character.trim())
-			.map(c => ({ ...c, character: c.character! })),
+			.filter((c) => c.character && c.character.trim())
+			.map((c) => ({ ...c, character: c.character! })),
 		trailerUrl: details.trailerUrl
 	};
 }
@@ -349,8 +349,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			durationMinutes: movie.durationMinutes ?? extras?.runtime ?? null,
 			imdbId: extras?.imdbId ?? movie.imdbId ?? null,
 			cast: (extras?.cast ?? [])
-				.filter(c => c.character && c.character.trim())
-				.map(c => ({ ...c, character: c.character! })),
+				.filter((c) => c.character && c.character.trim())
+				.map((c) => ({ ...c, character: c.character! })),
 			trailerUrl: extras?.trailerUrl ?? movie.trailerUrl ?? null,
 			productionCompanies: extras?.productionCompanies ?? [],
 			productionCountries: extras?.productionCountries ?? [],

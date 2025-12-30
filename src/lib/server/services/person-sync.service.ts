@@ -6,12 +6,7 @@ import { eq } from 'drizzle-orm';
 export async function syncPersonFromTmdb(tmdbId: number) {
 	try {
 		const existingPerson = await executeWithRetry(() =>
-			db
-				.select()
-				.from(people)
-				.where(eq(people.tmdbId, tmdbId))
-				.limit(1)
-				.get()
+			db.select().from(people).where(eq(people.tmdbId, tmdbId)).limit(1).get()
 		);
 
 		if (existingPerson) {

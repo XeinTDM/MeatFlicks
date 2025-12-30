@@ -10,7 +10,6 @@ export const GET: RequestHandler = async ({ url }) => {
 	const pageParam = url.searchParams.get('page');
 	const limitParam = url.searchParams.get('limit');
 
-
 	const page = pageParam ? parseInt(pageParam) : 1;
 	const limit = limitParam ? parseInt(limitParam) : 24;
 
@@ -85,9 +84,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		}
 
 		const formattedResults: LibraryMovie[] = data.results
-			.filter(
-				(item: any) => ['movie', 'tv'].includes(item.media_type) && item.popularity > 1
-			)
+			.filter((item: any) => ['movie', 'tv'].includes(item.media_type) && item.popularity > 1)
 			.slice(0, limit)
 			.map((item: any) => {
 				const posterPath = item.poster_path || item.profile_path;
@@ -96,7 +93,9 @@ export const GET: RequestHandler = async ({ url }) => {
 					title: item.title || item.name,
 					overview: item.overview || '',
 					posterPath: posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : null,
-					backdropPath: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
+					backdropPath: item.backdrop_path
+						? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}`
+						: null,
 					releaseDate: item.release_date || item.first_air_date || null,
 					rating: item.vote_average ? item.vote_average / 2 : null,
 					durationMinutes: null,

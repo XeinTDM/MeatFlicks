@@ -117,9 +117,7 @@
 						{@const trendingMovies = Array.isArray(library?.trendingMovies)
 							? library.trendingMovies
 							: []}
-						{@const trendingTv = Array.isArray(library?.trendingTv)
-							? library.trendingTv
-							: []}
+						{@const trendingTv = Array.isArray(library?.trendingTv) ? library.trendingTv : []}
 						{@const collections = Array.isArray(library?.collections) ? library.collections : []}
 						{@const genres = Array.isArray(library?.genres) ? library.genres : []}
 						{@const featuredMovie = trendingMovies.at(0) ?? null}

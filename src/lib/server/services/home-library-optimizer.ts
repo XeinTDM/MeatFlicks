@@ -1,7 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { logger } from '$lib/server/logger';
 import { tmdbRateLimiter } from '$lib/server/rate-limiter';
-import { loadMovieByTmdb, bulkUpsertMovies, type UpsertMoviePayload } from '$lib/server/db/mutations';
+import {
+	loadMovieByTmdb,
+	bulkUpsertMovies,
+	type UpsertMoviePayload
+} from '$lib/server/db/mutations';
 import {
 	discoverMovieIds,
 	discoverTvIds,
@@ -231,7 +235,10 @@ const ingestMedia = async (tmdbIds: number[], options: IngestOptions) => {
 					'[home-library] Batch ingestion completed'
 				);
 			} catch (error) {
-				logger.error({ label, error, mediaType, batchIndex: i / BATCH_SIZE }, '[home-library] Batch ingestion failed');
+				logger.error(
+					{ label, error, mediaType, batchIndex: i / BATCH_SIZE },
+					'[home-library] Batch ingestion failed'
+				);
 			}
 		}
 	}
