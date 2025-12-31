@@ -13,7 +13,9 @@ import {
 import {
 	fetchTmdbMovieDetails,
 	fetchTmdbMovieExtras,
-	lookupTmdbIdByImdbId
+	fetchTmdbTvDetails,
+	lookupTmdbIdByImdbId,
+	fetchMalId
 } from '$lib/server/services/tmdb.service';
 import { randomUUID } from 'node:crypto';
 import { errorHandler, NotFoundError, ValidationError, getEnv } from '$lib/server';
@@ -237,10 +239,106 @@ const isValidTmdbId = (value: unknown): value is number => {
 	return typeof value === 'number' && Number.isFinite(value) && value > 0;
 };
 
+async function checkIfAnime(tmdbId: number, title: string, releaseDate: string | null): Promise<boolean> {
+	try {
+		const year = releaseDate?.split('-')[0];
+		const malId = await fetchMalId(title, year);
+		return malId !== null && malId !== undefined;
+	} catch (error) {
+		console.log(`[API] Could not determine if TMDB ${tmdbId} is anime:`, error);
+		return false;
+	}
+}
+
+async function resolveAnimeMovie(tmdbId: number): Promise<MovieWithDetails | null> {
+	if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
+		return null;
+	}
+
+	// Try to fetch as movie first
+	let details = await fetchTmdbMovieDetails(tmdbId);
+	let isTvFallback = false;
+
+	if (!details.found || !details.title) {
+		// If not found as movie, try as TV (for anime series that might be classified as TV)
+		const tvDetails = await fetchTmdbTvDetails(tmdbId);
+		if (tvDetails.found && tvDetails.name) {
+			// Convert TV details to movie format for anime movies
+			details = {
+				found: true,
+				tmdbId: tvDetails.tmdbId,
+				imdbId: tvDetails.imdbId,
+				title: tvDetails.name,
+				overview: tvDetails.overview,
+				posterPath: tvDetails.posterPath,
+				backdropPath: tvDetails.backdropPath,
+				rating: tvDetails.rating,
+				releaseDate: tvDetails.firstAirDate,
+				runtime: tvDetails.episodeRuntimes?.[0] ?? null,
+				genres: tvDetails.genres,
+				cast: tvDetails.cast,
+				trailerUrl: tvDetails.trailerUrl,
+				productionCompanies: tvDetails.productionCompanies,
+				productionCountries: [],
+				voteCount: null,
+				logoPath: null
+			};
+			isTvFallback = true;
+		} else {
+			return null;
+		}
+	}
+
+	const releaseDate = details.releaseDate ? details.releaseDate.trim() : null;
+	const rating = details.rating ?? null;
+	const durationMinutes = details.runtime ?? null;
+	const genreNames = Array.from(
+		new Set(
+			details.genres
+				.map((genre) => (typeof genre.name === 'string' ? genre.name.trim() : ''))
+				.filter(Boolean)
+		)
+	);
+
+		// Check if this is anime content
+		const isAnime = releaseDate ? await checkIfAnime(tmdbId, details.title ?? 'Untitled', releaseDate?.split('-')[0] ?? undefined) : false;
+
+		const movie = await upsertMovieWithGenres({
+			tmdbId,
+			title: details.title ?? 'Untitled',
+			overview: details.overview ?? null,
+			posterPath: details.posterPath ?? null,
+			backdropPath: details.backdropPath ?? null,
+			releaseDate: releaseDate ?? null,
+			rating,
+			durationMinutes,
+			is4K: false,
+			isHD: true,
+			genreNames
+		});
+
+	if (!movie) {
+		return null;
+	}
+
+	await cacheMovieVariants(movie);
+
+	return {
+		...movie,
+		imdbId: details.imdbId,
+		cast: details.cast
+			.filter((c) => c.character && c.character.trim())
+			.map((c) => ({ ...c, character: c.character! })),
+		trailerUrl: details.trailerUrl,
+		isAnime
+	};
+}
+
 type MovieWithDetails = MovieRecord & {
 	imdbId: string | null;
 	cast: { id: number; name: string; character: string; profilePath?: string | null }[];
 	trailerUrl: string | null;
+	isAnime?: boolean;
 };
 
 async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | null> {
@@ -250,6 +348,16 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 	}
 
 	console.log(`[API] Fetching TMDB details for ID: ${tmdbId}`);
+
+	// First try as anime movie
+	const animeMovie = await resolveAnimeMovie(tmdbId);
+	if (animeMovie) {
+		console.log(`[API] Anime movie found: ${animeMovie.title} (${tmdbId})`);
+		return animeMovie;
+	}
+
+	// If not anime, try regular movie resolution
+	console.log(`[API] Trying regular movie resolution for TMDB ID: ${tmdbId}`);
 	const details = await fetchTmdbMovieDetails(tmdbId);
 
 	if (!details.found) {
@@ -296,7 +404,8 @@ async function resolveFallbackMovie(tmdbId: number): Promise<MovieWithDetails | 
 		cast: details.cast
 			.filter((c) => c.character && c.character.trim())
 			.map((c) => ({ ...c, character: c.character! })),
-		trailerUrl: details.trailerUrl
+		trailerUrl: details.trailerUrl,
+		isAnime: false
 	};
 }
 

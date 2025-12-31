@@ -27,6 +27,8 @@ type TvWithDetails = {
 		episodeCount: number;
 		posterPath: string | null;
 	}[];
+	isAnime?: boolean;
+	malId?: number | null;
 };
 
 const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
@@ -93,11 +95,13 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		throw redirect(301, `/tv/${tvShow.tmdbId}`);
 	}
 
-	try {
+		try {
 		const streaming = await resolveStreaming({
-			mediaType: 'tv',
+			mediaType: tvShow.isAnime ? 'anime' : 'tv',
 			tmdbId: Number(tvShow.tmdbId),
-			imdbId: tvShow.imdbId ?? undefined
+			imdbId: tvShow.imdbId ?? undefined,
+			malId: tvShow.malId ?? undefined,
+			subOrDub: 'sub'
 		});
 
 		let recommendations: any[] = [];

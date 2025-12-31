@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { buildCacheKey, CACHE_TTL_LONG_SECONDS, withCache } from '$lib/server/cache';
-import { fetchTmdbTvDetails, lookupTmdbIdByImdbId } from '$lib/server/services/tmdb.service';
+import { fetchTmdbTvDetails, lookupTmdbIdByImdbId, fetchMalId } from '$lib/server/services/tmdb.service';
 import { db } from '$lib/server/db';
 import { movies } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -16,6 +16,19 @@ const tvIdentifierSchema = z.object({
 const tvQueryParamsSchema = z.object({
 	by: queryModeSchema.optional()
 });
+
+async function checkIfAnime(tmdbId: number, title: string, releaseDate: string | null): Promise<boolean> {
+	try {
+		if (!releaseDate) {
+			return false;
+		}
+		const malId = await fetchMalId(title, releaseDate);
+		return malId !== null && malId !== undefined;
+	} catch (error) {
+		console.log(`[API] Could not determine if TMDB ${tmdbId} is anime:`, error);
+		return false;
+	}
+}
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	try {
@@ -65,6 +78,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			return json({ message: 'TV show not found' }, { status: 404 });
 		}
 
+		// Check if this is anime content
+		const isAnime = await checkIfAnime(tmdbId, details.name, details.firstAirDate);
+		const malId = isAnime && details.firstAirDate ? await fetchMalId(details.name, details.firstAirDate) : null;
+
 		return json({
 			id: String(details.tmdbId),
 			tmdbId: details.tmdbId,
@@ -86,7 +103,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			seasons: details.seasons,
 			is4K: false,
 			isHD: true,
-			media_type: 'tv'
+			media_type: 'tv',
+			isAnime,
+			malId
 		});
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);

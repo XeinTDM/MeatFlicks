@@ -8,6 +8,8 @@ type MovieWithDetails = MovieRecord & {
 	imdbId: string | null;
 	cast: { id: number; name: string; character: string }[];
 	trailerUrl: string | null;
+	isAnime?: boolean;
+	malId?: number | null;
 };
 
 const detectQueryMode = (identifier: string): 'id' | 'tmdb' | 'imdb' => {
@@ -74,11 +76,13 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		? `/movie/${movie.imdbId}`
 		: `/movie/${movie.tmdbId ?? movie.id}`;
 
-	try {
+		try {
 		const streaming = await resolveStreaming({
-			mediaType: 'movie',
+			mediaType: movie.isAnime ? 'anime' : 'movie',
 			tmdbId: Number(movie.tmdbId),
-			imdbId: movie.imdbId ?? undefined
+			imdbId: movie.imdbId ?? undefined,
+			malId: movie.malId ?? undefined,
+			subOrDub: 'sub'
 		});
 
 		let recommendations: any[] = [];
