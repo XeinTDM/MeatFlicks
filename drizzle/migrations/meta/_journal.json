@@ -8,6 +8,13 @@
 			"when": 1766938738465,
 			"tag": "0000_sweet_wolverine",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1766938738465,
+			"tag": "0008_add_database_validation",
+			"breakpoints": true
 		}
 	]
 }

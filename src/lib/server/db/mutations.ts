@@ -5,6 +5,7 @@ import { eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
 import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
+import { validateMovieData } from './validation';
 
 export const loadMovieById = async (id: string): Promise<MovieRecord | null> => {
 	const rows = await db.select().from(movies).where(eq(movies.id, id)).limit(1);
@@ -53,6 +54,9 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 			const results: MovieRecord[] = [];
 
 			for (const payload of payloads) {
+				// Validate movie data before processing
+				validateMovieData(payload);
+
 				const genreIds: number[] = [];
 				for (const rawName of payload.genreNames) {
 					const name = rawName.trim();
