@@ -17,14 +17,14 @@
 	<div class="min-h-screen bg-background text-foreground">
 		<main class="mx-auto max-w-7xl px-4 py-8">
 			<div class="animate-pulse">
-				<div class="h-96 bg-muted rounded-lg mb-8"></div>
+				<div class="mb-8 h-96 rounded-lg bg-muted"></div>
 				<div class="space-y-4">
-					<div class="h-8 bg-muted rounded w-1/3"></div>
-					<div class="h-4 bg-muted rounded w-2/3"></div>
-					<div class="h-4 bg-muted rounded w-1/2"></div>
-					<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-						{#each Array(8) as _}
-							<div class="h-48 bg-muted rounded"></div>
+					<div class="h-8 w-1/3 rounded bg-muted"></div>
+					<div class="h-4 w-2/3 rounded bg-muted"></div>
+					<div class="h-4 w-1/2 rounded bg-muted"></div>
+					<div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+						{#each Array(8)}
+							<div class="h-48 rounded bg-muted"></div>
 						{/each}
 					</div>
 				</div>

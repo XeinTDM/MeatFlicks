@@ -36,6 +36,7 @@
 
 		if (item.href) {
 			const getResolvedPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			void goto(getResolvedPath(item.href));
 		}
 	};

@@ -33,7 +33,9 @@
 
 <div class="px-[10%] py-8">
 	{#if linkTo}
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 		<a
+			rel="external"
 			href={getResolvedPath(linkTo)}
 			data-sveltekit-preload-data="hover"
 			class="group mb-6 flex w-full items-center justify-start text-foreground transition-colors duration-300 hover:text-primary"

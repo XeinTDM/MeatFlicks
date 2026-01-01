@@ -4,7 +4,7 @@ import '../../vitest-setup-server';
 
 describe('Environment Validation', () => {
 	beforeEach(() => {
-		// @ts-ignore - access private variable for testing
+		// @ts-expect-error - access private variable for testing
 		global.__validatedEnv = null;
 	});
 
@@ -41,7 +41,7 @@ describe('Environment Validation', () => {
 
 	it('should throw error for missing required environment variable', () => {
 		process.env.NODE_ENV = 'test';
-		// @ts-ignore - clear the env variable
+		// @ts-expect-error - clear the env variable
 		delete process.env.TMDB_API_KEY;
 		expect(() => getEnv('TMDB_API_KEY')).not.toThrow();
 	});

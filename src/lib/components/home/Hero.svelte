@@ -8,7 +8,6 @@
 		Play,
 		Plus,
 		Star,
-		Clapperboard,
 		RefreshCcw
 	} from '@lucide/svelte';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -167,31 +166,6 @@
 		if (!source) return null;
 		return source.startsWith('http') ? source : `https://image.tmdb.org/t/p/original${source}`;
 	});
-
-	const trailerVideoId = $derived(extractYouTubeVideoId(activeMovie?.trailerUrl ?? ''));
-
-	const trailerEmbedUrl = $derived.by(() => {
-		if (!trailerVideoId) return null;
-
-		try {
-			const embed = new URL(`https://www.youtube.com/embed/${trailerVideoId}`);
-			embed.searchParams.set('autoplay', '1');
-			embed.searchParams.set('mute', '1');
-			embed.searchParams.set('playsinline', '1');
-			embed.searchParams.set('controls', '0');
-			embed.searchParams.set('rel', '0');
-			embed.searchParams.set('loop', '1');
-			embed.searchParams.set('modestbranding', '1');
-			embed.searchParams.set('playlist', trailerVideoId);
-			return embed.toString();
-		} catch {
-			return null;
-		}
-	});
-
-	const trailerWatchUrl = $derived(
-		trailerVideoId ? `https://www.youtube.com/watch?v=${trailerVideoId}` : null
-	);
 
 	function goToSlide(index: number) {
 		if (!slides.length) return;

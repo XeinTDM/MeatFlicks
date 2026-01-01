@@ -1,7 +1,5 @@
 import type { GenreRecord, MovieRecord, MovieRow } from './types';
 
-type Nullable<T> = T | null | undefined;
-
 export const mapMovieRow = (row: MovieRow, genres: GenreRecord[] = []): MovieRecord => ({
 	...row,
 	genres

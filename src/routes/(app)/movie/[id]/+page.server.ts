@@ -76,7 +76,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		? `/movie/${movie.imdbId}`
 		: `/movie/${movie.tmdbId ?? movie.id}`;
 
-		try {
+	try {
 		const streaming = await resolveStreaming({
 			mediaType: movie.isAnime ? 'anime' : 'movie',
 			tmdbId: Number(movie.tmdbId),

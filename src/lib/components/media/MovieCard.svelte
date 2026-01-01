@@ -45,7 +45,9 @@
 	});
 </script>
 
+<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 <a
+	rel="external"
 	href={detailsHref}
 	aria-label={movie ? `View details for ${movie.title}` : 'Loading movie'}
 	class="group relative h-72 w-48 cursor-pointer overflow-hidden rounded-xl transition-transform duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-lg"

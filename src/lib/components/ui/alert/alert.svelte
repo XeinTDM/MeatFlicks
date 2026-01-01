@@ -1,7 +1,3 @@
-<script lang="ts" module>
-	export { alertVariants, type AlertVariant } from './alert.config';
-</script>
-
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '$lib/utils.js';

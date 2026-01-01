@@ -5,7 +5,6 @@ import {
 	real,
 	primaryKey,
 	index,
-	customType,
 	unique
 } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';

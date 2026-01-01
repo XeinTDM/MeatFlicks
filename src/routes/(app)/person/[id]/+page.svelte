@@ -8,8 +8,10 @@
 	function handleCreditClick(mediaType: string, id: number) {
 		const getResolvedPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
 		if (mediaType === 'movie') {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			goto(getResolvedPath(`/movie/${id}`));
 		} else if (mediaType === 'tv') {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			goto(getResolvedPath(`/tv/${id}`));
 		}
 	}

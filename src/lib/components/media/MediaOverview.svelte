@@ -35,7 +35,8 @@
 						<li
 							class="group/cast rounded-lg border border-border/40 bg-background/80 p-3 transition-all hover:-translate-y-0.5 hover:bg-muted/50 hover:shadow-lg"
 						>
-							<a href={`/person/${member.id}`} class="flex items-center gap-4">
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+							<a rel="external" href={`/person/${member.id}`} class="flex items-center gap-4">
 								<div class="relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md shadow-sm">
 									{#if member.profilePath}
 										<img

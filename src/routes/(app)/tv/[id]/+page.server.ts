@@ -95,7 +95,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		throw redirect(301, `/tv/${tvShow.tmdbId}`);
 	}
 
-		try {
+	try {
 		const streaming = await resolveStreaming({
 			mediaType: tvShow.isAnime ? 'anime' : 'tv',
 			tmdbId: Number(tvShow.tmdbId),

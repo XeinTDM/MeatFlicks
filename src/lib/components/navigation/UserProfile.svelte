@@ -31,9 +31,10 @@
 		}
 	});
 
-	function handleNavigate(path: string) {
+	async function handleNavigate(path: string) {
 		const getResolvedPath = (p: string) => (p.startsWith('/') ? p : `/${p}`);
-		goto(getResolvedPath(path));
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		await goto(getResolvedPath(path));
 	}
 </script>
 

@@ -25,8 +25,12 @@
 	});
 
 	$effect(() => {
-		const handleOnline = () => { isOffline = false; };
-		const handleOffline = () => { isOffline = true; };
+		const handleOnline = () => {
+			isOffline = false;
+		};
+		const handleOffline = () => {
+			isOffline = true;
+		};
 
 		if (typeof window !== 'undefined') {
 			window.addEventListener('online', handleOnline);
@@ -67,57 +71,63 @@
 		const searchTerm = query.toLowerCase().trim();
 		if (!searchTerm) return [];
 
-		const watchlistMovies = $watchlist.watchlist.map(movie => ({
-			id: movie.id,
-			tmdbId: movie.tmdbId || null,
-			title: movie.title,
-			overview: movie.overview,
-			posterPath: movie.posterPath,
-			backdropPath: movie.backdropPath,
-			releaseDate: movie.releaseDate,
-			rating: movie.rating,
-			durationMinutes: movie.durationMinutes || null,
-			genres: movie.genres,
-			is4K: movie.is4K || false,
-			isHD: movie.isHD || false,
-			canonicalPath: movie.canonicalPath || `/movie/${movie.id}`,
-			mediaType: movie.media_type || movie.mediaType || 'movie',
-			addedAt: Date.parse(movie.addedAt) || Date.now()
-		} as LibraryMovie));
+		const watchlistMovies = $watchlist.watchlist.map(
+			(movie) =>
+				({
+					id: movie.id,
+					tmdbId: movie.tmdbId || null,
+					title: movie.title,
+					overview: movie.overview,
+					posterPath: movie.posterPath,
+					backdropPath: movie.backdropPath,
+					releaseDate: movie.releaseDate,
+					rating: movie.rating,
+					durationMinutes: movie.durationMinutes || null,
+					genres: movie.genres,
+					is4K: movie.is4K || false,
+					isHD: movie.isHD || false,
+					canonicalPath: movie.canonicalPath || `/movie/${movie.id}`,
+					mediaType: movie.media_type || movie.mediaType || 'movie',
+					addedAt: Date.parse(movie.addedAt) || Date.now()
+				}) as LibraryMovie
+		);
 
-		const historyMovies = $watchHistory.entries.map(entry => ({
-			id: entry.id,
-			tmdbId: entry.tmdbId || null,
-			title: entry.title,
-			overview: entry.overview,
-			posterPath: entry.posterPath,
-			backdropPath: entry.backdropPath,
-			releaseDate: entry.releaseDate,
-			rating: entry.rating,
-			durationMinutes: entry.durationMinutes || null,
-			genres: entry.genres,
-			is4K: entry.is4K || false,
-			isHD: entry.isHD || false,
-			canonicalPath: entry.canonicalPath || `/movie/${entry.id}`,
-			mediaType: entry.media_type || entry.mediaType || 'movie',
-			addedAt: Date.parse(entry.watchedAt) || Date.now()
-		} as LibraryMovie));
+		const historyMovies = $watchHistory.entries.map(
+			(entry) =>
+				({
+					id: entry.id,
+					tmdbId: entry.tmdbId || null,
+					title: entry.title,
+					overview: entry.overview,
+					posterPath: entry.posterPath,
+					backdropPath: entry.backdropPath,
+					releaseDate: entry.releaseDate,
+					rating: entry.rating,
+					durationMinutes: entry.durationMinutes || null,
+					genres: entry.genres,
+					is4K: entry.is4K || false,
+					isHD: entry.isHD || false,
+					canonicalPath: entry.canonicalPath || `/movie/${entry.id}`,
+					mediaType: entry.media_type || entry.mediaType || 'movie',
+					addedAt: Date.parse(entry.watchedAt) || Date.now()
+				}) as LibraryMovie
+		);
 
 		const allMovies = [...watchlistMovies, ...historyMovies];
 
-		const uniqueMovies = allMovies.filter((movie, index, arr) =>
-			arr.findIndex(m => m.id === movie.id) === index
+		const uniqueMovies = allMovies.filter(
+			(movie, index, arr) => arr.findIndex((m) => m.id === movie.id) === index
 		);
 
 		return uniqueMovies
-			.filter(movie => {
+			.filter((movie) => {
 				const title = movie.title?.toLowerCase() || '';
 				const overview = movie.overview?.toLowerCase() || '';
 				const genres = movie.genres?.join(' ').toLowerCase() || '';
 
-				return title.includes(searchTerm) ||
-					   overview.includes(searchTerm) ||
-					   genres.includes(searchTerm);
+				return (
+					title.includes(searchTerm) || overview.includes(searchTerm) || genres.includes(searchTerm)
+				);
 			})
 			.slice(0, 5);
 	}
@@ -265,7 +275,9 @@
 			{:else if results.length > 0}
 				<div class="space-y-1">
 					{#if isOffline}
-						<div class="flex items-center gap-2 px-2 py-1 text-xs text-amber-600 bg-amber-50 rounded-md border border-amber-200">
+						<div
+							class="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-600"
+						>
 							<WifiOff class="size-3" />
 							Offline results from your watchlist & history
 						</div>

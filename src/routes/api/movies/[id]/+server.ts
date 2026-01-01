@@ -239,7 +239,11 @@ const isValidTmdbId = (value: unknown): value is number => {
 	return typeof value === 'number' && Number.isFinite(value) && value > 0;
 };
 
-async function checkIfAnime(tmdbId: number, title: string, releaseDate: string | null): Promise<boolean> {
+async function checkIfAnime(
+	tmdbId: number,
+	title: string,
+	releaseDate: string | null
+): Promise<boolean> {
 	try {
 		const year = releaseDate?.split('-')[0];
 		const malId = await fetchMalId(title, year);
@@ -300,22 +304,28 @@ async function resolveAnimeMovie(tmdbId: number): Promise<MovieWithDetails | nul
 		)
 	);
 
-		// Check if this is anime content
-		const isAnime = releaseDate ? await checkIfAnime(tmdbId, details.title ?? 'Untitled', releaseDate?.split('-')[0] ?? undefined) : false;
+	// Check if this is anime content
+	const isAnime = releaseDate
+		? await checkIfAnime(
+				tmdbId,
+				details.title ?? 'Untitled',
+				releaseDate?.split('-')[0] ?? undefined
+			)
+		: false;
 
-		const movie = await upsertMovieWithGenres({
-			tmdbId,
-			title: details.title ?? 'Untitled',
-			overview: details.overview ?? null,
-			posterPath: details.posterPath ?? null,
-			backdropPath: details.backdropPath ?? null,
-			releaseDate: releaseDate ?? null,
-			rating,
-			durationMinutes,
-			is4K: false,
-			isHD: true,
-			genreNames
-		});
+	const movie = await upsertMovieWithGenres({
+		tmdbId,
+		title: details.title ?? 'Untitled',
+		overview: details.overview ?? null,
+		posterPath: details.posterPath ?? null,
+		backdropPath: details.backdropPath ?? null,
+		releaseDate: releaseDate ?? null,
+		rating,
+		durationMinutes,
+		is4K: false,
+		isHD: true,
+		genreNames
+	});
 
 	if (!movie) {
 		return null;

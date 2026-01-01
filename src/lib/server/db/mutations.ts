@@ -1,17 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '$lib/server/db';
-import {
-	movies,
-	genres,
-	moviesGenres,
-	collections,
-	moviePeople,
-	people
-} from '$lib/server/db/schema';
-import { eq, sql, and, count as drizzleCount } from 'drizzle-orm';
-import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
+import { movies, genres, moviesGenres, collections } from '$lib/server/db/schema';
+import { eq, and, count as drizzleCount } from 'drizzle-orm';
+import type { MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
-import { personRepository } from '$lib/server/repositories/person.repository';
 import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
 
 export const loadMovieById = async (id: string): Promise<MovieRecord | null> => {
@@ -103,7 +95,8 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 				};
 
 				if (existingMovie) {
-					await tx.update(movies).set(movieData).where(eq(movies.tmdbId, payload.tmdbId));
+					const { ...updateData } = movieData;
+					await tx.update(movies).set(updateData).where(eq(movies.tmdbId, payload.tmdbId));
 				} else {
 					await tx.insert(movies).values({ ...movieData, createdAt: Date.now() });
 				}

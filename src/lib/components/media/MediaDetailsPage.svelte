@@ -194,13 +194,6 @@
 		}
 	}
 
-	function handleOpenInNewTab() {
-		const playbackUrl =
-			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
-		if (!playbackUrl) return;
-		window.open(playbackUrl, '_blank', 'noopener,noreferrer');
-	}
-
 	async function handleHeaderPlay(providerId: string) {
 		streamingService.selectProvider(providerId);
 

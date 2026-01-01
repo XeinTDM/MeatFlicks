@@ -1,20 +1,7 @@
-<script lang="ts" module>
-	export {
-		buttonVariants,
-		type ButtonProps,
-		type ButtonSize,
-		type ButtonVariant
-	} from './button.config';
-</script>
-
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
 	import { buttonVariants } from './button.config';
 	import type { ButtonProps } from './button.config';
-
-	interface $$Events {
-		click: MouseEvent;
-	}
 
 	let {
 		class: className,
@@ -30,7 +17,9 @@
 </script>
 
 {#if href}
+	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a
+		rel="external"
 		bind:this={ref}
 		data-slot="button"
 		class={cn(buttonVariants({ variant, size }), className)}

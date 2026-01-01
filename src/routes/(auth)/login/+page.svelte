@@ -40,7 +40,9 @@
 			<Button type="submit" class="w-full">Sign In</Button>
 
 			<p class="text-center text-sm text-muted-foreground">
-				Don't have an account? <a href="/signup" class="underline hover:text-primary">Sign up</a>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				Don't have an account?
+				<a rel="external" href="/signup" class="underline hover:text-primary">Sign up</a>
 			</p>
 		</form>
 	</div>

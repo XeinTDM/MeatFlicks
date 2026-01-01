@@ -1,3 +1,4 @@
+import '../app.css';
 import { setup } from 'svelte-match-media';
 
 setup({

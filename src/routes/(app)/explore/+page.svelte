@@ -30,7 +30,9 @@
 		<h2 class="mb-6 text-2xl font-semibold tracking-tight">Browse by Category</h2>
 		<div class="grid gap-6 md:grid-cols-2">
 			{#each data.categories as category, i}
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a
+					rel="external"
 					href={`/explore/${category.slug}`}
 					class="group relative block"
 					in:fly={{ y: 20, delay: i * 100, duration: 500 }}
@@ -86,7 +88,9 @@
 		<h2 class="mb-6 text-2xl font-semibold tracking-tight">Popular Genres</h2>
 		<div class="flex flex-wrap gap-3">
 			{#each data.topGenres as genre, i}
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a
+					rel="external"
 					href={`/explore/${genre.slug}`}
 					class="transition-transform hover:scale-105 active:scale-95"
 					in:fade={{ delay: 400 + i * 50, duration: 400 }}

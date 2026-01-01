@@ -14,17 +14,17 @@
 			cache: 'no-cache',
 			mode: 'no-cors'
 		})
-		.then(() => {
-			window.location.reload();
-		})
-		.catch(() => {
-			isReconnecting = false;
-		})
-		.finally(() => {
-			setTimeout(() => {
+			.then(() => {
+				window.location.reload();
+			})
+			.catch(() => {
 				isReconnecting = false;
-			}, 3000);
-		});
+			})
+			.finally(() => {
+				setTimeout(() => {
+					isReconnecting = false;
+				}, 3000);
+			});
 	}
 
 	function goHome() {
@@ -55,34 +55,37 @@
 	<meta name="robots" content="noindex,nofollow" />
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-4">
-	<div class="max-w-md w-full">
-		<div class="text-center mb-8">
-			<div class="inline-flex items-center justify-center w-20 h-20 bg-slate-700 rounded-full mb-6">
-				<Wifi class="w-10 h-10 text-slate-400" />
+<div
+	class="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-white"
+>
+	<div class="w-full max-w-md">
+		<div class="mb-8 text-center">
+			<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-700">
+				<Wifi class="h-10 w-10 text-slate-400" />
 			</div>
-			<h1 class="text-3xl font-bold mb-2">You're Offline</h1>
-			<p class="text-slate-400 text-lg">No internet connection detected</p>
+			<h1 class="mb-2 text-3xl font-bold">You're Offline</h1>
+			<p class="text-lg text-slate-400">No internet connection detected</p>
 		</div>
 
-		<div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-slate-700">
-			<p class="text-slate-300 mb-6 leading-relaxed">
-				Don't worry! You can still enjoy MeatFlicks with your saved content. Your watchlist and viewing history are available offline.
+		<div class="mb-6 rounded-2xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
+			<p class="mb-6 leading-relaxed text-slate-300">
+				Don't worry! You can still enjoy MeatFlicks with your saved content. Your watchlist and
+				viewing history are available offline.
 			</p>
 
-			<div class="space-y-3 mb-6">
-				<h3 class="font-semibold text-white mb-3">Available Offline:</h3>
+			<div class="mb-6 space-y-3">
+				<h3 class="mb-3 font-semibold text-white">Available Offline:</h3>
 				<div class="grid grid-cols-1 gap-3">
-					<div class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg">
-						<Home class="w-5 h-5 text-blue-400" />
+					<div class="flex items-center gap-3 rounded-lg bg-slate-700/50 p-3">
+						<Home class="h-5 w-5 text-blue-400" />
 						<span class="text-slate-200">Browse home page</span>
 					</div>
-					<div class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg">
-						<Heart class="w-5 h-5 text-red-400" />
+					<div class="flex items-center gap-3 rounded-lg bg-slate-700/50 p-3">
+						<Heart class="h-5 w-5 text-red-400" />
 						<span class="text-slate-200">View your watchlist</span>
 					</div>
-					<div class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg">
-						<Search class="w-5 h-5 text-green-400" />
+					<div class="flex items-center gap-3 rounded-lg bg-slate-700/50 p-3">
+						<Search class="h-5 w-5 text-green-400" />
 						<span class="text-slate-200">Search saved content</span>
 					</div>
 				</div>
@@ -92,13 +95,13 @@
 				<button
 					onclick={handleRetryConnection}
 					disabled={isReconnecting}
-					class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+					class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-slate-600"
 				>
 					{#if isReconnecting}
-						<RefreshCw class="w-5 h-5 animate-spin" />
+						<RefreshCw class="h-5 w-5 animate-spin" />
 						Reconnecting...
 					{:else}
-						<Wifi class="w-5 h-5" />
+						<Wifi class="h-5 w-5" />
 						Try Again
 					{/if}
 				</button>
@@ -106,23 +109,23 @@
 				<div class="grid grid-cols-3 gap-2">
 					<button
 						onclick={goHome}
-						class="flex items-center justify-center gap-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2 px-3 rounded-lg transition-colors text-sm"
+						class="flex items-center justify-center gap-1 rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
 					>
-						<Home class="w-4 h-4" />
+						<Home class="h-4 w-4" />
 						Home
 					</button>
 					<button
 						onclick={goToSearch}
-						class="flex items-center justify-center gap-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2 px-3 rounded-lg transition-colors text-sm"
+						class="flex items-center justify-center gap-1 rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
 					>
-						<Search class="w-4 h-4" />
+						<Search class="h-4 w-4" />
 						Search
 					</button>
 					<button
 						onclick={goToWatchlist}
-						class="flex items-center justify-center gap-1 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2 px-3 rounded-lg transition-colors text-sm"
+						class="flex items-center justify-center gap-1 rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600"
 					>
-						<Heart class="w-4 h-4" />
+						<Heart class="h-4 w-4" />
 						Watchlist
 					</button>
 				</div>
@@ -130,7 +133,7 @@
 		</div>
 
 		<div class="text-center">
-			<p class="text-slate-500 text-sm">
+			<p class="text-sm text-slate-500">
 				Your data will sync automatically when connection is restored.
 			</p>
 		</div>

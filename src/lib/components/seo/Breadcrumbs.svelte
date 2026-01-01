@@ -57,7 +57,9 @@
 						{item.label}
 					</span>
 				{:else}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a
+						rel="external"
 						href={`/${item.href}`}
 						itemprop="item"
 						class="flex items-center gap-1 transition-colors hover:text-foreground"

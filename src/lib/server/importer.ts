@@ -1,12 +1,10 @@
 import { db } from '$lib/server/db';
 import {
-	movies,
 	genres,
-	moviesGenres,
 	tvShows as tvShowsSchema,
 	tvShowsGenres
 } from '$lib/server/db/schema';
-import { eq, sql, and, count as drizzleCount } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
 import { personRepository } from '$lib/server/repositories/person.repository';
@@ -302,35 +300,54 @@ export const bulkUpsertTvShows = async (
 				.limit(1);
 			const existingTvShow = existingTvShows[0];
 
-			const tvShowData: InferSelectModel<typeof tvShowsSchema> = {
-				id: existingTvShow?.id || 0,
-				tmdbId: payload.tmdbId,
-				title: payload.title,
-				overview: payload.overview,
-				posterPath: payload.posterPath,
-				backdropPath: payload.backdropPath,
-				firstAirDate: payload.firstAirDate,
-				rating: payload.rating,
-				episodeRuntime: payload.episodeRuntime,
-				numberOfSeasons: payload.numberOfSeasons,
-				numberOfEpisodes: payload.numberOfEpisodes,
-				status: payload.status || 'not_found',
-				productionCompanies: payload.productionCompanies,
-				streamingProviders: payload.streamingProviders,
-				imdbId: payload.imdbId,
-				createdAt: existingTvShow?.createdAt || Date.now(),
-				updatedAt: Date.now()
-			};
-
 			let insertedOrUpdatedTvShow: InferSelectModel<typeof tvShowsSchema> | undefined;
 
 			if (existingTvShow) {
+				const tvShowData = {
+					tmdbId: payload.tmdbId,
+					title: payload.title,
+					overview: payload.overview,
+					posterPath: payload.posterPath,
+					backdropPath: payload.backdropPath,
+					firstAirDate: payload.firstAirDate,
+					rating: payload.rating,
+					episodeRuntime: payload.episodeRuntime,
+					numberOfSeasons: payload.numberOfSeasons,
+					numberOfEpisodes: payload.numberOfEpisodes,
+					status: payload.status || 'not_found',
+					productionCompanies: payload.productionCompanies,
+					streamingProviders: payload.streamingProviders,
+					imdbId: payload.imdbId,
+					updatedAt: Date.now()
+				};
 				await tx
 					.update(tvShowsSchema)
 					.set(tvShowData)
 					.where(eq(tvShowsSchema.tmdbId, payload.tmdbId));
-				insertedOrUpdatedTvShow = { ...existingTvShow, ...tvShowData };
+				insertedOrUpdatedTvShow = {
+					...existingTvShow,
+					...tvShowData,
+					createdAt: existingTvShow.createdAt
+				};
 			} else {
+				const tvShowData = {
+					tmdbId: payload.tmdbId,
+					title: payload.title,
+					overview: payload.overview,
+					posterPath: payload.posterPath,
+					backdropPath: payload.backdropPath,
+					firstAirDate: payload.firstAirDate,
+					rating: payload.rating,
+					episodeRuntime: payload.episodeRuntime,
+					numberOfSeasons: payload.numberOfSeasons,
+					numberOfEpisodes: payload.numberOfEpisodes,
+					status: payload.status || 'not_found',
+					productionCompanies: payload.productionCompanies,
+					streamingProviders: payload.streamingProviders,
+					imdbId: payload.imdbId,
+					createdAt: Date.now(),
+					updatedAt: Date.now()
+				};
 				const result = await tx.insert(tvShowsSchema).values(tvShowData).returning();
 				insertedOrUpdatedTvShow = result[0];
 			}

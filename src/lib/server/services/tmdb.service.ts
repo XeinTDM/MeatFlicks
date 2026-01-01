@@ -322,7 +322,7 @@ export async function fetchTmdbTvDetails(
 					.filter((s) => s.season_number > 0)
 					.map((s) => {
 						const seasonKey = `season/${s.season_number}`;
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 						const detailedSeason = rawData[seasonKey];
 
 						if (detailedSeason) {

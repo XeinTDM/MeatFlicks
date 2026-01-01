@@ -32,12 +32,9 @@ const OFFLINE_FALLBACKS = {
 };
 
 self.addEventListener('install', (event) => {
-	console.log('[SW] Installing service worker');
-
 	event.waitUntil(
 		Promise.all([
 			caches.open(STATIC_CACHE).then((cache) => {
-				console.log('[SW] Caching static assets');
 				return cache.addAll(STATIC_ASSETS).catch((error) => {
 					console.warn('[SW] Failed to cache some static assets:', error);
 				});
@@ -45,15 +42,12 @@ self.addEventListener('install', (event) => {
 			caches.open(API_CACHE),
 			caches.open(IMAGE_CACHE)
 		]).then(() => {
-			console.log('[SW] Service worker installed');
 			self.skipWaiting();
 		})
 	);
 });
 
 self.addEventListener('activate', (event) => {
-	console.log('[SW] Activating service worker');
-
 	event.waitUntil(
 		Promise.all([
 			caches.keys().then((cacheNames) => {
@@ -68,7 +62,7 @@ self.addEventListener('activate', (event) => {
 			}),
 			self.clients.claim()
 		]).then(() => {
-			console.log('[SW] Service worker activated');
+			// Ignore
 		})
 	);
 });
@@ -147,8 +141,6 @@ async function handleRequest(request) {
 	const strategy = getCacheStrategy(request);
 	const cacheName = getCacheName(strategy, url);
 
-	console.log(`[SW] Handling ${request.url} with strategy: ${strategy}`);
-
 	switch (strategy) {
 		case CACHE_STRATEGIES.NETWORK_FIRST:
 			return networkFirst(request, cacheName);
@@ -221,7 +213,6 @@ async function staleWhileRevalidate(request, cacheName) {
 	});
 
 	if (cachedResponse) {
-		console.log(`[SW] Serving stale content for: ${request.url}`);
 		return cachedResponse;
 	}
 

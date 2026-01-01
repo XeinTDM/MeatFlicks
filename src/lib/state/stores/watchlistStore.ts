@@ -229,7 +229,10 @@ function createWatchlistStore() {
 		});
 
 		window.addEventListener('online', () => {
-			if ('serviceWorker' in navigator && 'sync' in (window as any).ServiceWorkerRegistration?.prototype) {
+			if (
+				'serviceWorker' in navigator &&
+				'sync' in (window as any).ServiceWorkerRegistration?.prototype
+			) {
 				navigator.serviceWorker.ready.then((registration) => {
 					(registration as any).sync.register('sync-watchlist');
 				});

@@ -6,8 +6,6 @@ import { sessions, users } from './db/schema';
 
 const adapter = new DrizzleSQLiteAdapter(db, sessions, users);
 
-const SESSION_EXPIRATION = 86400 * 1000;
-
 export const lucia = new Lucia(adapter, {
 	sessionCookie: {
 		attributes: {

@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import type { Handle, RequestEvent } from '@sveltejs/kit';
 import { validateApiKeys } from '$lib/server';
 import { logger } from '$lib/server/logger';

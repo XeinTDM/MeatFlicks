@@ -30,7 +30,9 @@
 	<div class="mb-6 flex items-center gap-2">
 		<h2 class="text-3xl font-semibold text-foreground">{title}</h2>
 		{#if linkTo}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a
+				rel="external"
 				href={`/${linkTo}`}
 				data-sveltekit-preload-data="hover"
 				class="group flex items-center text-foreground transition-colors duration-300 hover:text-primary"

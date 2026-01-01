@@ -585,7 +585,10 @@
 										<article
 											class="flex flex-col gap-4 rounded-xl border border-border bg-card/50 p-4 shadow-sm transition hover:border-primary/50 md:flex-row md:items-center"
 										>
+											<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+											<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 											<a
+												rel="external"
 												href={`/${movie.canonicalPath ?? `movie/${movie.id}`}`}
 												data-sveltekit-preload-data="hover"
 												class="flex w-full gap-4 md:w-auto"
@@ -609,7 +612,10 @@
 											<div class="flex flex-1 flex-col gap-3">
 												<div class="flex flex-wrap items-start justify-between gap-2">
 													<div class="space-y-1">
+														<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+														<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 														<a
+															rel="external"
 															href={`/${movie.canonicalPath ?? `movie/${movie.id}`}`}
 															data-sveltekit-preload-data="hover"
 															class="text-lg font-semibold hover:text-primary"

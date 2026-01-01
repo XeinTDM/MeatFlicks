@@ -136,7 +136,7 @@
 		currentIncludeAnime = include_anime;
 	});
 
-	function updateURL() {
+	async function updateURL() {
 		const params = combineURLParams(
 			currentFilters,
 			currentSort,
@@ -144,30 +144,31 @@
 			currentIncludeAnime
 		);
 		const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-		goto(url, { keepFocus: true, noScroll: true });
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		await goto(url, { keepFocus: true, noScroll: true });
 	}
 
-	function handleFiltersChange(newFilters: MovieFilters) {
+	async function handleFiltersChange(newFilters: MovieFilters) {
 		currentFilters = newFilters;
 		currentPagination = { ...currentPagination, page: 1 };
-		updateURL();
+		await updateURL();
 	}
 
-	function handleClearFilters() {
+	async function handleClearFilters() {
 		currentFilters = {} as MovieFilters;
 		currentPagination = { ...currentPagination, page: 1 };
 		currentIncludeAnime = 'include';
-		updateURL();
+		await updateURL();
 	}
 
-	function handleSortChange(newSort: SortOptions) {
+	async function handleSortChange(newSort: SortOptions) {
 		currentSort = newSort;
-		updateURL();
+		await updateURL();
 	}
 
-	function handlePageChange(page: number) {
+	async function handlePageChange(page: number) {
 		currentPagination = { ...currentPagination, page };
-		updateURL();
+		await updateURL();
 	}
 
 	function handleRemoveFilter(filterKey: keyof MovieFilters) {

@@ -43,7 +43,7 @@ export const mapRowsToRecords = async (rows: MovieRow[]): Promise<MovieRecord[]>
 };
 
 export const toMovieSummary = (movie: MovieRecord): MovieSummary => {
-	const { numericId, createdAt, updatedAt, ...rest } = movie;
+	const { ...rest } = movie;
 	return rest;
 };
 

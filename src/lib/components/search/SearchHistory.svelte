@@ -37,12 +37,13 @@
 		return 'Just now';
 	}
 
-	function handleSearchClick(query: string) {
+	async function handleSearchClick(query: string) {
 		const getResolvedPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
 		if (onSearchSelect) {
 			onSearchSelect(query);
 		} else {
-			goto(getResolvedPath(`/search?q=${encodeURIComponent(query)}`));
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			await goto(getResolvedPath(`/search?q=${encodeURIComponent(query)}`));
 		}
 	}
 

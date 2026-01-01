@@ -28,7 +28,7 @@ export async function batchInsert<T>(
 					const placeholders = Object.keys(item)
 						.map(() => '?')
 						.join(', ');
-					const values = Object.values(item);
+					// const values = Object.values(item);
 
 					const query = sql`INSERT INTO ${sql.raw(table)} (${sql.raw(columns)}) VALUES (${sql.raw(placeholders)})`;
 					await tx.run(query);
@@ -74,7 +74,7 @@ export async function batchUpdate<T>(
 					const setClause = Object.keys(transformed)
 						.map((col) => `${col} = ?`)
 						.join(', ');
-					const values = [...Object.values(transformed), keyValue];
+					// const values = [...Object.values(transformed), keyValue];
 
 					const query = sql`UPDATE ${sql.raw(table)} SET ${sql.raw(setClause)} WHERE ${sql.raw(keyColumn)} = ?`;
 					await tx.run(query);
@@ -121,7 +121,7 @@ export async function batchUpsert<T>(
 					const setClause = Object.keys(transformed)
 						.map((col) => `${col} = ?`)
 						.join(', ');
-					const updateValues = [...Object.values(transformed), keyValue];
+					// const updateValues = [...Object.values(transformed), keyValue];
 
 					const updateQuery = sql`UPDATE ${sql.raw(table)} SET ${sql.raw(setClause)} WHERE ${sql.raw(keyColumn)} = ?`;
 					await tx.run(updateQuery);
@@ -159,7 +159,7 @@ export async function executeInTransaction<T>(
 
 	while (attempt < maxRetries) {
 		try {
-			return await db.transaction(async (tx) => {
+			return await db.transaction(async (_tx) => {
 				const results: T[] = [];
 
 				for (const query of queries) {

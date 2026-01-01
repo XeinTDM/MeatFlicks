@@ -16,7 +16,9 @@ export function getSearchHistory(browser: boolean): string[] {
 		if (Array.isArray(parsed)) {
 			return parsed.filter((value): value is string => typeof value === 'string').slice(0, 8);
 		}
-	} catch {}
+	} catch {
+		// Do nothing, just return an empty array
+	}
 	return [];
 }
 

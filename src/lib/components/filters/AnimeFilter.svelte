@@ -11,14 +11,15 @@
 
 	let { value = 'include' }: { value?: 'include' | 'exclude' | 'only' } = $props();
 
-	const updateUrl = (selectedValue: 'include' | 'exclude' | 'only') => {
+	const updateUrl = async (selectedValue: 'include' | 'exclude' | 'only') => {
 		const newUrl = new URL(page.url);
 		if (selectedValue === 'include') {
 			newUrl.searchParams.delete('include_anime');
 		} else {
 			newUrl.searchParams.set('include_anime', selectedValue);
 		}
-		goto(newUrl.pathname + newUrl.search, { noScroll: true });
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		await goto(newUrl.pathname + newUrl.search, { noScroll: true });
 	};
 </script>
 

@@ -6,7 +6,7 @@
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
 	import { SEOHead } from '$lib/components/seo';
-	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad';
+	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad.svelte.ts';
 
 	let ContinueWatchingRow: any = $state(null);
 	let TrendingMoviesSlider: any = $state(null);
@@ -39,19 +39,31 @@
 	);
 
 	$effect(() => {
-		ContinueWatchingRow = continueWatchingLazy.component;
+		const unsubscribe = continueWatchingLazy.component.subscribe((value) => {
+			ContinueWatchingRow = value;
+		});
+		return unsubscribe;
 	});
 
 	$effect(() => {
-		TrendingMoviesSlider = trendingLazy.component;
+		const unsubscribe = trendingLazy.component.subscribe((value) => {
+			TrendingMoviesSlider = value;
+		});
+		return unsubscribe;
 	});
 
 	$effect(() => {
-		RecentlyAddedRow = recentlyAddedLazy.component;
+		const unsubscribe = recentlyAddedLazy.component.subscribe((value) => {
+			RecentlyAddedRow = value;
+		});
+		return unsubscribe;
 	});
 
 	$effect(() => {
-		TopRatedRow = topRatedLazy.component;
+		const unsubscribe = topRatedLazy.component.subscribe((value) => {
+			TopRatedRow = value;
+		});
+		return unsubscribe;
 	});
 
 	let { data }: { data: PageData } = $props();
@@ -182,7 +194,10 @@
 								{#if ContinueWatchingRow}
 									<ContinueWatchingRow />
 								{:else}
-									<div bind:this={continueWatchingRef.value} class="h-32 bg-muted/50 rounded-lg animate-pulse"></div>
+									<div
+										bind:this={continueWatchingRef.value}
+										class="h-32 animate-pulse rounded-lg bg-muted/50"
+									></div>
 								{/if}
 								<PersonalizedRows />
 							</div>
@@ -191,7 +206,10 @@
 								{#if TrendingMoviesSlider}
 									<TrendingMoviesSlider title="Trending Movies" movies={trendingMovies} />
 								{:else}
-									<div bind:this={trendingMoviesRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+									<div
+										bind:this={trendingMoviesRef.value}
+										class="h-48 animate-pulse rounded-lg bg-muted/50"
+									></div>
 								{/if}
 							{/if}
 
@@ -199,20 +217,29 @@
 								{#if TrendingMoviesSlider}
 									<TrendingMoviesSlider title="Trending TV Series" movies={trendingTv} />
 								{:else}
-									<div bind:this={trendingMoviesRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+									<div
+										bind:this={trendingMoviesRef.value}
+										class="h-48 animate-pulse rounded-lg bg-muted/50"
+									></div>
 								{/if}
 							{/if}
 
 							{#if RecentlyAddedRow}
 								<RecentlyAddedRow />
 							{:else}
-								<div bind:this={recentlyAddedRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+								<div
+									bind:this={recentlyAddedRef.value}
+									class="h-48 animate-pulse rounded-lg bg-muted/50"
+								></div>
 							{/if}
 
 							{#if TopRatedRow}
 								<TopRatedRow />
 							{:else}
-								<div bind:this={topRatedRef.value} class="h-48 bg-muted/50 rounded-lg animate-pulse"></div>
+								<div
+									bind:this={topRatedRef.value}
+									class="h-48 animate-pulse rounded-lg bg-muted/50"
+								></div>
 							{/if}
 
 							{#if trendingMovies.length === 0 && collections.length === 0 && genres.length === 0}
