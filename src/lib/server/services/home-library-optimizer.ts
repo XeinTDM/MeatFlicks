@@ -145,15 +145,23 @@ const ingestMedia = async (tmdbIds: number[], options: IngestOptions) => {
 
 	for (let i = 0; i < tmdbIds.length; i += BATCH_SIZE) {
 		const batchIds = tmdbIds.slice(i, i + BATCH_SIZE);
-		const currentBatchPayloads: any[] = [];
 
-		const fetchPromises = batchIds.map(async (tmdbId) => {
+		const { db } = await import('$lib/server/db');
+		const { movies } = await import('$lib/server/db/schema');
+		const { inArray, and, eq } = await import('drizzle-orm');
+
+		const existingMovies = await db
+			.select({ tmdbId: movies.tmdbId })
+			.from(movies)
+			.where(and(inArray(movies.tmdbId, batchIds), eq(movies.mediaType, mediaType)));
+
+		const existingTmdbIds = new Set(existingMovies.map((m) => m.tmdbId));
+		const idsToFetch = batchIds.filter((id) => !existingTmdbIds.has(id));
+
+		if (idsToFetch.length === 0) continue;
+
+		const fetchPromises = idsToFetch.map(async (tmdbId) => {
 			try {
-				const existing = await loadMovieByTmdb(tmdbId);
-				if (existing && existing.mediaType === mediaType) {
-					return null;
-				}
-
 				const tmdbMediaType = options.tmdbMediaType ?? (mediaType === 'anime' ? 'tv' : mediaType);
 
 				let details;

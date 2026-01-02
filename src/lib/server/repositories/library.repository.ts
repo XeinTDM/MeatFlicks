@@ -54,6 +54,20 @@ export const libraryRepository = {
 		}
 	},
 
+	async findMoviesByIds(ids: string[]): Promise<MovieSummary[]> {
+		if (ids.length === 0) return [];
+		try {
+			const rows = await db
+				.select()
+				.from(movies)
+				.where(inArray(movies.id, ids));
+			return await mapRowsToSummaries(rows as MovieRow[]);
+		} catch (error) {
+			console.error('Error fetching movies by ids:', error);
+			throw new Error('Failed to fetch movies by ids');
+		}
+	},
+
 	async listCollections(): Promise<CollectionRecord[]> {
 		const cacheKey = buildCacheKey('collections', 'all');
 
@@ -82,29 +96,40 @@ export const libraryRepository = {
 				cacheKey,
 				CACHE_TTL_LONG_SECONDS,
 				async () => {
-					const collectionResults = await db
-						.select()
+					const query = db
+						.select({
+							collection: collections,
+							movie: movies
+						})
 						.from(collections)
+						.leftJoin(movies, eq(movies.collectionId, collections.id))
 						.where(eq(collections.slug, collectionSlug))
-						.limit(1);
-					const collection = collectionResults[0];
-					if (!collection) {
-						return null;
-					}
-
-					let query = db
-						.select()
-						.from(movies)
-						.where(eq(movies.collectionId, collection.id))
 						.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 						.offset(skip);
 
 					if (take !== undefined) {
-						query = query.limit(take) as any;
+						query.limit(take);
 					}
 
 					const rows = await query;
-					return { ...collection, movies: await mapRowsToSummaries(rows as MovieRow[]) };
+
+					if (rows.length === 0) {
+						const collectionCheck = await db
+							.select()
+							.from(collections)
+							.where(eq(collections.slug, collectionSlug))
+							.limit(1);
+						if (collectionCheck.length === 0) return null;
+						return { ...collectionCheck[0], movies: [] };
+					}
+
+					const collection = rows[0].collection;
+					const movieRows = rows.map((r) => r.movie).filter(Boolean) as MovieRow[];
+
+					return {
+						...collection,
+						movies: await mapRowsToSummaries(movieRows)
+					};
 				}
 			);
 		} catch (error) {
@@ -124,25 +149,16 @@ export const libraryRepository = {
 		try {
 			const cacheKey = buildCacheKey('movies', 'collection', collectionSlug, take, skip);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const collectionResults = await db
-					.select({ id: collections.id })
-					.from(collections)
-					.where(eq(collections.slug, collectionSlug))
-					.limit(1);
-				const collection = collectionResults[0];
-				if (!collection) {
-					return [];
-				}
-
 				const rows = await db
-					.select()
+					.select({ movies })
 					.from(movies)
-					.where(eq(movies.collectionId, collection.id))
+					.innerJoin(collections, eq(movies.collectionId, collections.id))
+					.where(eq(collections.slug, collectionSlug))
 					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 					.limit(take)
 					.offset(skip);
 
-				return await mapRowsToSummaries(rows as MovieRow[]);
+				return await mapRowsToSummaries(rows.map((r) => r.movies) as MovieRow[]);
 			});
 		} catch (error) {
 			console.error('Error fetching movies for collection ' + collectionSlug + ':', error);
@@ -224,6 +240,76 @@ export const libraryRepository = {
 	},
 
 	/**
+	 * Internal helper to build filters for movies
+	 */
+	applyFilters(
+		query: any,
+		conditions: any[],
+		filters: MovieFilters,
+		mediaType: 'movie' | 'tv' = 'movie',
+		include_anime: 'include' | 'exclude' | 'only' = 'include'
+	) {
+		let mediaTypeCondition;
+		if (include_anime === 'only') {
+			mediaTypeCondition = eq(movies.mediaType, 'anime');
+		} else if (include_anime === 'exclude') {
+			mediaTypeCondition = eq(movies.mediaType, mediaType);
+		} else {
+			mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
+		}
+		conditions.push(mediaTypeCondition);
+
+		if (filters.yearFrom) {
+			conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
+		}
+		if (filters.yearTo) {
+			conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
+		}
+
+		if (filters.minRating !== undefined) {
+			conditions.push(gte(movies.rating, filters.minRating));
+		}
+		if (filters.maxRating !== undefined) {
+			conditions.push(lte(movies.rating, filters.maxRating));
+		}
+
+		if (filters.runtimeMin !== undefined) {
+			conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
+		}
+		if (filters.runtimeMax !== undefined) {
+			conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
+		}
+
+		if (filters.language) {
+			conditions.push(eq(movies.language, filters.language));
+		}
+
+		if (filters.genres && filters.genres.length > 0) {
+			const genreMode = filters.genreMode || 'OR';
+
+			if (genreMode === 'AND') {
+				const genreCount = filters.genres.length;
+				query = query
+					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
+					.innerJoin(genres, eq(genres.id, moviesGenres.genreId));
+
+				conditions.push(inArray(genres.name, filters.genres));
+				query = (query as any)
+					.groupBy(movies.numericId)
+					.having(sql`count(DISTINCT ${moviesGenres.genreId}) = ${genreCount}`);
+			} else {
+				query = query
+					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
+					.innerJoin(genres, eq(genres.id, moviesGenres.genreId));
+
+				conditions.push(inArray(genres.name, filters.genres));
+			}
+		}
+
+		return query.where(and(...conditions));
+	},
+
+	/**
 	 * Find movies with advanced filters, sorting, and pagination
 	 */
 	async findMoviesWithFilters(
@@ -235,80 +321,18 @@ export const libraryRepository = {
 	): Promise<PaginatedResult<MovieSummary>> {
 		try {
 			const offset = calculateOffset(pagination.page, pagination.pageSize);
-			let mediaTypeCondition;
-			if (include_anime === 'only') {
-				mediaTypeCondition = eq(movies.mediaType, 'anime');
-			} else if (include_anime === 'exclude') {
-				mediaTypeCondition = eq(movies.mediaType, mediaType);
-			} else {
-				mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
-			}
-			const conditions: any[] = [mediaTypeCondition];
-
-			if (filters.yearFrom) {
-				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
-			}
-			if (filters.yearTo) {
-				conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
-			}
-
-			if (filters.minRating !== undefined) {
-				conditions.push(gte(movies.rating, filters.minRating));
-			}
-			if (filters.maxRating !== undefined) {
-				conditions.push(lte(movies.rating, filters.maxRating));
-			}
-
-			if (filters.runtimeMin !== undefined) {
-				conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
-			}
-			if (filters.runtimeMax !== undefined) {
-				conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
-			}
-
-			if (filters.language) {
-				conditions.push(eq(movies.language, filters.language));
-			}
 
 			let query = db.select({ movies }).from(movies);
+			const conditions: any[] = [];
 
-			if (filters.genres && filters.genres.length > 0) {
-				const genreMode = filters.genreMode || 'OR';
-
-				if (genreMode === 'AND') {
-					for (const genreName of filters.genres) {
-						query = query.innerJoin(
-							moviesGenres,
-							and(
-								eq(moviesGenres.movieId, movies.id),
-								eq(
-									moviesGenres.genreId,
-									sql`(SELECT id FROM ${genres} WHERE name = ${genreName} LIMIT 1)`
-								)
-							)
-						) as any;
-					}
-				} else {
-					query = query
-						.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
-						.innerJoin(genres, eq(genres.id, moviesGenres.genreId)) as any;
-
-					conditions.push(inArray(genres.name, filters.genres));
-				}
-			}
-
-			if (conditions.length > 0) {
-				query = query.where(and(...conditions)) as any;
-			}
+			query = this.applyFilters(query, conditions, filters, mediaType, include_anime);
 
 			const orderByClause = this.buildOrderByClause(sort);
-			query = query.orderBy(...orderByClause) as any;
+			query = (query as any).orderBy(...orderByClause);
 
 			const totalItems = await this.countMoviesWithFilters(filters, mediaType, include_anime);
 
-			query = query.limit(pagination.pageSize).offset(offset) as any;
-
-			const rows = await query;
+			const rows = await query.limit(pagination.pageSize).offset(offset);
 			const movieRows = rows.map((r: any) => r.movies);
 			const items = await mapRowsToSummaries(movieRows as MovieRow[]);
 
@@ -328,67 +352,16 @@ export const libraryRepository = {
 		}
 	},
 
-	/**
-	 * Count movies matching filters (for pagination)
-	 */
 	async countMoviesWithFilters(
 		filters: MovieFilters,
 		mediaType: 'movie' | 'tv' = 'movie',
 		include_anime: 'include' | 'exclude' | 'only' = 'include'
 	): Promise<number> {
 		try {
-			let mediaTypeCondition;
-			if (include_anime === 'only') {
-				mediaTypeCondition = eq(movies.mediaType, 'anime');
-			} else if (include_anime === 'exclude') {
-				mediaTypeCondition = eq(movies.mediaType, mediaType);
-			} else {
-				mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
-			}
-			const conditions: any[] = [mediaTypeCondition];
-
-			if (filters.yearFrom) {
-				conditions.push(gte(movies.releaseDate, `${filters.yearFrom}-01-01`));
-			}
-			if (filters.yearTo) {
-				conditions.push(lte(movies.releaseDate, `${filters.yearTo}-12-31`));
-			}
-
-			if (filters.minRating !== undefined) {
-				conditions.push(gte(movies.rating, filters.minRating));
-			}
-			if (filters.maxRating !== undefined) {
-				conditions.push(lte(movies.rating, filters.maxRating));
-			}
-
-			if (filters.runtimeMin !== undefined) {
-				conditions.push(gte(movies.durationMinutes, filters.runtimeMin));
-			}
-			if (filters.runtimeMax !== undefined) {
-				conditions.push(lte(movies.durationMinutes, filters.runtimeMax));
-			}
-
-			if (filters.language) {
-				conditions.push(eq(movies.language, filters.language));
-			}
-
 			let countQuery = db.select({ count: sql<number>`count(DISTINCT ${movies.id})` }).from(movies);
+			const conditions: any[] = [];
 
-			if (filters.genres && filters.genres.length > 0) {
-				const genreMode = filters.genreMode || 'OR';
-
-				if (genreMode === 'OR') {
-					countQuery = countQuery
-						.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
-						.innerJoin(genres, eq(genres.id, moviesGenres.genreId)) as any;
-
-					conditions.push(inArray(genres.name, filters.genres));
-				}
-			}
-
-			if (conditions.length > 0) {
-				countQuery = countQuery.where(and(...conditions)) as any;
-			}
+			countQuery = this.applyFilters(countQuery, conditions, filters, mediaType, include_anime);
 
 			const result = await countQuery;
 			return result[0]?.count || 0;
@@ -398,9 +371,6 @@ export const libraryRepository = {
 		}
 	},
 
-	/**
-	 * Build ORDER BY clause based on sort options
-	 */
 	buildOrderByClause(sort: SortOptions): any[] {
 		const orderFn = sort.order === 'asc' ? asc : desc;
 

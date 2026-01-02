@@ -279,65 +279,65 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 	});
 }
 
-async function performSearchQuery(
-	options: Omit<SearchOptions, 'offset'> & { offset: number }
-): Promise<MovieSummary[]> {
+function buildSearchWhereClauses(options: SearchOptions) {
 	const {
 		query,
-		limit,
-		offset,
 		genres = [],
 		minRating,
 		maxRating,
 		minYear,
 		maxYear,
-		sortBy,
-		sortOrder,
-		includeAdult
+		includeAdult = false
 	} = options;
 
-	try {
-		const whereClauses = [];
-		const params = [];
-		const ftsQuery = query ? createFuzzySearchQuery(query) : null;
+	const whereClauses: string[] = [];
+	const ftsQuery = query ? createFuzzySearchQuery(query) : null;
 
-		if (ftsQuery) {
-			whereClauses.push(`m.numericId IN (
-				SELECT rowid FROM movie_fts WHERE movie_fts MATCH ${ftsQuery}
+	if (ftsQuery) {
+		whereClauses.push(`m.numericId IN (
+				SELECT rowid FROM movie_fts WHERE movie_fts MATCH ${JSON.stringify(ftsQuery)}
 			)`);
-		}
+	}
 
-		if (genres.length > 0) {
-			whereClauses.push(`m.id IN (
+	if (genres.length > 0) {
+		whereClauses.push(`m.id IN (
 				SELECT movieId FROM movies_genres WHERE genreId IN (${genres.join(',')})
 			)`);
-		}
+	}
 
-		if (minRating !== undefined) {
-			whereClauses.push('m.rating >= ?');
-			params.push(minRating);
-		}
+	if (minRating !== undefined) {
+		whereClauses.push(`m.rating >= ${minRating}`);
+	}
 
-		if (maxRating !== undefined) {
-			whereClauses.push('m.rating <= ?');
-			params.push(maxRating);
-		}
+	if (maxRating !== undefined) {
+		whereClauses.push(`m.rating <= ${maxRating}`);
+	}
 
-		if (minYear !== undefined) {
-			whereClauses.push('strftime("%Y", m.releaseDate) >= ?');
-			params.push(minYear.toString());
-		}
+	if (minYear !== undefined) {
+		whereClauses.push(`strftime("%Y", m.releaseDate) >= ${JSON.stringify(minYear.toString())}`);
+	}
 
-		if (maxYear !== undefined) {
-			whereClauses.push('strftime("%Y", m.releaseDate) <= ?');
-			params.push(maxYear.toString());
-		}
+	if (maxYear !== undefined) {
+		whereClauses.push(`strftime("%Y", m.releaseDate) <= ${JSON.stringify(maxYear.toString())}`);
+	}
 
-		if (!includeAdult) {
-			whereClauses.push('m.is4K = 0');
-		}
+	if (!includeAdult) {
+		whereClauses.push('m.is4K = 0');
+	}
 
-		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+	return {
+		whereClause: whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '',
+		ftsQuery
+	};
+}
+
+async function performSearchQuery(
+	options: Omit<SearchOptions, 'offset'> & { offset: number }
+): Promise<MovieSummary[]> {
+	const { limit, offset, sortBy, sortOrder, query } = options;
+
+	try {
+		const { whereClause, ftsQuery } = buildSearchWhereClauses(options);
 
 		let orderByClause = '';
 		switch (sortBy) {
@@ -372,17 +372,17 @@ async function performSearchQuery(
 			searchSql = sql`
 					SELECT m.*
 					FROM movie_fts mf
-					JOIN movies m ON m.numericId = mf.rowid AND ${whereClause.replace('m.', '')}
+					JOIN movies m ON m.numericId = mf.rowid AND ${sql.raw(whereClause.replace('m.', ''))}
 					WHERE mf MATCH ${ftsQuery}
-					${orderByClause.replace('m.', '').replace('ORDER BY', 'ORDER BY mf.rank,')}
+					${sql.raw(orderByClause.replace('m.', '').replace('ORDER BY', 'ORDER BY mf.rank,'))}
 					LIMIT ${limit} OFFSET ${offset}
 				`;
 		} else {
 			searchSql = sql`
 					SELECT m.*
 					FROM movies m
-					${whereClause}
-					${orderByClause}
+					${sql.raw(whereClause)}
+					${sql.raw(orderByClause)}
 					LIMIT ${limit} OFFSET ${offset}
 				`;
 		}
@@ -398,57 +398,13 @@ async function performSearchQuery(
 async function getTotalCount(
 	options: Omit<SearchOptions, 'limit' | 'offset' | 'sortBy' | 'sortOrder'>
 ): Promise<number> {
-	const { query, genres = [], minRating, maxRating, minYear, maxYear, includeAdult } = options;
-
 	try {
-		const whereClauses = [];
-		const params = [];
-
-		if (query) {
-			const ftsQuery = createFuzzySearchQuery(query);
-			if (ftsQuery) {
-				whereClauses.push(`m.numericId IN (
-					SELECT rowid FROM movie_fts WHERE movie_fts MATCH ${ftsQuery}
-				)`);
-			}
-		}
-
-		if (genres.length > 0) {
-			whereClauses.push(`m.id IN (
-				SELECT movieId FROM movies_genres WHERE genreId IN (${genres.join(',')})
-			)`);
-		}
-
-		if (minRating !== undefined) {
-			whereClauses.push('m.rating >= ?');
-			params.push(minRating);
-		}
-
-		if (maxRating !== undefined) {
-			whereClauses.push('m.rating <= ?');
-			params.push(maxRating);
-		}
-
-		if (minYear !== undefined) {
-			whereClauses.push('strftime("%Y", m.releaseDate) >= ?');
-			params.push(minYear.toString());
-		}
-
-		if (maxYear !== undefined) {
-			whereClauses.push('strftime("%Y", m.releaseDate) <= ?');
-			params.push(maxYear.toString());
-		}
-
-		if (!includeAdult) {
-			whereClauses.push('m.is4K = 0');
-		}
-
-		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+		const { whereClause } = buildSearchWhereClauses(options);
 
 		const countSql = sql`
 			SELECT COUNT(*) as count
 			FROM movies m
-			${whereClause}
+			${sql.raw(whereClause)}
 		`;
 
 		const result = (await db.all(countSql)) as any[];
@@ -570,42 +526,21 @@ export async function getPersonalizedRecommendations(
 	limit: number = 10
 ): Promise<MovieSummary[]> {
 	try {
-		const [watchHistory, watchlist] = await Promise.all([
-			db.all(sql`
-				SELECT movieData
-				FROM watch_history
-				WHERE userId = ${userId}
-				ORDER BY watchedAt DESC
-				LIMIT 20
-			`),
-			db.all(sql`
-				SELECT movieData
-				FROM watchlist
-				WHERE userId = ${userId}
-				LIMIT 20
-			`)
-		]);
+		const genrePrefResults = await db.all(sql`
+			WITH CombinedHistory AS (
+				SELECT movie_id FROM watch_history WHERE userId = ${userId}
+				UNION ALL
+				SELECT movie_id FROM watchlist WHERE userId = ${userId}
+			)
+			SELECT mg.genreId, COUNT(*) as count
+			FROM CombinedHistory ch
+			JOIN movies_genres mg ON ch.movie_id = mg.movieId
+			GROUP BY mg.genreId
+			ORDER BY count DESC
+			LIMIT 3
+		`);
 
-		const allMovies = [...watchHistory, ...watchlist];
-		const genrePreferences: Record<number, number> = {};
-
-		for (const item of allMovies) {
-			try {
-				const movieData = JSON.parse((item as any).movieData as string);
-				if (movieData.genres) {
-					for (const genre of movieData.genres) {
-						genrePreferences[genre.id] = (genrePreferences[genre.id] || 0) + 1;
-					}
-				}
-			} catch {
-				// Ignore
-			}
-		}
-
-		const preferredGenreIds = Object.entries(genrePreferences)
-			.sort((a, b) => b[1] - a[1])
-			.slice(0, 3)
-			.map(([id]) => parseInt(id));
+		const preferredGenreIds = genrePrefResults.map((r: any) => r.genreId as number);
 
 		if (preferredGenreIds.length === 0) {
 			const popularMovies = (await db.all(sql`

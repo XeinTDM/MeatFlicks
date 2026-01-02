@@ -3,7 +3,6 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
-
 	import {
 		playbackStore,
 		shouldShowInContinueWatching,
@@ -12,6 +11,10 @@
 
 	let continueWatchingMovies = $state<LibraryMovie[]>([]);
 	let isLoading = $state(true);
+
+	function getMediaKey(id: string | number, season?: number, episode?: number) {
+		return `${id}-${season ?? 0}-${episode ?? 0}`;
+	}
 
 	onMount(async () => {
 		const localProgress = playbackStore.getContinueWatching();
@@ -23,92 +26,67 @@
 		}
 
 		try {
-			const response = await fetch('/api/playback/progress', {
+			const progressRes = await fetch('/api/playback/progress', { credentials: 'include' });
+			if (!progressRes.ok) throw new Error(progressRes.statusText);
+
+			const { continueWatching } = await progressRes.json();
+			if (!Array.isArray(continueWatching) || continueWatching.length === 0) {
+				isLoading = false;
+				return;
+			}
+
+			const movieIds = [...new Set(continueWatching.map((p: any) => p.mediaId))];
+			const moviesRes = await fetch(`/api/movies/batch?ids=${movieIds.join(',')}`, {
 				credentials: 'include'
 			});
-			if (response.ok) {
-				const data = await response.json();
-				if (data.continueWatching && Array.isArray(data.continueWatching)) {
-					const moviePromises = data.continueWatching.map(
-						async (progress: {
-							mediaId: string;
-							progress: number;
-							duration: number;
-							seasonNumber: number;
-							episodeNumber: number;
-						}) => {
-							try {
-								const movieResponse = await fetch(`/api/movies/${progress.mediaId}`, {
-									credentials: 'include'
-								});
-								if (movieResponse.ok) {
-									const movieData = await movieResponse.json();
-									return {
-										...movieData.movie,
-										progressPercent: (progress.progress / progress.duration) * 100,
-										progressSeconds: progress.progress,
-										durationSeconds: progress.duration,
-										seasonNumber: progress.seasonNumber,
-										episodeNumber: progress.episodeNumber
-									};
-								}
-							} catch (error) {
-								console.error(`Failed to fetch movie ${progress.mediaId}:`, error);
-							}
-							return null;
-						}
-					);
+			if (!moviesRes.ok) throw new Error(moviesRes.statusText);
 
-					const serverMovies = (await Promise.all(moviePromises)).filter(
-						(m) => m !== null
-					) as LibraryMovie[];
+			const { movies: fetchedMovies } = await moviesRes.json();
+			const movieLookup = new Map(fetchedMovies.map((m: any) => [m.id, m]));
 
-					const dedupedServerMovies = serverMovies.filter(
-						(movie, index, self) =>
-							index ===
-							self.findIndex(
-								(m) =>
-									m.id === movie.id &&
-									(m as any).seasonNumber === (movie as any).seasonNumber &&
-									(m as any).episodeNumber === (movie as any).episodeNumber
-							)
-					);
+			const serverMovies = continueWatching
+				.map((p: any) => {
+					const movie = movieLookup.get(p.mediaId);
+					if (!movie) return null;
+					return {
+						...movie,
+						progressPercent: (p.progress / p.duration) * 100,
+						progressSeconds: p.progress,
+						durationSeconds: p.duration,
+						seasonNumber: p.seasonNumber,
+						episodeNumber: p.episodeNumber
+					};
+				})
+				.filter(Boolean) as unknown as LibraryMovie[];
 
-					const combined = [...dedupedServerMovies];
-					localProgress.forEach((local) => {
-						const exists = combined.some(
-							(s) =>
-								s.id === local.id &&
-								(s as any).seasonNumber === (local as any).seasonNumber &&
-								(s as any).episodeNumber === (local as any).episodeNumber
-						);
-						if (!exists) {
-							combined.push(local);
-						}
-					});
+			const combinedMap = new Map<string, LibraryMovie>();
 
-					continueWatchingMovies = combined.filter((m) => {
-						const movie = m as LibraryMovie & {
-							progressSeconds?: number;
-							durationSeconds?: number;
-						};
-						const progress: PlaybackProgress = {
-							mediaId: movie.id.toString(),
-							mediaType: (movie.mediaType as 'movie' | 'tv' | 'anime') || 'movie',
-							progress: movie.progressSeconds || 0,
-							duration: movie.durationSeconds || 0,
-							updatedAt: 0
-						};
-						return shouldShowInContinueWatching(progress);
-					});
-				}
-			} else if (response.status === 401) {
-				// Ignore
-			} else {
-				console.error('Failed to fetch continue watching:', response.statusText);
-			}
+			localProgress.forEach((m) => {
+				const key = getMediaKey(m.id, (m as any).seasonNumber, (m as any).episodeNumber);
+				combinedMap.set(key, m);
+			});
+
+			serverMovies.forEach((m) => {
+				const key = getMediaKey(m.id, (m as any).seasonNumber, (m as any).episodeNumber);
+				combinedMap.set(key, m);
+			});
+
+			continueWatchingMovies = Array.from(combinedMap.values())
+				.filter((m: any) => {
+					const progress: PlaybackProgress = {
+						mediaId: m.id.toString(),
+						mediaType: (m.mediaType as 'movie' | 'tv' | 'anime') || 'movie',
+						progress: m.progressSeconds || 0,
+						duration: m.durationSeconds || 0,
+						updatedAt: 0
+					};
+					return shouldShowInContinueWatching(progress);
+				})
+				.sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0));
 		} catch (error) {
-			console.error('Failed to fetch continue watching:', error);
+			if ((error as any).status !== 401) {
+				console.error('[ContinueWatchingRow] Failed to fetch:', error);
+			}
 		} finally {
 			isLoading = false;
 		}

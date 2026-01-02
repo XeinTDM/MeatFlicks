@@ -113,25 +113,50 @@ export async function getEnhancedMovies(
 		const movies = await mapRowsToSummaries(movieRows as unknown as MovieRow[]);
 		const totalCount = (total[0] as CountResult)?.count || 0;
 
-		const enhancedMovies = await Promise.all(
-			movies.map(async (movie) => {
-				const enhancedMovie: LibraryMovie = {
-					...movie,
-					trailerUrl: includeTrailers ? movie.trailerUrl : null,
-					imdbId: movie.imdbId,
-					canonicalPath: movie.canonicalPath,
-					addedAt: movie.addedAt,
-					mediaType: movie.mediaType,
-					genres: movie.genres || []
-				};
+		const movieIds = movies.map((m) => m.id);
+		let castMap = new Map<string, CastMember[]>();
 
-				if (includeCast) {
-					enhancedMovie.cast = await getMovieCast(movie.id);
+		if (includeCast && movieIds.length > 0) {
+			const castRows = await db.all(sql`
+				SELECT
+					mp.movieId, p.id, p.name, mp.character, p.profilePath
+				FROM movie_people mp
+				JOIN people p ON mp.personId = p.id
+				WHERE mp.movieId IN (${sql.raw(movieIds.map((id) => `'${id}'`).join(','))}) AND mp.role = 'actor'
+				ORDER BY mp.order ASC
+			`);
+
+			for (const row of castRows as any) {
+				const list = castMap.get(row.movieId) || [];
+				if (list.length < 10) {
+					list.push({
+						id: row.id,
+						name: row.name,
+						character: row.character,
+						profilePath: row.profilePath
+					});
+					castMap.set(row.movieId, list);
 				}
+			}
+		}
 
-				return enhancedMovie;
-			})
-		);
+		const enhancedMovies = movies.map((movie) => {
+			const enhancedMovie: LibraryMovie = {
+				...movie,
+				trailerUrl: includeTrailers ? movie.trailerUrl : null,
+				imdbId: movie.imdbId,
+				canonicalPath: movie.canonicalPath,
+				addedAt: movie.addedAt,
+				mediaType: movie.mediaType,
+				genres: movie.genres || []
+			};
+
+			if (includeCast) {
+				enhancedMovie.cast = castMap.get(movie.id) || [];
+			}
+
+			return enhancedMovie;
+		});
 
 		const [genreFacets, collectionFacets] = await Promise.all([
 			includeGenres ? getGenreFacets() : Promise.resolve([]),

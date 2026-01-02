@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '$lib/server/db';
 import { movies, genres, moviesGenres, collections } from '$lib/server/db/schema';
-import { eq, and, count as drizzleCount } from 'drizzle-orm';
+import { eq, and, count as drizzleCount, inArray } from 'drizzle-orm';
 import type { MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';
 import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
@@ -51,38 +51,55 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 
 	return await db
 		.transaction(async (tx) => {
+			const allGenreNames = Array.from(
+				new Set(payloads.flatMap((p) => p.genreNames.map((n) => n.trim())).filter(Boolean))
+			);
+
+			const existingGenres = await tx
+				.select()
+				.from(genres)
+				.where(inArray(genres.name, allGenreNames));
+
+			const genreMap = new Map(existingGenres.map((g) => [g.name, g.id]));
+
+			const missingGenreNames = allGenreNames.filter((name) => !genreMap.has(name));
+			if (missingGenreNames.length > 0) {
+				const inserted = await tx
+					.insert(genres)
+					.values(missingGenreNames.map((name) => ({ name })))
+					.returning({ id: genres.id, name: genres.name });
+
+				for (const g of inserted) {
+					genreMap.set(g.name, g.id);
+				}
+			}
+
+			const tmdbIds = payloads.map((p) => p.tmdbId);
+			const existingMovies = await tx
+				.select()
+				.from(movies)
+				.where(inArray(movies.tmdbId, tmdbIds));
+
+			const movieMap = new Map();
+			for (const m of existingMovies) {
+				const key = `${m.tmdbId}:${m.mediaType}`;
+				movieMap.set(key, m);
+			}
+
 			const results: MovieRecord[] = [];
+			const movieUpserts: any[] = [];
+			const movieInserts: any[] = [];
+			const genresToAssign: { movieId: string; genreId: number }[] = [];
 
 			for (const payload of payloads) {
-				// Validate movie data before processing
 				validateMovieData(payload);
 
-				const genreIds: number[] = [];
-				for (const rawName of payload.genreNames) {
-					const name = rawName.trim();
-					if (!name) continue;
-
-					const existing = await tx.select().from(genres).where(eq(genres.name, name)).limit(1);
-					if (existing.length > 0) {
-						genreIds.push(existing[0].id);
-						continue;
-					}
-
-					const result = await tx.insert(genres).values({ name }).returning({ id: genres.id });
-					genreIds.push(result[0].id);
-				}
-
 				const mediaType = payload.mediaType || 'movie';
-				const existingMovies = await tx
-					.select()
-					.from(movies)
-					.where(and(eq(movies.tmdbId, payload.tmdbId), eq(movies.mediaType, mediaType)))
-					.limit(1);
-				const existingMovie = existingMovies[0];
+				const key = `${payload.tmdbId}:${mediaType}`;
+				const existingMovie = movieMap.get(key);
 				const movieId = existingMovie?.id ?? randomUUID();
 
-				const movieData = {
-					id: movieId,
+				const movieData: any = {
 					tmdbId: payload.tmdbId,
 					title: payload.title,
 					overview: payload.overview,
@@ -94,27 +111,42 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 					is4K: payload.is4K,
 					isHD: payload.isHD,
 					collectionId: payload.collectionId ?? (existingMovie?.collectionId || null),
-					mediaType: payload.mediaType ?? (existingMovie?.mediaType || 'movie'),
+					mediaType: mediaType,
+					imdbId: payload.imdbId ?? (existingMovie?.imdbId || null),
+					trailerUrl: payload.trailerUrl ?? (existingMovie?.trailerUrl || null),
 					updatedAt: Date.now()
 				};
 
 				if (existingMovie) {
-					const { ...updateData } = movieData;
-					await tx.update(movies).set(updateData).where(eq(movies.tmdbId, payload.tmdbId));
+					await tx.update(movies).set(movieData).where(eq(movies.id, existingMovie.id));
 				} else {
-					await tx.insert(movies).values({ ...movieData, createdAt: Date.now() });
+					movieData.id = movieId;
+					movieData.createdAt = Date.now();
+					await tx.insert(movies).values(movieData);
 				}
 
-				await tx.delete(moviesGenres).where(eq(moviesGenres.movieId, movieId));
-				for (const genreId of genreIds) {
-					await tx.insert(moviesGenres).values({ movieId, genreId }).onConflictDoNothing();
+				const payloadGenreIds = payload.genreNames
+					.map((n) => genreMap.get(n.trim()))
+					.filter((id): id is number => id !== undefined);
+
+				for (const genreId of payloadGenreIds) {
+					genresToAssign.push({ movieId, genreId });
 				}
 
-				const movieClone = {
+				results.push({
 					...movieData,
-					createdAt: existingMovie?.createdAt ?? movieData.updatedAt
-				};
-				results.push(movieClone as unknown as MovieRecord);
+					id: movieId,
+					createdAt: existingMovie?.createdAt ?? movieData.createdAt ?? movieData.updatedAt
+				} as unknown as MovieRecord);
+			}
+
+			const movieIds = results.map((r) => r.id);
+			if (movieIds.length > 0) {
+				await tx.delete(moviesGenres).where(inArray(moviesGenres.movieId, movieIds));
+			}
+
+			if (genresToAssign.length > 0) {
+				await tx.insert(moviesGenres).values(genresToAssign).onConflictDoNothing();
 			}
 
 			return results;

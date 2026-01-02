@@ -137,16 +137,39 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 };
 
 const buildExtrasMap = async (
-	movies: { tmdbId?: number | null | undefined }[]
+	movies: LibraryMovie[]
 ): Promise<Map<number, { imdbId: string | null; trailerUrl: string | null }>> => {
+	const moviesMissingData = movies.filter(
+		(m) => m.tmdbId && (!m.imdbId || !m.trailerUrl)
+	);
+
 	const uniqueIds = Array.from(
-		movies
-			.map((movie) => movie.tmdbId)
-			.filter((id): id is number => typeof id === 'number' && Number.isFinite(id) && id > 0)
-			.reduce<Set<number>>((accumulator, tmdbId) => accumulator.add(tmdbId), new Set<number>())
+		new Set(
+			moviesMissingData
+				.map((movie) => movie.tmdbId)
+				.filter((id): id is number => typeof id === 'number' && id > 0)
+		)
 	);
 
 	const extrasMap = new Map<number, { imdbId: string | null; trailerUrl: string | null }>();
+
+	for (const movie of movies) {
+		if (movie.tmdbId && movie.imdbId && movie.trailerUrl) {
+			extrasMap.set(movie.tmdbId, {
+				imdbId: movie.imdbId,
+				trailerUrl: movie.trailerUrl
+			});
+		}
+	}
+
+	if (uniqueIds.length === 0) {
+		return extrasMap;
+	}
+
+	logger.info(
+		{ count: uniqueIds.length, total: movies.length },
+		'[library][tmdb] Fetching extras for movies missing data'
+	);
 
 	await Promise.all(
 		uniqueIds.map(async (tmdbId) => {
@@ -224,12 +247,14 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 		})
 	);
 
-	const extrasMap = await buildExtrasMap([
+	const allMovies = [
 		...trendingMovies,
 		...trendingTv,
 		...collectionsWithMovies.flatMap((collection) => collection.movies),
 		...genresWithMovies.flatMap((genre) => genre.movies)
-	]);
+	];
+
+	const extrasMap = await buildExtrasMap(allMovies);
 
 	const decorate = (movie: LibraryMovie) => attachIdentifiers(movie, extrasMap);
 
