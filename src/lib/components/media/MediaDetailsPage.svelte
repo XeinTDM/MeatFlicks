@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 	import type { StreamingSource } from '$lib/streaming';
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MovieScrollContainer } from '$lib/components';
 	import type { LibraryMovie } from '$lib/types/library';
-	import { StructuredData, SEOHead } from '$lib/components/seo';
+	import { SEOHead, StructuredData } from '$lib/components/seo';
 	import { StreamingService, type MediaType } from '$lib/streaming/streamingService.svelte';
 	import { PlayerService } from '$lib/components/player/playerService.svelte';
-	import { EpisodeService } from '$lib/components/episodes/episodeService.svelte';
+	import { EpisodeService, type Season } from '$lib/components/episodes/episodeService.svelte';
 	import MediaHeader from '$lib/components/media/MediaHeader.svelte';
 	import EpisodeGrid from '$lib/components/episodes/EpisodeGrid.svelte';
 	import MediaOverview from '$lib/components/media/MediaOverview.svelte';
@@ -44,17 +44,12 @@
 		collectionId?: number | null;
 		seasonCount?: number | null;
 		episodeCount?: number | null;
-		seasons?: {
-			id: number;
-			name: string;
-			seasonNumber: number;
-			episodeCount: number;
-			posterPath: string | null;
-		}[];
+		seasons?: Season[];
 		productionCompanies?: { id: number; name: string; logoPath: string | null }[];
 		productionCountries?: { iso: string; name: string }[];
 		voteCount?: number | null;
 		logoPath?: string | null;
+		malId?: number;
 	};
 
 	type StreamingPayloadLike = {
@@ -86,6 +81,11 @@
 	let activeTab = $state<'suggested' | 'details'>('suggested');
 
 	$effect(() => {
+		playerService.init();
+		return () => playerService.destroy();
+	});
+
+	$effect(() => {
 		if (movie) {
 			streamingService.setCurrentMedia({
 				mediaId: movie.id,
@@ -104,8 +104,6 @@
 						? [...data.streaming.resolutions]
 						: []
 				});
-			} else {
-				console.log('[DEBUG] MediaDetailsPage: No streaming data available');
 			}
 		}
 	});
@@ -116,31 +114,28 @@
 			return;
 		}
 
-		const alreadyResolved =
-			streamingService.state.source?.providerId === streamingService.currentProviderId &&
-			Boolean(streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl);
-
-		if (alreadyResolved) {
+		if (
+			streamingService.isResolved &&
+			streamingService.state.source?.providerId === streamingService.currentProviderId
+		) {
 			return;
 		}
 
 		const savedProgress = playbackStore.getProgress(
 			movie?.id ?? '',
 			mediaType,
-			mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedSeason : undefined,
-			mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedEpisode : undefined
+			mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
+			mediaType !== 'movie' ? episodeService.selectedEpisode : undefined
 		);
 
 		await streamingService.resolveProvider(streamingService.currentProviderId, {
 			tmdbId: Number(movie?.tmdbId),
 			mediaType: mediaType,
 			imdbId: movie?.imdbId ?? undefined,
-			malId: (movie as { malId?: number })?.malId ?? undefined,
+			malId: movie?.malId ?? undefined,
 			subOrDub: mediaType === 'anime' ? subOrDub : undefined,
-			season:
-				mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedSeason : undefined,
-			episode:
-				mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedEpisode : undefined,
+			season: mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
+			episode: mediaType !== 'movie' ? episodeService.selectedEpisode : undefined,
 			preferredQuality: playerService.selectedQuality,
 			preferredSubtitleLanguage: playerService.selectedSubtitle,
 			csrfToken: data.csrfToken,
@@ -173,24 +168,12 @@
 	}
 
 	function goToNextEpisode() {
-		if (!movie?.seasons || (mediaType !== 'tv' && mediaType !== 'anime')) return;
-
-		const currentSeasonData = movie.seasons.find(
-			(s: { seasonNumber: number; episodeCount: number }) =>
-				s.seasonNumber === episodeService.selectedSeason
-		);
-		if (!currentSeasonData) return;
-
-		if (episodeService.selectedEpisode < currentSeasonData.episodeCount) {
-			handleEpisodeSelect(episodeService.selectedEpisode + 1);
-		} else {
-			const nextSeason = movie.seasons.find(
-				(s: { seasonNumber: number }) => s.seasonNumber === episodeService.selectedSeason + 1
-			);
-			if (nextSeason) {
-				episodeService.handleSeasonChange(nextSeason.seasonNumber);
-				handleEpisodeSelect(1);
+		const next = episodeService.getNextEpisode(movie?.seasons);
+		if (next) {
+			if (next.season !== episodeService.selectedSeason) {
+				episodeService.handleSeasonChange(next.season);
 			}
+			handleEpisodeSelect(next.episode);
 		}
 	}
 
@@ -216,11 +199,10 @@
 	}
 
 	$effect(() => {
-		if (!streamingService.currentProviderId && streamingService.state.resolutions.length > 0) {
+		if (!streamingService.currentProviderId && streamingService.hasResolutions) {
 			streamingService.selectProvider(
 				streamingService.state.source?.providerId ??
-					streamingService.state.resolutions.find((r: ProviderResolution) => r.success)
-						?.providerId ??
+					streamingService.state.resolutions.find((r) => r.success)?.providerId ??
 					streamingService.state.resolutions[0]?.providerId ??
 					null
 			);
@@ -230,13 +212,13 @@
 	$effect(() => {
 		if (
 			streamingService.currentProviderId &&
-			streamingService.state.resolutions.length > 0 &&
+			streamingService.hasResolutions &&
 			!streamingService.state.resolutions.some(
-				(r: ProviderResolution) => r.providerId === streamingService.currentProviderId
+				(r) => r.providerId === streamingService.currentProviderId
 			)
 		) {
 			streamingService.selectProvider(
-				streamingService.state.resolutions.find((r: ProviderResolution) => r.success)?.providerId ??
+				streamingService.state.resolutions.find((r) => r.success)?.providerId ??
 					streamingService.state.resolutions[0]?.providerId ??
 					null
 			);
@@ -250,116 +232,59 @@
 	});
 
 	$effect(() => {
-		const displayPlayer = Boolean(
-			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl
-		);
-		if (displayPlayer && movie) {
-			playerService.startProgressTracking(
-				movie.id,
-				mediaType,
-				movie.durationMinutes,
-				mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedSeason : null,
-				mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedEpisode : null,
-				async (progress) => {
-					if (!movie) return;
+		if (streamingService.isResolved && movie) {
+			playerService.startProgressTracking(movie.durationMinutes, async (progress) => {
+				if (!movie) return;
 
-					playbackStore.saveProgress({
-						mediaId: movie.id,
-						mediaType,
-						progress,
-						duration: movie.durationMinutes ? movie.durationMinutes * 60 : 0,
-						seasonNumber:
-							mediaType === 'tv' || mediaType === 'anime'
-								? episodeService.selectedSeason
-								: undefined,
-						episodeNumber:
-							mediaType === 'tv' || mediaType === 'anime'
-								? episodeService.selectedEpisode
-								: undefined,
-						updatedAt: Date.now(),
-						movieData: {
-							...movie,
-							mediaType
-						} as LibraryMovie
-					});
+				playbackStore.saveProgress({
+					mediaId: movie.id,
+					mediaType,
+					progress,
+					duration: movie.durationMinutes ? movie.durationMinutes * 60 : 0,
+					seasonNumber: mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
+					episodeNumber: mediaType !== 'movie' ? episodeService.selectedEpisode : undefined,
+					updatedAt: Date.now(),
+					movieData: { ...movie, mediaType } as LibraryMovie
+				});
 
-					try {
-						const duration = movie.durationMinutes ? movie.durationMinutes * 60 : 0;
-						if (duration > 0 && $page.data.user) {
-							const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-							if (data.csrfToken) {
-								headers['X-CSRF-Token'] = data.csrfToken;
-							}
+				try {
+					const duration = movie.durationMinutes ? movie.durationMinutes * 60 : 0;
+					if (duration > 0 && page.data.user) {
+						const response = await fetch('/api/playback/progress', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								...(data.csrfToken ? { 'X-CSRF-Token': data.csrfToken } : {})
+							},
+							body: JSON.stringify({
+								mediaId: movie.id,
+								mediaType,
+								progress,
+								duration,
+								seasonNumber: mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
+								episodeNumber: mediaType !== 'movie' ? episodeService.selectedEpisode : undefined
+							}),
+							credentials: 'include'
+						});
 
-							const response = await fetch('/api/playback/progress', {
-								method: 'POST',
-								headers,
-								body: JSON.stringify({
-									mediaId: movie.id,
-									mediaType,
-									progress: progress,
-									duration,
-									seasonNumber:
-										mediaType === 'tv' || mediaType === 'anime'
-											? episodeService.selectedSeason
-											: undefined,
-									episodeNumber:
-										mediaType === 'tv' || mediaType === 'anime'
-											? episodeService.selectedEpisode
-											: undefined
-								}),
-								credentials: 'include'
-							});
-
-							if (!response.ok) {
-								if (response.status === 401 || response.status === 403) {
-									return;
-								}
-								console.error(
-									`Failed to save playback progress: ${response.status} ${response.statusText}`
-								);
-							}
+						if (!response.ok && response.status !== 401 && response.status !== 403) {
+							console.error(`Failed to save progress: ${response.status}`);
 						}
-					} catch (error) {
-						console.error('Failed to save playback progress:', error);
 					}
+				} catch (error) {
+					console.error('Failed to save playback progress:', error);
 				}
-			);
+			});
 		} else {
 			playerService.stopProgressTracking();
 		}
 	});
 
 	$effect(() => {
-		const displayPlayer = Boolean(
-			streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl
-		);
-		if (displayPlayer && movie?.durationMinutes && (mediaType === 'tv' || mediaType === 'anime')) {
+		if (streamingService.isResolved && movie?.durationMinutes && mediaType !== 'movie') {
 			playerService.setupAutoPlayTimer(movie.durationMinutes, goToNextEpisode);
 		} else {
 			playerService.cancelAutoPlay();
-		}
-	});
-
-	$effect(() => {
-		function handleMessage(event: MessageEvent) {
-			if (!event.origin.includes(window.location.hostname) && event.origin !== 'null') {
-				return;
-			}
-
-			const data = event.data;
-			if (data && typeof data === 'object') {
-				if (data.type === 'progressUpdate' && typeof data.progress === 'number') {
-					playerService.currentProgress = data.progress;
-				}
-			}
-		}
-
-		if (typeof window !== 'undefined') {
-			window.addEventListener('message', handleMessage);
-			return () => {
-				window.removeEventListener('message', handleMessage);
-			};
 		}
 	});
 
@@ -373,21 +298,17 @@
 				return;
 			}
 
-			const displayPlayer = Boolean(
-				streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl
-			);
-
 			switch (event.key.toLowerCase()) {
 				case 'n':
-					if (displayPlayer && (mediaType === 'tv' || mediaType === 'anime')) {
+					if (streamingService.isResolved && mediaType !== 'movie') {
 						event.preventDefault();
 						goToNextEpisode();
 					}
 					break;
 				case 'p':
 					if (
-						displayPlayer &&
-						(mediaType === 'tv' || mediaType === 'anime') &&
+						streamingService.isResolved &&
+						mediaType !== 'movie' &&
 						episodeService.selectedEpisode > 1
 					) {
 						event.preventDefault();
@@ -396,19 +317,19 @@
 					break;
 				case 'arrowright':
 				case 'arrowleft':
-					if (displayPlayer) {
+					if (streamingService.isResolved) {
 						event.preventDefault();
 					}
 					break;
 				case '+':
 				case '=':
-					if (displayPlayer) {
+					if (streamingService.isResolved) {
 						event.preventDefault();
 						playerService.handlePlaybackSpeedChange(playerService.playbackSpeed + 0.25);
 					}
 					break;
 				case '-':
-					if (displayPlayer) {
+					if (streamingService.isResolved) {
 						event.preventDefault();
 						playerService.handlePlaybackSpeedChange(playerService.playbackSpeed - 0.25);
 					}
@@ -417,40 +338,14 @@
 		}
 
 		window.addEventListener('keydown', handleKeyDown);
-		return () => {
-			window.removeEventListener('keydown', handleKeyDown);
-		};
+		return () => window.removeEventListener('keydown', handleKeyDown);
 	});
 
 	$effect(() => {
 		if (typeof window !== 'undefined' && movie?.id) {
-			const normalizedGenres =
-				movie.genres?.map((genre: MediaGenre) =>
-					'name' in genre ? String(genre.name) : String(genre)
-				) ?? [];
+			const normalizedGenres = movie.genres?.map((g: MediaGenre) => g.name || String(g)) ?? [];
 
-			type WatchPayload = {
-				id: string;
-				title: string;
-				posterPath: string | null;
-				backdropPath: string | null;
-				overview: string | null;
-				releaseDate: string | null;
-				rating: number;
-				genres: string[];
-				trailerUrl: string | null;
-				media_type: MediaType;
-				is4K: boolean;
-				isHD: boolean | undefined;
-				tmdbId: number | undefined;
-				imdbId: string | undefined;
-				durationMinutes: number | null;
-				collectionId: number | null;
-				season?: number;
-				episode?: number;
-			};
-
-			const watchPayload: WatchPayload = {
+			watchHistory.recordWatch({
 				id: movie.id,
 				title: movie.title,
 				posterPath: movie.posterPath ?? null,
@@ -466,20 +361,19 @@
 				tmdbId: movie.tmdbId ?? undefined,
 				imdbId: movie.imdbId ?? undefined,
 				durationMinutes: movie.durationMinutes ?? null,
-				collectionId: movie.collectionId ?? null
-			};
-
-			if (mediaType === 'tv' || mediaType === 'anime') {
-				watchPayload.season = episodeService.selectedSeason;
-				watchPayload.episode = episodeService.selectedEpisode;
-			}
-
-			watchHistory.recordWatch(watchPayload);
+				collectionId: movie.collectionId ?? null,
+				...(mediaType !== 'movie'
+					? {
+							season: episodeService.selectedSeason,
+							episode: episodeService.selectedEpisode
+						}
+					: {})
+			});
 		}
 	});
 
 	$effect(() => {
-		if ((mediaType === 'tv' || mediaType === 'anime') && movie?.tmdbId) {
+		if (mediaType !== 'movie' && movie?.tmdbId) {
 			episodeService.fetchEpisodes(movie.tmdbId, episodeService.selectedSeason);
 		}
 	});

@@ -1,4 +1,4 @@
-import type { MediaType } from '$lib/streaming/streamingService.svelte';
+import type { MediaType } from '$lib/streaming/types';
 
 export type Episode = {
 	id: number;
@@ -7,6 +7,14 @@ export type Episode = {
 	seasonNumber: number;
 	stillPath: string | null;
 	runtime?: number | null;
+};
+
+export type Season = {
+	id: number;
+	name: string;
+	seasonNumber: number;
+	episodeCount: number;
+	posterPath: string | null;
 };
 
 export class EpisodeService {
@@ -44,18 +52,7 @@ export class EpisodeService {
 		this.selectedEpisode = episodeNumber;
 	};
 
-	getNextEpisodeLabel = (
-		seasons:
-			| {
-					id: number;
-					name: string;
-					seasonNumber: number;
-					episodeCount: number;
-					posterPath: string | null;
-			  }[]
-			| undefined,
-		mediaType: MediaType
-	) => {
+	getNextEpisodeLabel = (seasons: Season[] | undefined, mediaType: MediaType) => {
 		if (!seasons || mediaType !== 'tv') return 'Next Episode';
 
 		const currentSeasonData = seasons.find((s) => s.seasonNumber === this.selectedSeason);
@@ -70,5 +67,22 @@ export class EpisodeService {
 			}
 		}
 		return 'Next Episode';
+	};
+
+	getNextEpisode = (seasons: Season[] | undefined): { season: number; episode: number } | null => {
+		if (!seasons) return null;
+
+		const currentSeasonData = seasons.find((s) => s.seasonNumber === this.selectedSeason);
+		if (!currentSeasonData) return null;
+
+		if (this.selectedEpisode < currentSeasonData.episodeCount) {
+			return { season: this.selectedSeason, episode: this.selectedEpisode + 1 };
+		} else {
+			const nextSeason = seasons.find((s) => s.seasonNumber === this.selectedSeason + 1);
+			if (nextSeason) {
+				return { season: nextSeason.seasonNumber, episode: 1 };
+			}
+		}
+		return null;
 	};
 }

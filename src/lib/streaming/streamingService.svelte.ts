@@ -43,6 +43,12 @@ export class StreamingService {
 		episodeInfo: {}
 	});
 
+	isResolved = $derived(
+		Boolean(this.state.source?.embedUrl ?? this.state.source?.streamUrl)
+	);
+
+	hasResolutions = $derived(this.state.resolutions.length > 0);
+
 	resolveProvider = async (
 		providerId: string,
 		options: {
@@ -170,14 +176,12 @@ export class StreamingService {
 	};
 
 	reset = () => {
-		this.state = {
-			source: null,
-			resolutions: [],
-			qualities: [],
-			subtitles: [],
-			isResolving: false,
-			error: null
-		};
+		this.state.source = null;
+		this.state.resolutions = [];
+		this.state.qualities = [];
+		this.state.subtitles = [];
+		this.state.isResolving = false;
+		this.state.error = null;
 		this.currentProviderId = null;
 	};
 }

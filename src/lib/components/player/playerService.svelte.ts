@@ -12,42 +12,58 @@ export class PlayerService {
 	private nextEpTimer: ReturnType<typeof setTimeout> | null = null;
 	private autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 	private progressSaveInterval: ReturnType<typeof setInterval> | null = null;
+	private messageHandler: ((event: MessageEvent) => void) | null = null;
+
+	init() {
+		if (typeof window === 'undefined') return;
+
+		this.messageHandler = (event: MessageEvent) => {
+			if (!event.origin.includes(window.location.hostname) && event.origin !== 'null') {
+				return;
+			}
+
+			const data = event.data;
+			if (data && typeof data === 'object') {
+				if (data.type === 'progressUpdate' && typeof data.progress === 'number') {
+					this.currentProgress = data.progress;
+				}
+			}
+		};
+
+		window.addEventListener('message', this.messageHandler);
+	}
+
+	postToIframe(message: any) {
+		if (this.iframeElement?.contentWindow) {
+			this.iframeElement.contentWindow.postMessage(message, '*');
+		}
+	}
 
 	handleQualityChange = (quality: VideoQuality, qualities: VideoQuality[]) => {
 		this.selectedQuality = quality.label;
-		if (qualities.some((q) => q.url === quality.url) && this.iframeElement?.contentWindow) {
-			this.iframeElement.contentWindow.postMessage(
-				{
-					type: 'qualityChange',
-					quality: quality.url
-				},
-				'*'
-			);
+		if (qualities.some((q) => q.url === quality.url)) {
+			this.postToIframe({
+				type: 'qualityChange',
+				quality: quality.url
+			});
 		}
 	};
 
 	handleSubtitleChange = (subtitle: SubtitleTrack | null) => {
 		this.selectedSubtitle = subtitle?.id || null;
-		if (this.iframeElement?.contentWindow) {
-			this.iframeElement.contentWindow.postMessage(
-				{
-					type: 'subtitleChange',
-					subtitle: subtitle
-						? {
-								url: subtitle.url,
-								language: subtitle.language,
-								label: subtitle.label
-							}
-						: null
-				},
-				'*'
-			);
-		}
+		this.postToIframe({
+			type: 'subtitleChange',
+			subtitle: subtitle
+				? {
+					url: subtitle.url,
+					language: subtitle.language,
+					label: subtitle.label
+				}
+				: null
+		});
 	};
 
 	handleIframeLoad = (qualities: VideoQuality[], subtitles: SubtitleTrack[]) => {
-		if (!this.iframeElement?.contentWindow) return;
-
 		let qualityValue = 'auto';
 		if (this.selectedQuality !== 'auto') {
 			const quality = qualities.find((q) => q.label === this.selectedQuality);
@@ -56,13 +72,10 @@ export class PlayerService {
 			}
 		}
 
-		this.iframeElement.contentWindow.postMessage(
-			{
-				type: 'qualityChange',
-				quality: qualityValue
-			},
-			'*'
-		);
+		this.postToIframe({
+			type: 'qualityChange',
+			quality: qualityValue
+		});
 
 		let subtitleValue = null;
 		if (this.selectedSubtitle) {
@@ -76,34 +89,29 @@ export class PlayerService {
 			}
 		}
 
-		this.iframeElement.contentWindow.postMessage(
-			{
-				type: 'subtitleChange',
-				subtitle: subtitleValue
-			},
-			'*'
-		);
+		this.postToIframe({
+			type: 'subtitleChange',
+			subtitle: subtitleValue
+		});
 	};
 
 	handlePlaybackSpeedChange = (speed: number) => {
 		this.playbackSpeed = Math.min(2.0, Math.max(0.25, speed));
-		if (this.iframeElement?.contentWindow) {
-			this.iframeElement.contentWindow.postMessage(
-				{
-					type: 'playbackSpeedChange',
-					speed: this.playbackSpeed
-				},
-				'*'
-			);
-		}
+		this.postToIframe({
+			type: 'playbackSpeedChange',
+			speed: this.playbackSpeed
+		});
+	};
+
+	seekTo = (seconds: number) => {
+		this.postToIframe({
+			type: 'seek',
+			time: seconds
+		});
 	};
 
 	startProgressTracking = (
-		mediaId: string,
-		mediaType: 'movie' | 'tv' | 'anime',
 		durationMinutes: number | null,
-		seasonNumber: number | null,
-		episodeNumber: number | null,
 		onProgressSave: (progress: number) => Promise<void>
 	) => {
 		this.stopProgressTracking();
@@ -158,6 +166,13 @@ export class PlayerService {
 		}
 		this.showNextOverlay = false;
 	};
+
+	destroy() {
+		this.cleanup();
+		if (this.messageHandler && typeof window !== 'undefined') {
+			window.removeEventListener('message', this.messageHandler);
+		}
+	}
 
 	cleanup = () => {
 		this.stopProgressTracking();

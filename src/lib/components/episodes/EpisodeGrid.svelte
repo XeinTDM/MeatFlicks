@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Episode } from '$lib/components/episodes/episodeService.svelte';
+	import type { Episode, Season } from '$lib/components/episodes/episodeService.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 
@@ -15,13 +15,7 @@
 		episodes: Episode[];
 		selectedEpisode: number;
 		selectedSeason: number;
-		seasons: {
-			id: number;
-			name: string;
-			seasonNumber: number;
-			episodeCount: number;
-			posterPath: string | null;
-		}[];
+		seasons: Season[];
 		isLoading: boolean;
 		onSeasonChange: (value: string) => void;
 		onEpisodeSelect: (episodeNumber: number) => void;
@@ -34,10 +28,9 @@
 		<Select type="single" value={selectedSeason.toString()} onValueChange={onSeasonChange}>
 			<SelectTrigger class="w-48" aria-label="Select season">
 				<span data-slot="select-value">
-					{#if seasons?.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)}
-						{seasons.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)?.name}
-						({seasons.find((s: { seasonNumber: number }) => s.seasonNumber === selectedSeason)
-							?.episodeCount} Episodes)
+					{#if seasons?.find((s: Season) => s.seasonNumber === selectedSeason)}
+						{seasons.find((s: Season) => s.seasonNumber === selectedSeason)?.name}
+						({seasons.find((s: Season) => s.seasonNumber === selectedSeason)?.episodeCount} Episodes)
 					{/if}
 				</span>
 			</SelectTrigger>
@@ -75,7 +68,7 @@
 						/>
 					{/if}
 					<div
-						class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"
+						class="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent"
 					></div>
 					<div class="absolute right-2 bottom-2 left-2 text-left">
 						<p class="line-clamp-1 text-xs font-medium text-white">

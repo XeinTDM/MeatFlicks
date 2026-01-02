@@ -1,6 +1,6 @@
 <script lang="ts">
 	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
@@ -17,7 +17,7 @@
 		const localProgress = playbackStore.getContinueWatching();
 		continueWatchingMovies = localProgress;
 
-		if (!$page.data.user) {
+		if (!page.data.user) {
 			isLoading = false;
 			return;
 		}
