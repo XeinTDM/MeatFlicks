@@ -28,6 +28,14 @@ const normalizeOffset = (value: number | undefined): number => {
 	return Math.floor(value);
 };
 
+let genreIdMap: Map<string, number> | null = null;
+const getGenreIdMap = async (): Promise<Map<string, number>> => {
+	if (genreIdMap) return genreIdMap;
+	const allGenres = await db.select().from(genres);
+	genreIdMap = new Map(allGenres.map((g) => [g.name.toLowerCase(), g.id]));
+	return genreIdMap;
+};
+
 export type CollectionWithMovies = CollectionRecord & { movies: MovieSummary[] };
 
 export const libraryRepository = {
@@ -96,39 +104,30 @@ export const libraryRepository = {
 				cacheKey,
 				CACHE_TTL_LONG_SECONDS,
 				async () => {
-					const query = db
-						.select({
-							collection: collections,
-							movie: movies
-						})
+					const [collectionResults] = await db
+						.select()
 						.from(collections)
-						.leftJoin(movies, eq(movies.collectionId, collections.id))
 						.where(eq(collections.slug, collectionSlug))
+						.limit(1);
+
+					if (!collectionResults) return null;
+
+					const moviesQuery = db
+						.select()
+						.from(movies)
+						.where(eq(movies.collectionId, collectionResults.id))
 						.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 						.offset(skip);
 
 					if (take !== undefined) {
-						query.limit(take);
+						moviesQuery.limit(take);
 					}
 
-					const rows = await query;
-
-					if (rows.length === 0) {
-						const collectionCheck = await db
-							.select()
-							.from(collections)
-							.where(eq(collections.slug, collectionSlug))
-							.limit(1);
-						if (collectionCheck.length === 0) return null;
-						return { ...collectionCheck[0], movies: [] };
-					}
-
-					const collection = rows[0].collection;
-					const movieRows = rows.map((r) => r.movie).filter(Boolean) as MovieRow[];
+					const movieRows = await moviesQuery;
 
 					return {
-						...collection,
-						movies: await mapRowsToSummaries(movieRows)
+						...collectionResults,
+						movies: await mapRowsToSummaries(movieRows as MovieRow[])
 					};
 				}
 			);
@@ -198,19 +197,24 @@ export const libraryRepository = {
 	): Promise<MovieSummary[]> {
 		const take = typeof limit === 'number' ? toPositiveInteger(limit, 20) : 20;
 		const skip = normalizeOffset(offset);
-		const normalizedGenre = genreName.trim();
+		const normalizedGenre = genreName.trim().toLowerCase();
 
 		try {
 			const cacheKey = buildCacheKey(
 				'movies',
 				'genre',
 				mediaType,
-				normalizedGenre.toLowerCase(),
+				normalizedGenre,
 				take,
 				skip,
 				include_anime
 			);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+				const idMap = await getGenreIdMap();
+				const genreId = idMap.get(normalizedGenre);
+
+				if (!genreId) return [];
+
 				let mediaTypeCondition;
 				if (include_anime === 'only') {
 					mediaTypeCondition = eq(movies.mediaType, 'anime');
@@ -224,8 +228,7 @@ export const libraryRepository = {
 					.select({ movies })
 					.from(movies)
 					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
-					.innerJoin(genres, eq(genres.id, moviesGenres.genreId))
-					.where(and(eq(genres.name, normalizedGenre), mediaTypeCondition))
+					.where(and(eq(moviesGenres.genreId, genreId), mediaTypeCondition))
 					.orderBy(desc(movies.rating), desc(movies.releaseDate), asc(movies.title))
 					.limit(take)
 					.offset(skip);
@@ -239,20 +242,21 @@ export const libraryRepository = {
 		}
 	},
 
-	/**
-	 * Internal helper to build filters for movies
-	 */
-	applyFilters(
+	async applyFilters(
 		query: any,
 		conditions: any[],
 		filters: MovieFilters,
 		mediaType: 'movie' | 'tv' = 'movie',
-		include_anime: 'include' | 'exclude' | 'only' = 'include'
+		include_anime: 'include_anime' | 'exclude_anime' | 'only_anime' | 'include' | 'exclude' | 'only' = 'include'
 	) {
 		let mediaTypeCondition;
-		if (include_anime === 'only') {
+		const animeMode = (include_anime as string).includes('anime')
+			? (include_anime as string).split('_')[0]
+			: include_anime;
+
+		if (animeMode === 'only') {
 			mediaTypeCondition = eq(movies.mediaType, 'anime');
-		} else if (include_anime === 'exclude') {
+		} else if (animeMode === 'exclude') {
 			mediaTypeCondition = eq(movies.mediaType, mediaType);
 		} else {
 			mediaTypeCondition = or(eq(movies.mediaType, mediaType), eq(movies.mediaType, 'anime'));
@@ -285,33 +289,32 @@ export const libraryRepository = {
 		}
 
 		if (filters.genres && filters.genres.length > 0) {
-			const genreMode = filters.genreMode || 'OR';
+			const idMap = await getGenreIdMap();
+			const genreIds = filters.genres
+				.map((name) => idMap.get(name.toLowerCase()))
+				.filter((id): id is number => id !== undefined);
 
-			if (genreMode === 'AND') {
-				const genreCount = filters.genres.length;
-				query = query
-					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
-					.innerJoin(genres, eq(genres.id, moviesGenres.genreId));
+			if (genreIds.length > 0) {
+				const genreMode = filters.genreMode || 'OR';
 
-				conditions.push(inArray(genres.name, filters.genres));
-				query = (query as any)
-					.groupBy(movies.numericId)
-					.having(sql`count(DISTINCT ${moviesGenres.genreId}) = ${genreCount}`);
-			} else {
-				query = query
-					.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id))
-					.innerJoin(genres, eq(genres.id, moviesGenres.genreId));
+				if (genreMode === 'AND') {
+					const genreCount = genreIds.length;
+					query = query.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id));
 
-				conditions.push(inArray(genres.name, filters.genres));
+					conditions.push(inArray(moviesGenres.genreId, genreIds));
+					query = (query as any)
+						.groupBy(movies.numericId)
+						.having(sql`count(DISTINCT ${moviesGenres.genreId}) = ${genreCount}`);
+				} else {
+					query = query.innerJoin(moviesGenres, eq(moviesGenres.movieId, movies.id));
+					conditions.push(inArray(moviesGenres.genreId, genreIds));
+				}
 			}
 		}
 
 		return query.where(and(...conditions));
 	},
 
-	/**
-	 * Find movies with advanced filters, sorting, and pagination
-	 */
 	async findMoviesWithFilters(
 		filters: MovieFilters,
 		sort: SortOptions,
@@ -322,17 +325,18 @@ export const libraryRepository = {
 		try {
 			const offset = calculateOffset(pagination.page, pagination.pageSize);
 
-			let query = db.select({ movies }).from(movies);
-			const conditions: any[] = [];
+			const [totalItems, rows] = await Promise.all([
+				this.countMoviesWithFilters(filters, mediaType, include_anime),
+				(async () => {
+					let query = db.select({ movies }).from(movies);
+					const conditions: any[] = [];
+					query = await this.applyFilters(query, conditions, filters, mediaType, include_anime);
+					const orderByClause = this.buildOrderByClause(sort);
+					query = (query as any).orderBy(...orderByClause);
+					return await query.limit(pagination.pageSize).offset(offset);
+				})()
+			]);
 
-			query = this.applyFilters(query, conditions, filters, mediaType, include_anime);
-
-			const orderByClause = this.buildOrderByClause(sort);
-			query = (query as any).orderBy(...orderByClause);
-
-			const totalItems = await this.countMoviesWithFilters(filters, mediaType, include_anime);
-
-			const rows = await query.limit(pagination.pageSize).offset(offset);
 			const movieRows = rows.map((r: any) => r.movies);
 			const items = await mapRowsToSummaries(movieRows as MovieRow[]);
 
@@ -361,7 +365,13 @@ export const libraryRepository = {
 			let countQuery = db.select({ count: sql<number>`count(DISTINCT ${movies.id})` }).from(movies);
 			const conditions: any[] = [];
 
-			countQuery = this.applyFilters(countQuery, conditions, filters, mediaType, include_anime);
+			countQuery = await this.applyFilters(
+				countQuery,
+				conditions,
+				filters,
+				mediaType,
+				include_anime
+			);
 
 			const result = await countQuery;
 			return result[0]?.count || 0;
