@@ -71,7 +71,8 @@ export const movies = sqliteTable(
 		index('idx_movies_durationMinutes').on(table.durationMinutes),
 		index('idx_movies_mediaType').on(table.mediaType),
 		index('idx_movies_addedAt').on(table.addedAt),
-		index('idx_movies_imdbId').on(table.imdbId)
+		index('idx_movies_imdbId').on(table.imdbId),
+		index('idx_movies_common_sort').on(table.rating, table.releaseDate, table.title)
 	]
 );
 

@@ -55,17 +55,20 @@ function createAutocompleteQuery(term: string): string {
 }
 
 async function getGenreFacets(
-	genreIds: number[]
+	whereClause: string
 ): Promise<{ id: number; name: string; count: number }[]> {
-	if (genreIds.length === 0) return [];
-
 	try {
+		const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
 		const results = await db.all(sql`
-			SELECT g.id, g.name, COUNT(*) as count
+			SELECT g.id, g.name, COUNT(DISTINCT m.id) as count
 			FROM genres g
-			WHERE g.id IN (${genreIds.join(',')})
+			JOIN movies_genres mg ON g.id = mg.genreId
+			JOIN movies m ON mg.movieId = m.id
+			${sql.raw(baseWhere)}
 			GROUP BY g.id, g.name
+			HAVING count > 0
 			ORDER BY count DESC, g.name ASC
+			LIMIT 15
 		`);
 
 		return results.map((row: any) => ({
@@ -80,26 +83,17 @@ async function getGenreFacets(
 }
 
 async function getYearFacets(
-	minYear?: number,
-	maxYear?: number
+	whereClause: string
 ): Promise<{ year: number; count: number }[]> {
 	try {
-		let yearFilter = sql`1 = 1`;
-		if (minYear && maxYear) {
-			yearFilter = sql`strftime('%Y', m.releaseDate) BETWEEN ${minYear} AND ${maxYear}`;
-		} else if (minYear) {
-			yearFilter = sql`strftime('%Y', m.releaseDate) >= ${minYear}`;
-		} else if (maxYear) {
-			yearFilter = sql`strftime('%Y', m.releaseDate) <= ${maxYear}`;
-		}
-
+		const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
 		const results = await db.all(sql`
 			SELECT strftime('%Y', m.releaseDate) as year, COUNT(*) as count
 			FROM movies m
-			WHERE m.releaseDate IS NOT NULL AND ${yearFilter}
+			${sql.raw(baseWhere)} AND m.releaseDate IS NOT NULL
 			GROUP BY year
 			ORDER BY year DESC
-			LIMIT 20
+			LIMIT 15
 		`);
 
 		return results
@@ -114,8 +108,9 @@ async function getYearFacets(
 	}
 }
 
-async function getRatingFacets(): Promise<{ rating: number; count: number }[]> {
+async function getRatingFacets(whereClause: string): Promise<{ rating: number; count: number }[]> {
 	try {
+		const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
 		const results = await db.all(sql`
 			SELECT
 				CASE
@@ -127,7 +122,7 @@ async function getRatingFacets(): Promise<{ rating: number; count: number }[]> {
 				END as rating_range,
 				COUNT(*) as count
 			FROM movies m
-			WHERE m.rating IS NOT NULL
+			${sql.raw(baseWhere)} AND m.rating IS NOT NULL
 			GROUP BY rating_range
 			ORDER BY rating_range DESC
 		`);
@@ -232,6 +227,9 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
+			const { whereClause, ftsQuery } = buildSearchWhereClauses(options);
+			const facetWhere = buildSearchWhereClauses({ ...options, genres: [] }).whereClause;
+
 			const [results, total] = await Promise.all([
 				performSearchQuery({
 					query: normalizedQuery,
@@ -258,9 +256,9 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 			]);
 
 			const [genreFacets, yearFacets, ratingFacets, suggestions] = await Promise.all([
-				getGenreFacets(genres.map((g) => parseInt(g))),
-				getYearFacets(minYear, maxYear),
-				getRatingFacets(),
+				getGenreFacets(facetWhere),
+				getYearFacets(facetWhere),
+				getRatingFacets(facetWhere),
 				normalizedQuery.length >= 2 ? getSearchSuggestions(normalizedQuery) : Promise.resolve([])
 			]);
 
@@ -553,10 +551,10 @@ export async function getPersonalizedRecommendations(
 		}
 
 		const recommendedMovies = await db.all(sql`
-			SELECT m.*
+			SELECT DISTINCT m.*
 			FROM movies m
 			JOIN movies_genres mg ON m.id = mg.movieId
-			WHERE mg.genreId IN (${preferredGenreIds.join(',')})
+			WHERE mg.genreId IN (${sql.raw(preferredGenreIds.join(','))})
 			ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 			LIMIT ${limit}
 		`);

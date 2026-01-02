@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
-import { sql } from 'drizzle-orm';
+import { movies, genres, collections, moviesGenres } from '$lib/server/db/schema';
+import { sql, eq, and, isNotNull, ne } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import { logger } from '$lib/server/logger';
 import type { GenreRecord, MovieRow } from '$lib/server/db';
@@ -348,32 +349,18 @@ export async function updateMovieMetadata(
 	}
 ): Promise<void> {
 	try {
-		const setParts = [];
-		if (metadata.trailerUrl !== undefined) {
-			setParts.push(sql`trailerUrl = ${metadata.trailerUrl}`);
-		}
-		if (metadata.imdbId !== undefined) {
-			setParts.push(sql`imdbId = ${metadata.imdbId}`);
-		}
-		if (metadata.canonicalPath !== undefined) {
-			setParts.push(sql`canonicalPath = ${metadata.canonicalPath}`);
-		}
-		if (metadata.addedAt !== undefined) {
-			setParts.push(sql`addedAt = ${metadata.addedAt}`);
-		}
-		if (metadata.mediaType !== undefined) {
-			setParts.push(sql`mediaType = ${metadata.mediaType}`);
-		}
+		const updateData: any = {};
+		if (metadata.trailerUrl !== undefined) updateData.trailerUrl = metadata.trailerUrl;
+		if (metadata.imdbId !== undefined) updateData.imdbId = metadata.imdbId;
+		if (metadata.canonicalPath !== undefined) updateData.canonicalPath = metadata.canonicalPath;
+		if (metadata.addedAt !== undefined) updateData.addedAt = metadata.addedAt;
+		if (metadata.mediaType !== undefined) updateData.mediaType = metadata.mediaType;
 
-		if (setParts.length === 0) {
+		if (Object.keys(updateData).length === 0) {
 			return;
 		}
 
-		await db.run(sql`
-			UPDATE movies
-			SET ${setParts.join(', ')}
-			WHERE id = ${movieId}
-		`);
+		await db.update(movies).set(updateData).where(eq(movies.id, movieId));
 
 		logger.info({ movieId, metadata }, 'Updated movie metadata');
 	} catch (error) {
@@ -391,27 +378,25 @@ export async function getMetadataStatistics(): Promise<{
 	moviesWithCanonicalPath: number;
 }> {
 	try {
-		const [movieCount, genreCount, collectionCount, trailers, imdbIds, canonicalPaths] =
-			await Promise.all([
-				db.all(sql`SELECT COUNT(*) as count FROM movies`),
-				db.all(sql`SELECT COUNT(*) as count FROM genres`),
-				db.all(sql`SELECT COUNT(*) as count FROM collections`),
-				db.all(
-					sql`SELECT COUNT(*) as count FROM movies WHERE trailerUrl IS NOT NULL AND trailerUrl != ''`
-				),
-				db.all(sql`SELECT COUNT(*) as count FROM movies WHERE imdbId IS NOT NULL AND imdbId != ''`),
-				db.all(
-					sql`SELECT COUNT(*) as count FROM movies WHERE canonicalPath IS NOT NULL AND canonicalPath != ''`
-				)
-			]);
+		const [stats] = await db
+			.select({
+				movieCount: sql<number>`COUNT(*)`,
+				moviesWithTrailers: sql<number>`SUM(CASE WHEN trailerUrl IS NOT NULL AND trailerUrl != '' THEN 1 ELSE 0 END)`,
+				moviesWithImdbId: sql<number>`SUM(CASE WHEN imdbId IS NOT NULL AND imdbId != '' THEN 1 ELSE 0 END)`,
+				moviesWithCanonicalPath: sql<number>`SUM(CASE WHEN canonicalPath IS NOT NULL AND canonicalPath != '' THEN 1 ELSE 0 END)`
+			})
+			.from(movies);
+
+		const [genreCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(genres);
+		const [collectionCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(collections);
 
 		return {
-			movieCount: (movieCount[0] as any)?.count || 0,
-			genreCount: (genreCount[0] as any)?.count || 0,
-			collectionCount: (collectionCount[0] as any)?.count || 0,
-			moviesWithTrailers: (trailers[0] as any)?.count || 0,
-			moviesWithImdbId: (imdbIds[0] as any)?.count || 0,
-			moviesWithCanonicalPath: (canonicalPaths[0] as any)?.count || 0
+			movieCount: stats.movieCount || 0,
+			genreCount: genreCount.count || 0,
+			collectionCount: collectionCount.count || 0,
+			moviesWithTrailers: stats.moviesWithTrailers || 0,
+			moviesWithImdbId: stats.moviesWithImdbId || 0,
+			moviesWithCanonicalPath: stats.moviesWithCanonicalPath || 0
 		};
 	} catch (error) {
 		logger.error({ error }, 'Failed to get metadata statistics');
