@@ -46,8 +46,8 @@
 		movies: Movie[];
 	};
 
-	const watchlistMovies = $derived($watchlist.watchlist ?? []);
-	const error = $derived($watchlist.error);
+	const watchlistMovies = $derived(watchlist.items);
+	const error = $derived(watchlist.error);
 
 	let searchTerm = $state('');
 	let selectedGenre = $state('all');

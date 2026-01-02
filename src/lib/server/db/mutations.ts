@@ -167,14 +167,16 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 			return results;
 		})
 		.then(async (syncedMovies) => {
-			for (const movie of syncedMovies) {
+			await Promise.all(syncedMovies.map(async (movie) => {
 				try {
-					await syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any);
-					await syncMovieCrew(movie.id, movie.tmdbId!, movie.mediaType as any);
+					await Promise.all([
+						syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any),
+						syncMovieCrew(movie.id, movie.tmdbId!, movie.mediaType as any)
+					]);
 				} catch (error) {
 					console.warn(`Failed to sync person data for movie ${movie.id}:`, error);
 				}
-			}
+			}));
 			return syncedMovies;
 		});
 };

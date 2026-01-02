@@ -1,9 +1,10 @@
 import { db } from '$lib/server/db';
-import { sql } from 'drizzle-orm';
+import { movies, genres, moviesGenres, people, moviePeople } from '$lib/server/db/schema';
+import { sql, eq, and, gte, lte, desc, asc, inArray, like } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
-import { withCache, buildCacheKey, CACHE_TTL_SEARCH_SECONDS } from '$lib/server/cache';
+import { withCache, buildCacheKey, CACHE_TTL_SEARCH_SECONDS, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
-import type { MovieSummary } from '$lib/server/db';
+import type { MovieSummary, MovieRow } from '$lib/server/db';
 
 interface SearchOptions {
 	query?: string;
@@ -57,95 +58,104 @@ function createAutocompleteQuery(term: string): string {
 async function getGenreFacets(
 	whereClause: string
 ): Promise<{ id: number; name: string; count: number }[]> {
-	try {
-		const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
-		const results = await db.all(sql`
-			SELECT g.id, g.name, COUNT(DISTINCT m.id) as count
-			FROM genres g
-			JOIN movies_genres mg ON g.id = mg.genreId
-			JOIN movies m ON mg.movieId = m.id
-			${sql.raw(baseWhere)}
-			GROUP BY g.id, g.name
-			HAVING count > 0
-			ORDER BY count DESC, g.name ASC
-			LIMIT 15
-		`);
+	const cacheKey = buildCacheKey('search', 'facets', 'genres', whereClause);
+	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
+		try {
+			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
+			const results = await db.all(sql`
+				SELECT g.id, g.name, COUNT(DISTINCT m.id) as count
+				FROM genres g
+				JOIN movies_genres mg ON g.id = mg.genreId
+				JOIN movies m ON mg.movieId = m.id
+				${sql.raw(baseWhere)}
+				GROUP BY g.id, g.name
+				HAVING count > 0
+				ORDER BY count DESC, g.name ASC
+				LIMIT 15
+			`);
 
-		return results.map((row: any) => ({
-			id: row.id as number,
-			name: row.name as string,
-			count: row.count as number
-		}));
-	} catch (error) {
-		logger.error({ error }, 'Failed to get genre facets');
-		return [];
-	}
+			return results.map((row: any) => ({
+				id: row.id as number,
+				name: row.name as string,
+				count: row.count as number
+			}));
+		} catch (error) {
+			logger.error({ error }, 'Failed to get genre facets');
+			return [];
+		}
+	});
 }
 
 async function getYearFacets(
 	whereClause: string
 ): Promise<{ year: number; count: number }[]> {
-	try {
-		const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
-		const results = await db.all(sql`
-			SELECT strftime('%Y', m.releaseDate) as year, COUNT(*) as count
-			FROM movies m
-			${sql.raw(baseWhere)} AND m.releaseDate IS NOT NULL
-			GROUP BY year
-			ORDER BY year DESC
-			LIMIT 15
-		`);
+	const cacheKey = buildCacheKey('search', 'facets', 'years', whereClause);
+	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
+		try {
+			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
+			const results = await db.all(sql`
+				SELECT strftime('%Y', m.releaseDate) as year, COUNT(*) as count
+				FROM movies m
+				${sql.raw(baseWhere)} AND m.releaseDate IS NOT NULL
+				GROUP BY year
+				ORDER BY year DESC
+				LIMIT 15
+			`);
 
-		return results
-			.map((row: any) => ({
-				year: parseInt(row.year as string),
-				count: row.count as number
-			}))
-			.filter((item) => !isNaN(item.year));
-	} catch (error) {
-		logger.error({ error }, 'Failed to get year facets');
-		return [];
-	}
+			return results
+				.map((row: any) => ({
+					year: parseInt(row.year as string),
+					count: row.count as number
+				}))
+				.filter((item: { year: number; count: number }) => !isNaN(item.year));
+		} catch (error) {
+			logger.error({ error }, 'Failed to get year facets');
+			return [];
+		}
+	});
 }
 
 async function getRatingFacets(whereClause: string): Promise<{ rating: number; count: number }[]> {
-	try {
-		const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
-		const results = await db.all(sql`
-			SELECT
-				CASE
-					WHEN m.rating >= 8 THEN '8+'
-					WHEN m.rating >= 7 THEN '7-8'
-					WHEN m.rating >= 6 THEN '6-7'
-					WHEN m.rating >= 5 THEN '5-6'
-					ELSE 'Below 5'
-				END as rating_range,
-				COUNT(*) as count
-			FROM movies m
-			${sql.raw(baseWhere)} AND m.rating IS NOT NULL
-			GROUP BY rating_range
-			ORDER BY rating_range DESC
-		`);
+	const cacheKey = buildCacheKey('search', 'facets', 'ratings', whereClause);
+	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
+		try {
+			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
+			const results = await db.all(sql`
+				SELECT
+					CASE
+						WHEN m.rating >= 8 THEN '8+'
+						WHEN m.rating >= 7 THEN '7-8'
+						WHEN m.rating >= 6 THEN '6-7'
+						WHEN m.rating >= 5 THEN '5-6'
+						ELSE 'Below 5'
+					END as rating_range,
+					COUNT(*) as count
+				FROM movies m
+				${sql.raw(baseWhere)} AND m.rating IS NOT NULL
+				GROUP BY rating_range
+				ORDER BY rating_range DESC
+			`);
 
-		return results.map((row: any) => {
-			const range = row.rating_range as string;
-			let rating: number;
+			return results.map((row: any) => {
+				const range = row.rating_range as string;
+				let rating: number;
 
-			if (range === '8+') rating = 8;
-			else if (range === '7-8') rating = 7.5;
-			else if (range === '6-7') rating = 6.5;
-			else if (range === '5-6') rating = 5.5;
-			else rating = 4;
+				if (range === '8+') rating = 8;
+				else if (range === '7-8') rating = 7.5;
+				else if (range === '6-7') rating = 6.5;
+				else if (range === '5-6') rating = 5.5;
+				else rating = 4;
 
-			return {
-				rating,
-				count: row.count as number
-			};
-		});
-	} catch (error) {
-		logger.error({ error }, 'Failed to get rating facets');
-		return [];
-	}
+				return {
+					rating,
+					count: row.count as number
+				};
+			});
+		} catch (error) {
+			logger.error({ error }, 'Failed to get rating facets');
+			return [];
+		}
+	});
 }
 
 async function getSearchSuggestions(query: string, limit: number = 5): Promise<string[]> {
@@ -523,51 +533,54 @@ export async function getPersonalizedRecommendations(
 	userId: string,
 	limit: number = 10
 ): Promise<MovieSummary[]> {
-	try {
-		const genrePrefResults = await db.all(sql`
-			WITH CombinedHistory AS (
-				SELECT movie_id FROM watch_history WHERE userId = ${userId}
-				UNION ALL
-				SELECT movie_id FROM watchlist WHERE userId = ${userId}
-			)
-			SELECT mg.genreId, COUNT(*) as count
-			FROM CombinedHistory ch
-			JOIN movies_genres mg ON ch.movie_id = mg.movieId
-			GROUP BY mg.genreId
-			ORDER BY count DESC
-			LIMIT 3
-		`);
+	const cacheKey = buildCacheKey('recommendations', userId, limit);
+	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+		try {
+			const genrePrefResults = await db.all(sql`
+				WITH CombinedHistory AS (
+					SELECT movie_id FROM watch_history WHERE userId = ${userId}
+					UNION ALL
+					SELECT movie_id FROM watchlist WHERE userId = ${userId}
+				)
+				SELECT mg.genreId, COUNT(*) as count
+				FROM CombinedHistory ch
+				JOIN movies_genres mg ON ch.movie_id = mg.movieId
+				GROUP BY mg.genreId
+				ORDER BY count DESC
+				LIMIT 3
+			`);
 
-		const preferredGenreIds = genrePrefResults.map((r: any) => r.genreId as number);
+			const preferredGenreIds = genrePrefResults.map((r: any) => r.genreId as number);
 
-		if (preferredGenreIds.length === 0) {
-			const popularMovies = (await db.all(sql`
-			SELECT m.*
-			FROM movies m
-			ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
-			LIMIT ${limit}
-		`)) as any[];
-			return await mapRowsToSummaries(popularMovies);
+			if (preferredGenreIds.length === 0) {
+				const popularMovies = (await db.all(sql`
+				SELECT m.*
+				FROM movies m
+				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
+				LIMIT ${limit}
+			`)) as any[];
+				return await mapRowsToSummaries(popularMovies as MovieRow[]);
+			}
+
+			const recommendedMovies = await db.all(sql`
+				SELECT DISTINCT m.*
+				FROM movies m
+				JOIN movies_genres mg ON m.id = mg.movieId
+				WHERE mg.genreId IN (${sql.raw(preferredGenreIds.join(','))})
+				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
+				LIMIT ${limit}
+			`);
+
+			return await mapRowsToSummaries(recommendedMovies as any[]);
+		} catch (error) {
+			logger.error({ error, userId }, 'Failed to get personalized recommendations');
+			const popularMovies = await db.all(sql`
+				SELECT m.*
+				FROM movies m
+				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
+				LIMIT ${limit}
+			`);
+			return await mapRowsToSummaries(popularMovies as any[]);
 		}
-
-		const recommendedMovies = await db.all(sql`
-			SELECT DISTINCT m.*
-			FROM movies m
-			JOIN movies_genres mg ON m.id = mg.movieId
-			WHERE mg.genreId IN (${sql.raw(preferredGenreIds.join(','))})
-			ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
-			LIMIT ${limit}
-		`);
-
-		return await mapRowsToSummaries(recommendedMovies as any[]);
-	} catch (error) {
-		logger.error({ error, userId }, 'Failed to get personalized recommendations');
-		const popularMovies = await db.all(sql`
-			SELECT m.*
-			FROM movies m
-			ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
-			LIMIT ${limit}
-		`);
-		return await mapRowsToSummaries(popularMovies as any[]);
-	}
+	});
 }

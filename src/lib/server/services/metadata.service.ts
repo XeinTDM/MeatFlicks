@@ -1,8 +1,9 @@
 import { db } from '$lib/server/db';
-import { movies, genres, collections, moviesGenres } from '$lib/server/db/schema';
-import { sql, eq, and, isNotNull, ne } from 'drizzle-orm';
+import { movies, genres, collections, moviesGenres, people, moviePeople } from '$lib/server/db/schema';
+import { sql, eq, and, isNotNull, ne, desc, asc, inArray, getTableColumns } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import { logger } from '$lib/server/logger';
+import { withCache, buildCacheKey, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '$lib/server/cache';
 import type { GenreRecord, MovieRow } from '$lib/server/db';
 import type { LibraryMovie } from '$lib/types/library';
 
@@ -57,9 +58,11 @@ export async function enhanceMovieMetadata(
 	const { includeCast = true, includeTrailers = true } = options;
 
 	try {
-		const movieRows = await db.all(sql<MovieRow>`
-			SELECT * FROM movies WHERE id = ${movieId} LIMIT 1
-		`);
+		const movieRows = await db
+			.select()
+			.from(movies)
+			.where(eq(movies.id, movieId))
+			.limit(1);
 
 		if (movieRows.length === 0) {
 			throw new Error(`Movie not found: ${movieId}`);
@@ -101,98 +104,104 @@ export async function getEnhancedMovies(
 		offset = 0
 	} = options;
 
-	try {
-		const [movieRows, total] = await Promise.all([
-			db.all(sql`
-				SELECT * FROM movies
-				ORDER BY (rating IS NULL) ASC, rating DESC, popularity DESC
-				LIMIT ${limit} OFFSET ${offset}
-			`),
-			db.all(sql`SELECT COUNT(*) as count FROM movies`)
-		]);
+	const cacheKey = buildCacheKey('metadata', 'enhanced-movies', limit, offset, includeCast, includeTrailers, includeGenres, includeCollections);
 
-		const movies = await mapRowsToSummaries(movieRows as unknown as MovieRow[]);
-		const totalCount = (total[0] as CountResult)?.count || 0;
+	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+		try {
+			const [movieRows, total] = await Promise.all([
+				db.select().from(movies)
+					.orderBy(sql`(rating IS NULL) ASC`, desc(movies.rating), desc(movies.popularity))
+					.limit(limit)
+					.offset(offset),
+				db.select({ count: sql<number>`count(*)` }).from(movies)
+			]);
 
-		const movieIds = movies.map((m) => m.id);
-		let castMap = new Map<string, CastMember[]>();
+			const moviesResult = await mapRowsToSummaries(movieRows as MovieRow[]);
+			const totalCount = (total[0] as any)?.count || 0;
 
-		if (includeCast && movieIds.length > 0) {
-			const castRows = await db.all(sql`
-				SELECT
-					mp.movieId, p.id, p.name, mp.character, p.profilePath
-				FROM movie_people mp
-				JOIN people p ON mp.personId = p.id
-				WHERE mp.movieId IN (${sql.raw(movieIds.map((id) => `'${id}'`).join(','))}) AND mp.role = 'actor'
-				ORDER BY mp.order ASC
-			`);
+			const movieIds = moviesResult.map((m) => m.id);
+			let castMap = new Map<string, CastMember[]>();
 
-			for (const row of castRows as any) {
-				const list = castMap.get(row.movieId) || [];
-				if (list.length < 10) {
-					list.push({
-						id: row.id,
-						name: row.name,
-						character: row.character,
-						profilePath: row.profilePath
-					});
-					castMap.set(row.movieId, list);
+			if (includeCast && movieIds.length > 0) {
+				const castRows = await db.all(sql`
+					SELECT
+						mp.movieId, p.id, p.name, mp.character, p.profilePath
+					FROM movie_people mp
+					JOIN people p ON mp.personId = p.id
+					WHERE mp.movieId IN (${sql.join(movieIds.map(id => sql`${id}`), sql`, `)}) AND mp.role = 'actor'
+					ORDER BY mp.order ASC
+				`);
+
+				for (const row of castRows as any) {
+					const list = castMap.get(row.movieId) || [];
+					if (list.length < 10) {
+						list.push({
+							id: row.id,
+							name: row.name,
+							character: row.character,
+							profilePath: row.profilePath
+						});
+						castMap.set(row.movieId, list);
+					}
 				}
 			}
-		}
 
-		const enhancedMovies = movies.map((movie) => {
-			const enhancedMovie: LibraryMovie = {
-				...movie,
-				trailerUrl: includeTrailers ? movie.trailerUrl : null,
-				imdbId: movie.imdbId,
-				canonicalPath: movie.canonicalPath,
-				addedAt: movie.addedAt,
-				mediaType: movie.mediaType,
-				genres: movie.genres || []
+			const enhancedMovies = moviesResult.map((movie) => {
+				const enhancedMovie: LibraryMovie = {
+					...movie,
+					trailerUrl: includeTrailers ? movie.trailerUrl : null,
+					imdbId: movie.imdbId,
+					canonicalPath: movie.canonicalPath,
+					addedAt: movie.addedAt,
+					mediaType: movie.mediaType,
+					genres: movie.genres || []
+				};
+
+				if (includeCast) {
+					enhancedMovie.cast = castMap.get(movie.id) || [];
+				}
+
+				return enhancedMovie;
+			});
+
+			const [genreFacets, collectionFacets] = await Promise.all([
+				includeGenres ? getGenreFacets() : Promise.resolve([]),
+				includeCollections ? getCollectionFacets() : Promise.resolve([])
+			]);
+
+			return {
+				movies: enhancedMovies,
+				total: totalCount,
+				genres: genreFacets,
+				collections: collectionFacets
 			};
-
-			if (includeCast) {
-				enhancedMovie.cast = castMap.get(movie.id) || [];
-			}
-
-			return enhancedMovie;
-		});
-
-		const [genreFacets, collectionFacets] = await Promise.all([
-			includeGenres ? getGenreFacets() : Promise.resolve([]),
-			includeCollections ? getCollectionFacets() : Promise.resolve([])
-		]);
-
-		return {
-			movies: enhancedMovies,
-			total: totalCount,
-			genres: genreFacets,
-			collections: collectionFacets
-		};
-	} catch (error) {
-		logger.error({ error, options }, 'Failed to get enhanced movies');
-		throw error;
-	}
+		} catch (error) {
+			logger.error({ error, options }, 'Failed to get enhanced movies');
+			throw error;
+		}
+	});
 }
 
 async function getMovieCast(movieId: string): Promise<CastMember[]> {
 	try {
-		const castRows = await db.all(sql`
-			SELECT
-				p.id, p.name, mp.character, p.profilePath
-			FROM movie_people mp
-			JOIN people p ON mp.personId = p.id
-			WHERE mp.movieId = ${movieId} AND mp.role = 'actor'
-			ORDER BY mp.order ASC
-			LIMIT 10
-		`);
+		const results = await db
+			.select({
+				id: people.id,
+				name: people.name,
+				character: moviePeople.character,
+				profilePath: people.profilePath
+			})
+			.from(moviePeople)
+			.innerJoin(people, eq(moviePeople.personId, people.id))
+			.where(and(eq(moviePeople.movieId, movieId), eq(moviePeople.role, 'actor')))
+			.orderBy(asc(moviePeople.order))
+			.limit(10);
 
-		return castRows.map((row: unknown) => ({
-			id: (row as { id: number }).id,
-			name: (row as { name: string }).name,
-			character: (row as { character: string }).character,
-			profilePath: (row as { profilePath: string | null }).profilePath
+		return results.map((row) => ({
+			id: row.id,
+			name: row.name,
+			character: row.character ?? '',
+			profilePath: row.profilePath
 		}));
 	} catch (error) {
 		logger.error({ error, movieId }, 'Failed to get movie cast');
@@ -201,47 +210,60 @@ async function getMovieCast(movieId: string): Promise<CastMember[]> {
 }
 
 async function getGenreFacets(): Promise<GenreRecord[]> {
-	try {
-		const results = await db.all(sql`
-			SELECT g.id, g.name, COUNT(*) as count
-			FROM genres g
-			JOIN movies_genres mg ON g.id = mg.genreId
-			GROUP BY g.id, g.name
-			ORDER BY count DESC, g.name ASC
-		`);
+	const cacheKey = buildCacheKey('metadata', 'facets', 'genres');
+	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
+		try {
+			const results = await db
+				.select({
+					id: genres.id,
+					name: genres.name,
+					count: sql<number>`count(*)`
+				})
+				.from(genres)
+				.innerJoin(moviesGenres, eq(genres.id, moviesGenres.genreId))
+				.groupBy(genres.id, genres.name)
+				.orderBy(desc(sql`count(*)`), asc(genres.name));
 
-		return results.map((row: unknown) => ({
-			id: (row as GenreFacetResult).id,
-			name: (row as GenreFacetResult).name
-		}));
-	} catch (error) {
-		logger.error({ error }, 'Failed to get genre facets');
-		return [];
-	}
+			return results.map((row) => ({
+				id: row.id,
+				name: row.name
+			}));
+		} catch (error) {
+			logger.error({ error }, 'Failed to get genre facets');
+			return [];
+		}
+	});
 }
 
 async function getCollectionFacets(): Promise<
 	Array<{ id: number; name: string; slug: string; count: number }>
 > {
-	try {
-		const results = await db.all(sql`
-			SELECT c.id, c.name, c.slug, COUNT(*) as count
-			FROM collections c
-			LEFT JOIN movies m ON c.id = m.collectionId
-			GROUP BY c.id, c.name, c.slug
-			ORDER BY count DESC, c.name ASC
-		`);
+	const cacheKey = buildCacheKey('metadata', 'facets', 'collections');
+	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
+		try {
+			const results = await db
+				.select({
+					id: collections.id,
+					name: collections.name,
+					slug: collections.slug,
+					count: sql<number>`count(${movies.id})`
+				})
+				.from(collections)
+				.leftJoin(movies, eq(collections.id, movies.collectionId))
+				.groupBy(collections.id, collections.name, collections.slug)
+				.orderBy(desc(sql`count(${movies.id})`), asc(collections.name));
 
-		return results.map((row: any) => ({
-			id: row.id,
-			name: row.name,
-			slug: row.slug,
-			count: row.count
-		}));
-	} catch (error) {
-		logger.error({ error }, 'Failed to get collection facets');
-		return [];
-	}
+			return results.map((row) => ({
+				id: row.id,
+				name: row.name,
+				slug: row.slug,
+				count: row.count ?? 0
+			}));
+		} catch (error) {
+			logger.error({ error }, 'Failed to get collection facets');
+			return [];
+		}
+	});
 }
 
 export async function getMoviesByMetadata(
@@ -254,88 +276,99 @@ export async function getMoviesByMetadata(
 	},
 	options: { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' } = {}
 ): Promise<EnhancedMetadataResult> {
-	const { mediaType, hasTrailer, hasImdbId, genres = [], collections = [] } = filters;
-
+	const { mediaType, hasTrailer, hasImdbId, genres: genreIds = [], collections: collectionIds = [] } = filters;
 	const { limit = 20, offset = 0, sortBy = 'rating', sortOrder = 'desc' } = options;
 
-	try {
-		const whereConditions = [];
-		if (mediaType) {
-			whereConditions.push(sql`m.mediaType = ${mediaType}`);
+	const cacheKey = buildCacheKey(
+		'metadata',
+		'movies-by-metadata',
+		mediaType,
+		hasTrailer,
+		hasImdbId,
+		genreIds.join(','),
+		collectionIds.join(','),
+		limit,
+		offset,
+		sortBy,
+		sortOrder
+	);
+
+	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
+		try {
+			const conditions = [];
+			if (mediaType) {
+				conditions.push(eq(movies.mediaType, mediaType));
+			}
+			if (hasTrailer) {
+				conditions.push(and(isNotNull(movies.trailerUrl), ne(movies.trailerUrl, '')));
+			}
+			if (hasImdbId) {
+				conditions.push(and(isNotNull(movies.imdbId), ne(movies.imdbId, '')));
+			}
+			if (genreIds.length > 0) {
+				conditions.push(sql`m.id IN (
+					SELECT movieId FROM movies_genres WHERE genreId IN (${sql.join(genreIds.map(id => sql`${id}`), sql`, `)})
+				)`);
+			}
+			if (collectionIds.length > 0) {
+				conditions.push(inArray(movies.collectionId, collectionIds));
+			}
+
+			const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+			let orderBy;
+			const orderFn = sortOrder === 'desc' ? desc : asc;
+
+			switch (sortBy) {
+				case 'title':
+					orderBy = [orderFn(movies.title)];
+					break;
+				case 'releaseDate':
+					orderBy = [sql`(releaseDate IS NULL) ASC`, orderFn(movies.releaseDate)];
+					break;
+				case 'rating':
+				default:
+					orderBy = [sql`(rating IS NULL) ASC`, orderFn(movies.rating)];
+			}
+
+			const [movieRows, total] = await Promise.all([
+				db.select().from(movies)
+					.where(where)
+					.orderBy(...orderBy as any)
+					.limit(limit)
+					.offset(offset),
+				db.select({ count: sql<number>`count(*)` }).from(movies).where(where)
+			]);
+
+			const moviesResult = await mapRowsToSummaries(movieRows as any[]);
+			const totalCount = (total[0] as any)?.count || 0;
+
+			const enhancedMovies = moviesResult.map((movie) => ({
+				...movie,
+				trailerUrl: movie.trailerUrl,
+				imdbId: movie.imdbId,
+				canonicalPath: movie.canonicalPath,
+				addedAt: movie.addedAt,
+				mediaType: movie.mediaType,
+				genres: movie.genres || []
+			}));
+
+			const [genreFacets, collectionFacets] = await Promise.all([
+				getGenreFacets(),
+				getCollectionFacets()
+			]);
+
+			return {
+				movies: enhancedMovies,
+				total: totalCount,
+				genres: genreFacets,
+				collections: collectionFacets
+			};
+		} catch (error) {
+			logger.error({ error, filters, options }, 'Failed to get movies by metadata');
+			throw error;
 		}
-		if (hasTrailer) {
-			whereConditions.push(sql`m.trailerUrl IS NOT NULL AND m.trailerUrl != ""`);
-		}
-		if (hasImdbId) {
-			whereConditions.push(sql`m.imdbId IS NOT NULL AND m.imdbId != ""`);
-		}
-		if (genres.length > 0) {
-			whereConditions.push(sql`m.id IN (
-				SELECT movieId FROM movies_genres WHERE genreId IN (${genres.join(',')})
-			)`);
-		}
-		if (collections.length > 0) {
-			whereConditions.push(sql`m.collectionId IN (${collections.join(',')})`);
-		}
-
-		const whereClause =
-			whereConditions.length > 0 ? sql`WHERE ${whereConditions.join(' AND ')}` : sql``;
-
-		let orderByClause = sql``;
-		switch (sortBy) {
-			case 'title':
-				orderByClause = sql`ORDER BY m.title COLLATE NOCASE`;
-				break;
-			case 'releaseDate':
-				orderByClause = sql`ORDER BY (m.releaseDate IS NULL) ASC, m.releaseDate`;
-				break;
-			case 'rating':
-			default:
-				orderByClause = sql`ORDER BY (m.rating IS NULL) ASC, m.rating`;
-		}
-		orderByClause = sql`${orderByClause} ${sql.raw(sortOrder)}`;
-
-		const [movieRows, total] = await Promise.all([
-			db.all(sql`
-				SELECT m.* FROM movies m
-				${whereClause}
-				${orderByClause}
-				LIMIT ${limit} OFFSET ${offset}
-			`),
-			db.all(sql`
-				SELECT COUNT(*) as count FROM movies m
-				${whereClause}
-			`)
-		]);
-
-		const movies = await mapRowsToSummaries(movieRows as any[]);
-		const totalCount = (total[0] as any)?.count || 0;
-
-		const enhancedMovies = movies.map((movie) => ({
-			...movie,
-			trailerUrl: movie.trailerUrl,
-			imdbId: movie.imdbId,
-			canonicalPath: movie.canonicalPath,
-			addedAt: movie.addedAt,
-			mediaType: movie.mediaType,
-			genres: movie.genres || []
-		}));
-
-		const [genreFacets, collectionFacets] = await Promise.all([
-			getGenreFacets(),
-			getCollectionFacets()
-		]);
-
-		return {
-			movies: enhancedMovies,
-			total: totalCount,
-			genres: genreFacets,
-			collections: collectionFacets
-		};
-	} catch (error) {
-		logger.error({ error, filters, options }, 'Failed to get movies by metadata');
-		throw error;
-	}
+	});
 }
 
 export async function updateMovieMetadata(
@@ -377,29 +410,32 @@ export async function getMetadataStatistics(): Promise<{
 	moviesWithImdbId: number;
 	moviesWithCanonicalPath: number;
 }> {
-	try {
-		const [stats] = await db
-			.select({
-				movieCount: sql<number>`COUNT(*)`,
-				moviesWithTrailers: sql<number>`SUM(CASE WHEN trailerUrl IS NOT NULL AND trailerUrl != '' THEN 1 ELSE 0 END)`,
-				moviesWithImdbId: sql<number>`SUM(CASE WHEN imdbId IS NOT NULL AND imdbId != '' THEN 1 ELSE 0 END)`,
-				moviesWithCanonicalPath: sql<number>`SUM(CASE WHEN canonicalPath IS NOT NULL AND canonicalPath != '' THEN 1 ELSE 0 END)`
-			})
-			.from(movies);
+	const cacheKey = buildCacheKey('metadata', 'statistics');
+	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
+		try {
+			const [stats] = await db
+				.select({
+					movieCount: sql<number>`COUNT(*)`,
+					moviesWithTrailers: sql<number>`SUM(CASE WHEN trailerUrl IS NOT NULL AND trailerUrl != '' THEN 1 ELSE 0 END)`,
+					moviesWithImdbId: sql<number>`SUM(CASE WHEN imdbId IS NOT NULL AND imdbId != '' THEN 1 ELSE 0 END)`,
+					moviesWithCanonicalPath: sql<number>`SUM(CASE WHEN canonicalPath IS NOT NULL AND canonicalPath != '' THEN 1 ELSE 0 END)`
+				})
+				.from(movies);
 
-		const [genreCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(genres);
-		const [collectionCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(collections);
+			const [genreCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(genres);
+			const [collectionCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(collections);
 
-		return {
-			movieCount: stats.movieCount || 0,
-			genreCount: genreCount.count || 0,
-			collectionCount: collectionCount.count || 0,
-			moviesWithTrailers: stats.moviesWithTrailers || 0,
-			moviesWithImdbId: stats.moviesWithImdbId || 0,
-			moviesWithCanonicalPath: stats.moviesWithCanonicalPath || 0
-		};
-	} catch (error) {
-		logger.error({ error }, 'Failed to get metadata statistics');
-		throw error;
-	}
+			return {
+				movieCount: stats.movieCount || 0,
+				genreCount: genreCount.count || 0,
+				collectionCount: collectionCount.count || 0,
+				moviesWithTrailers: stats.moviesWithTrailers || 0,
+				moviesWithImdbId: stats.moviesWithImdbId || 0,
+				moviesWithCanonicalPath: stats.moviesWithCanonicalPath || 0
+			};
+		} catch (error) {
+			logger.error({ error }, 'Failed to get metadata statistics');
+			throw error;
+		}
+	});
 }

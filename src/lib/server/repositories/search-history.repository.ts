@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { searchHistory } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, lt } from 'drizzle-orm';
 import type { MovieFilters } from '$lib/types/filters';
 
 export interface SearchHistoryEntry {
@@ -12,9 +12,6 @@ export interface SearchHistoryEntry {
 }
 
 export const searchHistoryRepository = {
-	/**
-	 * Add a new search to history
-	 */
 	async addSearch(userId: string, query: string, filters?: MovieFilters): Promise<void> {
 		try {
 			const filtersJson = filters ? JSON.stringify(filters) : null;
@@ -30,9 +27,6 @@ export const searchHistoryRepository = {
 		}
 	},
 
-	/**
-	 * Get recent searches for a user
-	 */
 	async getRecentSearches(userId: string, limit: number = 10): Promise<SearchHistoryEntry[]> {
 		try {
 			const results = await db
@@ -55,9 +49,6 @@ export const searchHistoryRepository = {
 		}
 	},
 
-	/**
-	 * Get unique recent search queries (without duplicates)
-	 */
 	async getUniqueRecentQueries(userId: string, limit: number = 10): Promise<string[]> {
 		try {
 			const searches = await this.getRecentSearches(userId, limit * 2);
@@ -77,9 +68,6 @@ export const searchHistoryRepository = {
 		}
 	},
 
-	/**
-	 * Clear all search history for a user
-	 */
 	async clearHistory(userId: string): Promise<void> {
 		try {
 			await db.delete(searchHistory).where(eq(searchHistory.userId, userId));
@@ -89,9 +77,6 @@ export const searchHistoryRepository = {
 		}
 	},
 
-	/**
-	 * Delete a specific search entry
-	 */
 	async deleteSearch(userId: string, searchId: number): Promise<void> {
 		try {
 			await db.delete(searchHistory).where(eq(searchHistory.id, searchId));
@@ -101,13 +86,10 @@ export const searchHistoryRepository = {
 		}
 	},
 
-	/**
-	 * Clean up old search history (older than 90 days)
-	 */
 	async cleanupOldSearches(): Promise<void> {
 		try {
 			const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-			await db.delete(searchHistory).where(eq(searchHistory.searchedAt, ninetyDaysAgo));
+			await db.delete(searchHistory).where(lt(searchHistory.searchedAt, ninetyDaysAgo));
 		} catch (error) {
 			console.error('Error cleaning up old searches:', error);
 		}

@@ -1,4 +1,3 @@
-import { writable, get } from 'svelte/store';
 import type { LibraryMovie } from '$lib/types/library';
 import { notifications } from './notificationStore';
 
@@ -28,25 +27,13 @@ export type Movie = {
 
 type WatchlistCandidate = LibraryMovie | Movie | (Partial<Movie> & Record<string, unknown>);
 
-interface WatchlistState {
-	watchlist: Movie[];
-	loading: boolean;
-	error: string | null;
-}
-
 const STORAGE_KEY = 'meatflicks.watchlist';
 const hasStorage = typeof localStorage !== 'undefined';
 
 const normalizeDateString = (value: unknown): string | null => {
-	if (typeof value !== 'string') {
-		return null;
-	}
-
+	if (typeof value !== 'string') return null;
 	const parsed = Date.parse(value);
-	if (Number.isNaN(parsed)) {
-		return null;
-	}
-
+	if (Number.isNaN(parsed)) return null;
 	return new Date(parsed).toISOString();
 };
 
@@ -55,37 +42,24 @@ const buildCanonicalPath = (
 	id: string
 ): string => {
 	const fromPayload = typeof payload.canonicalPath === 'string' ? payload.canonicalPath.trim() : '';
-	if (fromPayload) {
-		return fromPayload.startsWith('/') ? fromPayload : `/${fromPayload}`;
-	}
+	if (fromPayload) return fromPayload.startsWith('/') ? fromPayload : `/${fromPayload}`;
 
 	const imdbId = typeof payload.imdbId === 'string' ? payload.imdbId.trim() : '';
-	if (imdbId) {
-		return `/movie/${imdbId}`;
-	}
+	if (imdbId) return `/movie/${imdbId}`;
 
-	const tmdbId =
-		typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId) ? payload.tmdbId : null;
-
-	if (tmdbId) {
-		return `/movie/${tmdbId}`;
-	}
+	const tmdbId = typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId) ? payload.tmdbId : null;
+	if (tmdbId) return `/movie/${tmdbId}`;
 
 	return `/movie/${id}`;
 };
 
 const sanitizeMovie = (candidate: unknown): Movie | null => {
-	if (!candidate || typeof candidate !== 'object') {
-		return null;
-	}
-
+	if (!candidate || typeof candidate !== 'object') return null;
 	const payload = candidate as Partial<Movie> & Record<string, unknown>;
 	const id = typeof payload.id === 'string' ? payload.id : String(payload.id ?? '');
 	const title = typeof payload.title === 'string' ? payload.title : String(payload.title ?? '');
 
-	if (!id) {
-		return null;
-	}
+	if (!id) return null;
 
 	const ratingValue = Number(payload.rating ?? 0);
 	const addedAt = normalizeDateString(payload.addedAt) ?? new Date().toISOString();
@@ -112,24 +86,16 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
 		season: typeof payload.season === 'number' ? payload.season : null,
 		episode: typeof payload.episode === 'number' ? payload.episode : null,
 		addedAt
-	} satisfies Movie;
+	};
 };
 
 const readStorage = (): Movie[] => {
-	if (!hasStorage) {
-		return [];
-	}
-
+	if (!hasStorage) return [];
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) {
-			return [];
-		}
-
+		if (!raw) return [];
 		const parsed = JSON.parse(raw);
-		if (!Array.isArray(parsed)) {
-			return [];
-		}
+		if (!Array.isArray(parsed)) return [];
 
 		return parsed
 			.map(sanitizeMovie)
@@ -140,40 +106,52 @@ const readStorage = (): Movie[] => {
 					: [...accumulator, movie];
 			}, []);
 	} catch (error) {
-		console.error('[watchlist][readStorage] Failed to parse persisted data', error);
+		console.error('[watchlist][readStorage] Failed', error);
 		return [];
 	}
 };
 
-const persist = (watchlist: Movie[]) => {
-	if (!hasStorage) {
-		return;
-	}
-
+const persist = (items: Movie[]) => {
+	if (!hasStorage) return;
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 	} catch (error) {
-		console.error('[watchlist][persist] Failed to write data', error);
+		console.error('[watchlist][persist] Failed', error);
 	}
 };
 
-function createWatchlistStore() {
-	const initialState: WatchlistState = {
-		watchlist: [],
-		loading: false,
-		error: null
-	};
+class WatchlistStore {
+	#watchlist = $state<Movie[]>([]);
+	#loading = $state(false);
+	#error = $state<string | null>(null);
 
-	const store = writable<WatchlistState>(initialState);
+	constructor() {
+		if (typeof window !== 'undefined') {
+			this.#watchlist = readStorage();
+			this.syncFromServer();
 
-	const syncFromServer = async () => {
+			window.addEventListener('storage', (event) => {
+				if (event.key === STORAGE_KEY) {
+					this.#watchlist = readStorage();
+				}
+			});
+
+			window.addEventListener('online', () => {
+				this.syncFromServer();
+			});
+		}
+	}
+
+	get items() { return this.#watchlist; }
+	get loading() { return this.#loading; }
+	get error() { return this.#error; }
+
+	async syncFromServer() {
 		if (typeof window === 'undefined') return;
 
-		store.update((state) => ({ ...state, loading: true }));
+		this.#loading = true;
 		try {
-			const response = await fetch('/api/watchlist', {
-				credentials: 'include'
-			});
+			const response = await fetch('/api/watchlist', { credentials: 'include' });
 			if (response.ok) {
 				const serverMovies = await response.json();
 				const sanitized = serverMovies
@@ -181,106 +159,38 @@ function createWatchlistStore() {
 					.filter((movie: Movie | null): movie is Movie => Boolean(movie));
 
 				if (sanitized.length > 0) {
-					store.update((state) => ({
-						...state,
-						watchlist: sanitized,
-						loading: false,
-						error: null
-					}));
+					this.#watchlist = sanitized;
 					persist(sanitized);
-				} else {
-					const stored = readStorage();
-					store.update((state) => ({
-						...state,
-						watchlist: stored,
-						loading: false,
-						error: null
-					}));
 				}
-			} else {
-				const stored = readStorage();
-				store.update((state) => ({
-					...state,
-					watchlist: stored,
-					loading: false,
-					error: null
-				}));
 			}
 		} catch (error) {
 			console.error('[watchlist][syncFromServer] Failed', error);
-			const stored = readStorage();
-			store.update((state) => ({
-				...state,
-				watchlist: stored,
-				loading: false,
-				error: null
-			}));
-		}
-	};
-
-	if (typeof window !== 'undefined') {
-		syncFromServer();
-
-		window.addEventListener('storage', (event) => {
-			if (event.key === STORAGE_KEY) {
-				const stored = readStorage();
-				store.update((state) => ({ ...state, watchlist: stored }));
-			}
-		});
-
-		window.addEventListener('online', () => {
-			if (
-				'serviceWorker' in navigator &&
-				'sync' in (window as any).ServiceWorkerRegistration?.prototype
-			) {
-				navigator.serviceWorker.ready.then((registration) => {
-					(registration as any).sync.register('sync-watchlist');
-				});
-			} else {
-				syncFromServer();
-			}
-		});
-
-		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.addEventListener('message', (event) => {
-				if (event.data && event.data.type === 'SYNC_WATCHLIST') {
-					console.log('[watchlist] Received sync request from service worker');
-					syncFromServer();
-				}
-			});
+		} finally {
+			this.#loading = false;
 		}
 	}
 
-	const setError = (message: string) => {
-		store.update((state) => ({ ...state, error: message }));
-	};
+	isInWatchlist(movieId: string): boolean {
+		return this.#watchlist.some((movie) => movie.id === movieId);
+	}
 
-	const clearError = () => {
-		store.update((state) => ({ ...state, error: null }));
-	};
-
-	const addToWatchlist = async (movie: WatchlistCandidate) => {
+	async addToWatchlist(movie: WatchlistCandidate) {
 		const sanitized = sanitizeMovie(movie);
-
 		if (!sanitized) {
-			setError('Unable to add movie to watchlist. Missing required fields.');
-			notifications.error('Error', 'Unable to add movie. Missing data.');
+			this.#error = 'Missing movie data';
 			return;
 		}
 
-		const previousState = get(store).watchlist;
+		const previousWatchlist = [...this.#watchlist];
+		const existingIndex = this.#watchlist.findIndex((item) => item.id === sanitized.id);
 
-		store.update((state) => {
-			const existing = state.watchlist.find((item) => item.id === sanitized.id);
-			const updatedEntry = existing ? { ...sanitized, addedAt: existing.addedAt } : sanitized;
+		if (existingIndex >= 0) {
+			this.#watchlist[existingIndex] = { ...sanitized, addedAt: this.#watchlist[existingIndex].addedAt };
+		} else {
+			this.#watchlist.push(sanitized);
+		}
 
-			const updated = existing
-				? state.watchlist.map((item) => (item.id === sanitized.id ? updatedEntry : item))
-				: [...state.watchlist, updatedEntry];
-
-			persist(updated);
-			return { ...state, watchlist: updated, error: null };
-		});
+		persist(this.#watchlist);
 
 		try {
 			const response = await fetch('/api/watchlist', {
@@ -289,42 +199,28 @@ function createWatchlistStore() {
 				body: JSON.stringify({ movie: sanitized }),
 				credentials: 'include'
 			});
-			if (!response.ok) throw new Error('Failed to sync with server');
+			if (!response.ok) throw new Error('Failed to sync');
 
-			const wasAlreadyIn = previousState.some((i) => i.id === sanitized.id);
-			if (!wasAlreadyIn) {
+			if (existingIndex < 0) {
 				notifications.movieAdded({
 					title: sanitized.title,
 					posterPath: sanitized.posterPath,
 					tmdbId: sanitized.tmdbId ?? 0
 				});
-			} else {
-				notifications.success('Updated', `Updated "${sanitized.title}" in your watchlist.`);
 			}
 		} catch (error) {
-			console.error('[watchlist][addToWatchlist] sync failed', error);
-			store.update((state) => {
-				persist(previousState);
-				return { ...state, watchlist: previousState, error: 'Failed to sync with server.' };
-			});
-			notifications.error('Sync Error', 'Failed to save to server. Reverting.');
+			this.#watchlist = previousWatchlist;
+			persist(this.#watchlist);
+			notifications.error('Sync Error', 'Failed to save to server.');
 		}
-	};
+	}
 
-	const removeFromWatchlist = async (movieId: string) => {
-		if (!movieId) {
-			setError('Movie id is required to remove from watchlist.');
-			return;
-		}
+	async removeFromWatchlist(movieId: string) {
+		const previousWatchlist = [...this.#watchlist];
+		const movieTitle = this.#watchlist.find((m) => m.id === movieId)?.title ?? 'Movie';
 
-		const previousState = get(store).watchlist;
-		const movieTitle = previousState.find((m) => m.id === movieId)?.title ?? 'Movie';
-
-		store.update((state) => {
-			const updated = state.watchlist.filter((movie) => movie.id !== movieId);
-			persist(updated);
-			return { ...state, watchlist: updated, error: null };
-		});
+		this.#watchlist = this.#watchlist.filter((m) => m.id !== movieId);
+		persist(this.#watchlist);
 
 		try {
 			const response = await fetch('/api/watchlist', {
@@ -333,79 +229,49 @@ function createWatchlistStore() {
 				body: JSON.stringify({ movieId }),
 				credentials: 'include'
 			});
-			if (!response.ok) throw new Error('Failed to sync removal with server');
-
+			if (!response.ok) throw new Error('Failed to sync');
 			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
 		} catch (error) {
-			console.error('[watchlist][removeFromWatchlist] sync failed', error);
-			store.update((state) => {
-				persist(previousState);
-				return { ...state, watchlist: previousState, error: 'Failed to sync removal with server.' };
-			});
-			notifications.error('Sync Error', 'Failed to remove from server. Reverting.');
+			this.#watchlist = previousWatchlist;
+			persist(this.#watchlist);
+			notifications.error('Sync Error', 'Failed to remove from server.');
 		}
-	};
+	}
 
-	const isInWatchlist = (movieId: string) =>
-		get(store).watchlist.some((movie) => movie.id === movieId);
-
-	const replaceAll = async (movies: Movie[]) => {
-		const sanitized = movies.map(sanitizeMovie).filter((movie): movie is Movie => Boolean(movie));
-
-		const deduped = sanitized.reduce<Movie[]>((accumulator, movie) => {
-			return accumulator.some((existing) => existing.id === movie.id)
-				? accumulator
-				: [...accumulator, movie];
-		}, []);
-
-		store.update((state) => ({ ...state, watchlist: deduped, error: null }));
-		persist(deduped);
-
-		try {
-			const response = await fetch('/api/watchlist', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movies: deduped }),
-				credentials: 'include'
-			});
-			if (!response.ok) throw new Error('Failed to replace watchlist on server');
-		} catch (error) {
-			console.error('[watchlist][replaceAll] sync failed', error);
-			setError('Replaced locally, but failed to sync with server.');
-		}
-	};
-
-	const clear = async () => {
-		store.set({ ...initialState });
+	async clear() {
+		this.#watchlist = [];
 		persist([]);
-
 		try {
-			const response = await fetch('/api/watchlist', {
+			await fetch('/api/watchlist', {
 				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ clearAll: true }),
 				credentials: 'include'
 			});
-			if (!response.ok) throw new Error('Failed to clear on server');
 		} catch (error) {
-			console.error('[watchlist][clear] sync failed', error);
-			setError('Cleared locally, but failed to sync with server.');
+			console.error('[watchlist][clear] Sync failed', error);
 		}
-	};
+	}
 
-	const exportData = () => structuredClone(get(store).watchlist);
+	async replaceAll(movies: Movie[]) {
+		const sanitized = movies.map(sanitizeMovie).filter((movie): movie is Movie => Boolean(movie));
+		this.#watchlist = sanitized;
+		persist(sanitized);
+		try {
+			await fetch('/api/watchlist', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ movies: sanitized }),
+				credentials: 'include'
+			});
+		} catch (error) {
+			console.error('[watchlist][replaceAll] Sync failed', error);
+		}
+	}
 
-	return {
-		subscribe: store.subscribe,
-		addToWatchlist,
-		removeFromWatchlist,
-		isInWatchlist,
-		replaceAll,
-		clear,
-		exportData,
-		clearError,
-		setError
-	};
+	exportData() {
+		return $state.snapshot(this.#watchlist);
+	}
 }
 
-export const watchlist = createWatchlistStore();
+export const watchlist = new WatchlistStore();
