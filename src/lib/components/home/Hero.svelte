@@ -10,6 +10,7 @@
 		Star,
 		RefreshCcw
 	} from '@lucide/svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -58,6 +59,8 @@
 	let activeIndex = $state(0);
 	let lastSlideKey = $state<string | null>(null);
 	let heroElement = $state<HTMLElement | null>(null);
+	let touchStartX = 0;
+	let touchEndX = 0;
 
 	function normalizeKey(entry: LibraryMovie, index: number): string {
 		const candidates = [
@@ -68,32 +71,6 @@
 		].filter(Boolean);
 
 		return candidates[0] || `slide-${index}`;
-	}
-
-	function extractYouTubeVideoId(url: string): string | null {
-		if (!url) return null;
-
-		try {
-			const parsed = new URL(url);
-			const host = parsed.hostname.toLowerCase();
-
-			if (host.includes('youtu.be')) {
-				return parsed.pathname.slice(1).trim() || null;
-			}
-
-			const pathSegments = parsed.pathname.split('/').filter(Boolean);
-			if (pathSegments.length >= 2 && pathSegments[0] === 'embed') {
-				return pathSegments[1] || null;
-			}
-
-			const queryId = parsed.searchParams.get('v');
-			if (queryId) return queryId;
-		} catch {
-			const match = url.match(/(?:v=|be\/|embed\/)([A-Za-z0-9_-]{6,})/);
-			return match?.[1] || null;
-		}
-
-		return null;
 	}
 
 	function formatReleaseDate(dateInput: string | Date | null | undefined): string {
@@ -233,19 +210,35 @@
 		switch (event.key) {
 			case 'ArrowLeft':
 				event.preventDefault();
+				event.stopPropagation();
 				showPrevious();
 				break;
 			case 'ArrowRight':
 				event.preventDefault();
+				event.stopPropagation();
 				showNext();
 				break;
 			case ' ':
-				if (event.target === heroElement) {
-					event.preventDefault();
-					toggleAutoplay();
-				}
+				event.preventDefault();
+				event.stopPropagation();
+				toggleAutoplay();
 				break;
 		}
+	}
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.changedTouches[0].screenX;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		if (!isMultiSlide) return;
+		touchEndX = e.changedTouches[0].screenX;
+		handleSwipe();
+	}
+
+	function handleSwipe() {
+		if (touchEndX < touchStartX - 50) showNext();
+		if (touchEndX > touchStartX + 50) showPrevious();
 	}
 
 	$effect(() => {
@@ -288,26 +281,42 @@
 	});
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 {#if hasSlides && activeMovie}
-	<div
-		class="rounded-b-0 relative min-h-[60vh] overflow-hidden border-0 bg-black bg-cover bg-center bg-no-repeat p-0 md:min-h-[65vh] lg:min-h-[70vh]"
-		role="region"
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<section
+		class="relative min-h-[60vh] overflow-hidden border-0 bg-black p-0 outline-none md:min-h-[65vh] lg:min-h-[70vh]"
 		aria-label="Featured content spotlight"
-		tabindex="-1"
+		tabindex="0"
+		onkeydown={handleKeydown}
+		ontouchstart={handleTouchStart}
+		ontouchend={handleTouchEnd}
 	>
 		<div bind:this={heroElement} class="contents">
-			{#if backgroundImageUrl}
-				<img
-					src={backgroundImageUrl}
-					alt=""
-					loading="lazy"
-					aria-hidden="true"
-					class="absolute inset-0 -z-10 h-full w-full object-cover"
-					style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"
-				/>
-			{/if}
+			{#each slides as slide, index (slide.key)}
+				{#if index === activeIndex}
+					{#if slide.movie.backdropPath || slide.movie.posterPath}
+						{@const rawPath = slide.movie.backdropPath || slide.movie.posterPath}
+						{@const src = (rawPath || '').startsWith('http')
+							? rawPath
+							: `https://image.tmdb.org/t/p/w1280${rawPath}`}
+
+						<div
+							class="absolute inset-0 -z-10 h-full w-full overflow-hidden"
+							transition:fade={{ duration: 1000 }}
+						>
+							<img
+								{src}
+								alt=""
+								loading={index === 0 ? 'eager' : 'lazy'}
+								aria-hidden="true"
+								class="animate-ken-burns h-full w-full object-cover"
+								style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"
+							/>
+						</div>
+					{/if}
+				{/if}
+			{/each}
 
 			<div
 				class="absolute inset-0 bg-linear-to-t from-background/50 via-background/40 to-transparent"
@@ -391,78 +400,82 @@
 			{/if}
 
 			<div class="relative z-10 flex h-full items-end px-[10%] py-12">
-				<CardContent class="max-w-2xl space-y-6 px-0 text-foreground">
-					<CardHeader class="space-y-4 px-0">
-						<CardTitle class="text-4xl leading-tight font-bold sm:text-5xl">
-							{activeMovie.title}
-						</CardTitle>
+				{#key activeMovie.id}
+					<div in:fly={{ y: 20, duration: 600, delay: 300 }}>
+						<CardContent class="max-w-2xl space-y-6 px-0 text-foreground">
+							<CardHeader class="space-y-4 px-0">
+								<CardTitle class="text-4xl leading-tight font-bold sm:text-5xl">
+									{activeMovie.title}
+								</CardTitle>
 
-						<div class="flex flex-wrap items-center gap-3 text-sm">
-							<Badge variant="secondary" class="bg-foreground/10 text-foreground backdrop-blur">
-								{mediaTypeLabel}
-							</Badge>
+								<div class="flex flex-wrap items-center gap-3 text-sm">
+									<Badge variant="secondary" class="bg-foreground/10 text-foreground backdrop-blur">
+										{mediaTypeLabel}
+									</Badge>
 
-							<Badge
-								variant="outline"
-								class="flex items-center gap-1 border-foreground/20 bg-background/40 text-foreground backdrop-blur"
-							>
-								<CalendarDays class="size-3.5" aria-hidden="true" />
-								<span>{releaseDateLabel}</span>
-							</Badge>
+									<Badge
+										variant="outline"
+										class="flex items-center gap-1 border-foreground/20 bg-background/40 text-foreground backdrop-blur"
+									>
+										<CalendarDays class="size-3.5" aria-hidden="true" />
+										<span>{releaseDateLabel}</span>
+									</Badge>
 
-							<Badge
-								variant="outline"
-								class="flex items-center gap-1 border-foreground/20 bg-background/40 text-foreground backdrop-blur"
-							>
-								<Star class="size-3.5 text-yellow-400" aria-hidden="true" />
-								<span>{ratingLabel}</span>
-							</Badge>
-						</div>
-					</CardHeader>
+									<Badge
+										variant="outline"
+										class="flex items-center gap-1 border-foreground/20 bg-background/40 text-foreground backdrop-blur"
+									>
+										<Star class="size-3.5 text-yellow-400" aria-hidden="true" />
+										<span>{ratingLabel}</span>
+									</Badge>
+								</div>
+							</CardHeader>
 
-					{#if activeMovie.overview}
-						<p class="text-base leading-relaxed text-foreground/90 md:text-lg">
-							{activeMovie.overview}
-						</p>
-					{/if}
-
-					<div class="flex flex-wrap items-center gap-4">
-						<Button
-							href={detailsHref}
-							size="lg"
-							class="gap-2 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
-						>
-							<Play class="size-4" aria-hidden="true" />
-							Play
-						</Button>
-
-						<Button
-							type="button"
-							size="icon"
-							variant={isInWatchlist ? 'destructive' : 'secondary'}
-							onclick={handleWatchlistToggle}
-							aria-label={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
-							class="size-11 cursor-pointer rounded-full border border-foreground/20 bg-background/40 text-foreground backdrop-blur transition-transform duration-300 hover:-translate-y-0.5"
-						>
-							{#if isInWatchlist}
-								<Check class="size-4" aria-hidden="true" />
-							{:else}
-								<Plus class="size-4" aria-hidden="true" />
+							{#if activeMovie.overview}
+								<p class="text-base leading-relaxed text-foreground/90 md:text-lg">
+									{activeMovie.overview}
+								</p>
 							{/if}
-						</Button>
-					</div>
 
-					{#if message}
-						<div
-							class="text-sm font-medium text-foreground/80"
-							role="status"
-							aria-live="polite"
-							aria-atomic="true"
-						>
-							{message}
-						</div>
-					{/if}
-				</CardContent>
+							<div class="flex flex-wrap items-center gap-4">
+								<Button
+									href={detailsHref}
+									size="lg"
+									class="gap-2 font-semibold transition-transform duration-300 hover:-translate-y-0.5"
+								>
+									<Play class="size-4" aria-hidden="true" />
+									Play
+								</Button>
+
+								<Button
+									type="button"
+									size="icon"
+									variant={isInWatchlist ? 'destructive' : 'secondary'}
+									onclick={handleWatchlistToggle}
+									aria-label={isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
+									class="size-11 cursor-pointer rounded-full border border-foreground/20 bg-background/40 text-foreground backdrop-blur transition-transform duration-300 hover:-translate-y-0.5"
+								>
+									{#if isInWatchlist}
+										<Check class="size-4" aria-hidden="true" />
+									{:else}
+										<Plus class="size-4" aria-hidden="true" />
+									{/if}
+								</Button>
+							</div>
+
+							{#if message}
+								<div
+									class="text-sm font-medium text-foreground/80"
+									role="status"
+									aria-live="polite"
+									aria-atomic="true"
+								>
+									{message}
+								</div>
+							{/if}
+						</CardContent>
+					</div>
+				{/key}
 			</div>
 
 			{#if isMultiSlide}
@@ -498,7 +511,7 @@
 				</div>
 			{/if}
 		</div>
-	</div>
+	</section>
 {:else}
 	<Card
 		class="relative flex min-h-[50vh] items-center justify-center overflow-hidden border-0 bg-linear-to-br from-background via-background/90 to-background px-[5%] py-24 text-center text-foreground/70"
@@ -511,3 +524,19 @@
 		</div>
 	</Card>
 {/if}
+
+<style>
+	@keyframes ken-burns {
+		0% {
+			transform: scale(1);
+		}
+		100% {
+			transform: scale(1.15);
+		}
+	}
+
+	.animate-ken-burns {
+		animation: ken-burns 20s ease-out infinite alternate;
+		will-change: transform;
+	}
+</style>
