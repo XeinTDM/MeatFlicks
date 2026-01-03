@@ -99,12 +99,8 @@
 		sources.forEach((entry, index) => {
 			if (!entry) return;
 
-			let key = normalizeKey(entry, index);
-			let suffix = 1;
-			while (seen.has(key)) {
-				key = `${normalizeKey(entry, index)}-${suffix}`;
-				suffix += 1;
-			}
+			const key = normalizeKey(entry, index);
+			if (seen.has(key)) return;
 
 			seen.add(key);
 			pooled.push({ movie: entry, key });
@@ -302,7 +298,7 @@
 							: `https://image.tmdb.org/t/p/w1280${rawPath}`}
 
 						<div
-							class="absolute inset-0 -z-10 h-full w-full overflow-hidden"
+							class="absolute inset-x-0 top-0 -right-[5%] -left-[5%] h-full w-[calc(100%+10%)] overflow-hidden"
 							transition:fade={{ duration: 1000 }}
 						>
 							<img
@@ -311,7 +307,6 @@
 								loading={index === 0 ? 'eager' : 'lazy'}
 								aria-hidden="true"
 								class="animate-ken-burns h-full w-full object-cover"
-								style="mask-image: linear-gradient(to bottom, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);"
 							/>
 						</div>
 					{/if}
@@ -319,39 +314,14 @@
 			{/each}
 
 			<div
-				class="absolute inset-0 bg-linear-to-t from-background/50 via-background/40 to-transparent"
+				class="absolute inset-0 rounded-lg bg-linear-to-t from-background via-background/60 to-transparent"
 			></div>
 			<div
-				class="absolute inset-0 bg-linear-to-r from-background/90 via-background/40 to-transparent"
-			></div>
-			<div
-				class="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-background via-background/90 to-transparent"
+				class="absolute inset-0 bg-linear-to-r from-background/90 via-transparent to-transparent"
 			></div>
 
 			{#if isMultiSlide || canRefresh}
 				<div class="absolute top-8 right-[5%] z-20 flex items-center gap-2">
-					{#if canRefresh}
-						<Button
-							type="button"
-							variant="secondary"
-							size="sm"
-							class="flex items-center gap-2 rounded-full border border-foreground/20 bg-background/50 text-foreground shadow-sm backdrop-blur transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
-							onclick={triggerRefresh}
-							disabled={refreshing}
-							aria-label="Refresh spotlight picks"
-							title="Refresh spotlight picks"
-						>
-							{#if refreshing}
-								<Spinner />
-							{:else}
-								<RefreshCcw class="size-4" />
-							{/if}
-							<span class="hidden text-xs font-semibold tracking-wide uppercase sm:inline">
-								Refresh
-							</span>
-						</Button>
-					{/if}
-
 					{#if isMultiSlide}
 						<Button
 							type="button"

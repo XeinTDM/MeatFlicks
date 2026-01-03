@@ -33,7 +33,7 @@
 {#if hasMounted}
 	<div class="space-y-12">
 		{#if libraryHistoryEntries.length > 0}
-			<MovieScrollContainer title="Continue Watching" movies={libraryHistoryEntries} />
+			<MovieScrollContainer title="Recently Viewed" movies={libraryHistoryEntries} />
 		{/if}
 
 		{#if libraryWatchlistEntries.length > 0}
