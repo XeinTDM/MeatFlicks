@@ -1,5 +1,6 @@
 import type { LibraryMovie } from '$lib/types/library';
 import { notifications } from './notificationStore';
+import { page } from '$app/state';
 
 export type Movie = {
 	id: string;
@@ -148,6 +149,7 @@ class WatchlistStore {
 
 	async syncFromServer() {
 		if (typeof window === 'undefined') return;
+		if (!page.data.user) return;
 
 		this.#loading = true;
 		try {
@@ -192,6 +194,17 @@ class WatchlistStore {
 
 		persist(this.#watchlist);
 
+		if (!page.data.user) {
+			if (existingIndex < 0) {
+				notifications.movieAdded({
+					title: sanitized.title,
+					posterPath: sanitized.posterPath,
+					tmdbId: sanitized.tmdbId ?? 0
+				});
+			}
+			return;
+		}
+
 		try {
 			const response = await fetch('/api/watchlist', {
 				method: 'POST',
@@ -199,6 +212,18 @@ class WatchlistStore {
 				body: JSON.stringify({ movie: sanitized }),
 				credentials: 'include'
 			});
+
+			if (response.status === 401 || response.status === 403) {
+				if (existingIndex < 0) {
+					notifications.movieAdded({
+						title: sanitized.title,
+						posterPath: sanitized.posterPath,
+						tmdbId: sanitized.tmdbId ?? 0
+					});
+				}
+				return;
+			}
+
 			if (!response.ok) throw new Error('Failed to sync');
 
 			if (existingIndex < 0) {
@@ -222,6 +247,11 @@ class WatchlistStore {
 		this.#watchlist = this.#watchlist.filter((m) => m.id !== movieId);
 		persist(this.#watchlist);
 
+		if (!page.data.user) {
+			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
+			return;
+		}
+
 		try {
 			const response = await fetch('/api/watchlist', {
 				method: 'DELETE',
@@ -229,6 +259,12 @@ class WatchlistStore {
 				body: JSON.stringify({ movieId }),
 				credentials: 'include'
 			});
+
+			if (response.status === 401 || response.status === 403) {
+				notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
+				return;
+			}
+
 			if (!response.ok) throw new Error('Failed to sync');
 			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
 		} catch (error) {
@@ -241,6 +277,9 @@ class WatchlistStore {
 	async clear() {
 		this.#watchlist = [];
 		persist([]);
+
+		if (!page.data.user) return;
+
 		try {
 			await fetch('/api/watchlist', {
 				method: 'DELETE',
@@ -257,6 +296,9 @@ class WatchlistStore {
 		const sanitized = movies.map(sanitizeMovie).filter((movie): movie is Movie => Boolean(movie));
 		this.#watchlist = sanitized;
 		persist(sanitized);
+
+		if (!page.data.user) return;
+
 		try {
 			await fetch('/api/watchlist', {
 				method: 'PUT',

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, Minus, Star } from '@lucide/svelte';
-	import { watchlist } from '$lib/state/stores/watchlistStore';
-	import type { Movie as WatchlistMovie } from '$lib/state/stores/watchlistStore';
+	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
+	import type { Movie as WatchlistMovie } from '$lib/state/stores/watchlistStore.svelte';
 	import { error as errorStore } from '$lib/state/stores/errorStore';
 
 	import { Button } from '$lib/components/ui/button';

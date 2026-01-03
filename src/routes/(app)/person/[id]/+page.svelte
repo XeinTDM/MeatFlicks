@@ -29,7 +29,7 @@
 					/>
 				{:else}
 					<div
-						class="flex aspect-[2/3] w-full items-center justify-center rounded-lg bg-muted text-muted-foreground"
+						class="flex aspect-2/3 w-full items-center justify-center rounded-lg bg-muted text-muted-foreground"
 					>
 						No Image
 					</div>
@@ -82,7 +82,7 @@
 						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 							{#each person.knownFor as credit (credit.id)}
 								<button
-									class="group relative flex aspect-[2/3] flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground transition-all hover:scale-105 hover:shadow-xl"
+									class="group relative flex aspect-2/3 flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground transition-all hover:scale-105 hover:shadow-xl"
 									onclick={() => handleCreditClick(credit.mediaType, credit.id)}
 								>
 									{#if credit.posterPath}
@@ -101,7 +101,7 @@
 									{/if}
 
 									<div
-										class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3 pt-12 text-left"
+										class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/90 to-transparent p-3 pt-12 text-left"
 									>
 										<p class="line-clamp-2 text-sm font-semibold text-white">
 											{credit.title}

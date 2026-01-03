@@ -58,17 +58,17 @@ export async function enhanceMovieMetadata(
 	const { includeCast = true, includeTrailers = true } = options;
 
 	try {
-		const movieRows = await db
+		const movieRow = await db
 			.select()
 			.from(movies)
 			.where(eq(movies.id, movieId))
-			.limit(1);
+			.get();
 
-		if (movieRows.length === 0) {
+		if (!movieRow) {
 			throw new Error(`Movie not found: ${movieId}`);
 		}
 
-		const baseMovie = (await mapRowsToSummaries(movieRows as MovieRow[]))[0];
+		const baseMovie = (await mapRowsToSummaries([movieRow as MovieRow]))[0];
 
 		const enhancedMovie: LibraryMovie = {
 			...baseMovie,
@@ -108,7 +108,7 @@ export async function getEnhancedMovies(
 
 	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 		try {
-			const [movieRows, total] = await Promise.all([
+			const [movieRows, totalCountResult] = await db.batch([
 				db.select().from(movies)
 					.orderBy(sql`(rating IS NULL) ASC`, desc(movies.rating), desc(movies.popularity))
 					.limit(limit)
@@ -117,20 +117,24 @@ export async function getEnhancedMovies(
 			]);
 
 			const moviesResult = await mapRowsToSummaries(movieRows as MovieRow[]);
-			const totalCount = (total[0] as any)?.count || 0;
+			const totalCount = totalCountResult[0]?.count || 0;
 
 			const movieIds = moviesResult.map((m) => m.id);
 			let castMap = new Map<string, CastMember[]>();
 
 			if (includeCast && movieIds.length > 0) {
-				const castRows = await db.all(sql`
-					SELECT
-						mp.movieId, p.id, p.name, mp.character, p.profilePath
-					FROM movie_people mp
-					JOIN people p ON mp.personId = p.id
-					WHERE mp.movieId IN (${sql.join(movieIds.map(id => sql`${id}`), sql`, `)}) AND mp.role = 'actor'
-					ORDER BY mp.order ASC
-				`);
+				const castRows = await db
+					.select({
+						movieId: moviePeople.movieId,
+						id: people.id,
+						name: people.name,
+						character: moviePeople.character,
+						profilePath: people.profilePath
+					})
+					.from(moviePeople)
+					.innerJoin(people, eq(moviePeople.personId, people.id))
+					.where(and(inArray(moviePeople.movieId, movieIds), eq(moviePeople.role, 'actor')))
+					.orderBy(asc(moviePeople.order));
 
 				for (const row of castRows as any) {
 					const list = castMap.get(row.movieId) || [];
@@ -306,7 +310,7 @@ export async function getMoviesByMetadata(
 				conditions.push(and(isNotNull(movies.imdbId), ne(movies.imdbId, '')));
 			}
 			if (genreIds.length > 0) {
-				conditions.push(sql`m.id IN (
+				conditions.push(sql`${movies.id} IN (
 					SELECT movieId FROM movies_genres WHERE genreId IN (${sql.join(genreIds.map(id => sql`${id}`), sql`, `)})
 				)`);
 			}
@@ -331,7 +335,7 @@ export async function getMoviesByMetadata(
 					orderBy = [sql`(rating IS NULL) ASC`, orderFn(movies.rating)];
 			}
 
-			const [movieRows, total] = await Promise.all([
+			const [movieRows, totalCountResult] = await db.batch([
 				db.select().from(movies)
 					.where(where)
 					.orderBy(...orderBy as any)
@@ -341,7 +345,7 @@ export async function getMoviesByMetadata(
 			]);
 
 			const moviesResult = await mapRowsToSummaries(movieRows as any[]);
-			const totalCount = (total[0] as any)?.count || 0;
+			const totalCount = totalCountResult[0]?.count || 0;
 
 			const enhancedMovies = moviesResult.map((movie) => ({
 				...movie,
@@ -413,25 +417,24 @@ export async function getMetadataStatistics(): Promise<{
 	const cacheKey = buildCacheKey('metadata', 'statistics');
 	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
 		try {
-			const [stats] = await db
-				.select({
+			const [stats, genreCount, collectionCount] = await db.batch([
+				db.select({
 					movieCount: sql<number>`COUNT(*)`,
 					moviesWithTrailers: sql<number>`SUM(CASE WHEN trailerUrl IS NOT NULL AND trailerUrl != '' THEN 1 ELSE 0 END)`,
 					moviesWithImdbId: sql<number>`SUM(CASE WHEN imdbId IS NOT NULL AND imdbId != '' THEN 1 ELSE 0 END)`,
 					moviesWithCanonicalPath: sql<number>`SUM(CASE WHEN canonicalPath IS NOT NULL AND canonicalPath != '' THEN 1 ELSE 0 END)`
-				})
-				.from(movies);
-
-			const [genreCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(genres);
-			const [collectionCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(collections);
+				}).from(movies),
+				db.select({ count: sql<number>`COUNT(*)` }).from(genres),
+				db.select({ count: sql<number>`COUNT(*)` }).from(collections)
+			]);
 
 			return {
-				movieCount: stats.movieCount || 0,
-				genreCount: genreCount.count || 0,
-				collectionCount: collectionCount.count || 0,
-				moviesWithTrailers: stats.moviesWithTrailers || 0,
-				moviesWithImdbId: stats.moviesWithImdbId || 0,
-				moviesWithCanonicalPath: stats.moviesWithCanonicalPath || 0
+				movieCount: stats[0]?.movieCount || 0,
+				genreCount: genreCount[0]?.count || 0,
+				collectionCount: collectionCount[0]?.count || 0,
+				moviesWithTrailers: stats[0]?.moviesWithTrailers || 0,
+				moviesWithImdbId: stats[0]?.moviesWithImdbId || 0,
+				moviesWithCanonicalPath: stats[0]?.moviesWithCanonicalPath || 0
 			};
 		} catch (error) {
 			logger.error({ error }, 'Failed to get metadata statistics');

@@ -12,9 +12,16 @@
 
 	let { qualities = [], selectedQuality, onQualityChange, disabled = false }: Props = $props();
 
-	let selectedQualityValue = $state(
-		selectedQuality || qualities.find((q) => q.isDefault)?.label || qualities[0]?.label || 'auto'
-	);
+	let selectedQualityValue = $state('');
+
+	$effect.pre(() => {
+		if (selectedQuality) {
+			selectedQualityValue = selectedQuality;
+		} else if (!selectedQualityValue && qualities.length > 0) {
+			selectedQualityValue =
+				qualities.find((q) => q.isDefault)?.label || qualities[0]?.label || 'auto';
+		}
+	});
 
 	$effect(() => {
 		const quality = qualities.find(

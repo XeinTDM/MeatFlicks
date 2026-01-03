@@ -11,8 +11,8 @@
 	} from '@lucide/svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import MovieCard from '$lib/components/media/MovieCard.svelte';
-	import type { Movie } from '$lib/state/stores/watchlistStore';
-	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import type { Movie } from '$lib/state/stores/watchlistStore.svelte';
+	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Input } from '$lib/components/ui/input';

@@ -14,9 +14,9 @@
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { Input } from '$lib/components/ui/input';
 	import { Sun, Moon, Download, Upload, ListX, Trash2 } from '@lucide/svelte';
-	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { watchHistory } from '$lib/state/stores/historyStore';
-	import type { Movie } from '$lib/state/stores/watchlistStore';
+	import type { Movie } from '$lib/state/stores/watchlistStore.svelte';
 	import type { HistoryEntry } from '$lib/state/stores/historyStore';
 
 	type DataNotice = { text: string; tone: 'success' | 'error' };
@@ -72,9 +72,9 @@
 		}
 	] as const;
 
-	const watchlistState = $derived($watchlist);
+	const watchlistState = $derived(watchlist.items);
 	const historyState = $derived($watchHistory);
-	const watchlistCount = $derived(watchlistState.watchlist.length);
+	const watchlistCount = $derived(watchlistState.length);
 	const historyCount = $derived(historyState.entries.length);
 
 	const resetPreferences = () => {
@@ -210,10 +210,10 @@
 						<div class="flex w-fit rounded-md border border-border bg-background p-0.5">
 							<Button onclick={toggleMode} variant="outline" size="icon" aria-label="Toggle theme">
 								<Sun
-									class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 !transition-all dark:scale-0 dark:-rotate-90"
+									class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all! dark:scale-0 dark:-rotate-90"
 								/>
 								<Moon
-									class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 !transition-all dark:scale-100 dark:rotate-0"
+									class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all! dark:scale-100 dark:rotate-0"
 								/>
 								<span class="sr-only">Toggle theme</span>
 							</Button>

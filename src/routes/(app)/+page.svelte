@@ -8,13 +8,9 @@
 	import { SEOHead } from '$lib/components/seo';
 	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad.svelte.ts';
 
-	let ContinueWatchingRow: any = $state(null);
-	let TrendingMoviesSlider: any = $state(null);
-	let RecentlyAddedRow: any = $state(null);
-	let TopRatedRow: any = $state(null);
-
 	let continueWatchingRef = $state({ value: null as HTMLElement | null });
 	let trendingMoviesRef = $state({ value: null as HTMLElement | null });
+	let trendingTvRef = $state({ value: null as HTMLElement | null });
 	let recentlyAddedRef = $state({ value: null as HTMLElement | null });
 	let topRatedRef = $state({ value: null as HTMLElement | null });
 
@@ -38,38 +34,16 @@
 		() => import('$lib/components/home/TopRatedRow.svelte')
 	);
 
-	$effect(() => {
-		const unsubscribe = continueWatchingLazy.component.subscribe((value) => {
-			ContinueWatchingRow = value;
-		});
-		return unsubscribe;
-	});
-
-	$effect(() => {
-		const unsubscribe = trendingLazy.component.subscribe((value) => {
-			TrendingMoviesSlider = value;
-		});
-		return unsubscribe;
-	});
-
-	$effect(() => {
-		const unsubscribe = recentlyAddedLazy.component.subscribe((value) => {
-			RecentlyAddedRow = value;
-		});
-		return unsubscribe;
-	});
-
-	$effect(() => {
-		const unsubscribe = topRatedLazy.component.subscribe((value) => {
-			TopRatedRow = value;
-		});
-		return unsubscribe;
-	});
+	const ContinueWatchingRow = $derived(continueWatchingLazy.component);
+	const TrendingMoviesSlider = $derived(trendingLazy.component);
+	const RecentlyAddedRow = $derived(recentlyAddedLazy.component);
+	const TopRatedRow = $derived(topRatedLazy.component);
 
 	let { data }: { data: PageData } = $props();
 
-	let homeLibraryPromise = $state<Promise<HomeLibrary | null> | null>(
-		(data.streamed?.homeLibrary ?? null) as Promise<HomeLibrary | null> | null
+	let refreshPromise = $state<Promise<HomeLibrary | null> | null>(null);
+	const homeLibraryPromise = $derived(
+		refreshPromise ?? (data.streamed?.homeLibrary as Promise<HomeLibrary | null>) ?? null
 	);
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
@@ -101,7 +75,7 @@
 			return payload.data;
 		})();
 
-		homeLibraryPromise = loadPromise;
+		refreshPromise = loadPromise;
 
 		try {
 			await loadPromise;
@@ -109,7 +83,7 @@
 			console.error('Failed to refresh home library data', error);
 			refreshError = error instanceof Error ? error.message : 'Failed to refresh spotlight.';
 			if (lastResolvedLibrary) {
-				homeLibraryPromise = Promise.resolve(lastResolvedLibrary);
+				refreshPromise = Promise.resolve(lastResolvedLibrary);
 			}
 		} finally {
 			isRefreshing = false;
@@ -117,10 +91,9 @@
 	}
 
 	$effect(() => {
-		const streamed = data.streamed?.homeLibrary;
-		if (streamed) {
-			homeLibraryPromise = streamed as Promise<HomeLibrary | null>;
-		}
+		// Reset manual refresh promise when page data changes (navigation)
+		data;
+		refreshPromise = null;
 	});
 	$effect(() => {
 		const promise = homeLibraryPromise;
@@ -218,7 +191,7 @@
 									<TrendingMoviesSlider title="Trending TV Series" movies={trendingTv} />
 								{:else}
 									<div
-										bind:this={trendingMoviesRef.value}
+										bind:this={trendingTvRef.value}
 										class="h-48 animate-pulse rounded-lg bg-muted/50"
 									></div>
 								{/if}

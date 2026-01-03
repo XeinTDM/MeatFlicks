@@ -51,36 +51,28 @@ export function useLazyComponentOnVisible<T = any>(
 	importFn: () => Promise<{ default: T }>,
 	options: IntersectionObserverInit = { threshold: 0.1 }
 ) {
-	const component = writable<T | null>(null);
-	const isLoading = writable(false);
-	const hasLoaded = writable(false);
-	const error = writable<Error | null>(null);
+	let component = $state<T | null>(null);
+	let isLoading = $state(false);
+	let hasLoaded = $state(false);
+	let error = $state<Error | null>(null);
 
-	// Use onMount to set up the observer on client side only
-	onMount(() => {
+	$effect(() => {
 		const element = elementRef.value;
-		if (!element) return;
-
-		let loaded = false;
-		let loading = false;
+		if (!element || hasLoaded || isLoading) return;
 
 		const observer = new IntersectionObserver((entries) => {
 			const [entry] = entries;
-			if (entry.isIntersecting && !loaded && !loading) {
-				loading = true;
-				isLoading.set(true);
+			if (entry.isIntersecting && !hasLoaded && !isLoading) {
+				isLoading = true;
 				lazyLoadComponent(importFn)
 					.then((comp) => {
-						component.set(comp);
-						hasLoaded.set(true);
-						isLoading.set(false);
-						loaded = true;
-						loading = false;
+						component = comp;
+						hasLoaded = true;
+						isLoading = false;
 					})
 					.catch((err) => {
-						error.set(err as Error);
-						isLoading.set(false);
-						loading = false;
+						error = err as Error;
+						isLoading = false;
 						console.error('Failed to lazy load component:', err);
 					});
 
@@ -90,13 +82,23 @@ export function useLazyComponentOnVisible<T = any>(
 
 		observer.observe(element);
 
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+		};
 	});
 
 	return {
-		component,
-		isLoading,
-		hasLoaded,
-		error
+		get component() {
+			return component;
+		},
+		get isLoading() {
+			return isLoading;
+		},
+		get hasLoaded() {
+			return hasLoaded;
+		},
+		get error() {
+			return error;
+		}
 	};
 }

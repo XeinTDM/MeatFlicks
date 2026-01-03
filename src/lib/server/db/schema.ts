@@ -8,13 +8,6 @@ import {
 	unique
 } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
-import {
-	validateMovieData,
-	validateUserData,
-	validateTvShowData,
-	validateEpisodeData,
-	validatePersonData
-} from './validation';
 
 export const schemaInfo = sqliteTable('schema_info', {
 	key: text('key').primaryKey(),

@@ -73,7 +73,9 @@
 	setContext('toggleGroup', {
 		toggleValue,
 		isActive,
-		disabled
+		get disabled() {
+			return disabled;
+		}
 	});
 </script>
 

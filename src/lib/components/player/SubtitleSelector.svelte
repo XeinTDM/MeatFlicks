@@ -12,7 +12,13 @@
 
 	let { subtitles = [], selectedSubtitle, onSubtitleChange, disabled = false }: Props = $props();
 
-	let selectedSubtitleValue = $state(selectedSubtitle || 'off');
+	let selectedSubtitleValue = $state('off');
+
+	$effect.pre(() => {
+		if (selectedSubtitle) {
+			selectedSubtitleValue = selectedSubtitle;
+		}
+	});
 
 	$effect(() => {
 		if (selectedSubtitleValue === 'off') {

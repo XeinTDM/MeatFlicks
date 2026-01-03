@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { movies, genres, moviesGenres, collections } from '$lib/server/db/schema';
 import { eq, and, count as drizzleCount, inArray, sql } from 'drizzle-orm';
 import type { MovieRecord, MovieRow } from '$lib/server/db';
-import { mapRowsToRecords } from '$lib/server/db/movie-select';
+import { mapRowsToRecords, invalidateGenreCache } from '$lib/server/db/movie-select';
 import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
 import { validateMovieData } from './validation';
 
@@ -72,6 +72,7 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 				for (const g of inserted) {
 					genreMap.set(g.name, g.id);
 				}
+				invalidateGenreCache();
 			}
 
 			const tmdbIds = payloads.map((p) => p.tmdbId);

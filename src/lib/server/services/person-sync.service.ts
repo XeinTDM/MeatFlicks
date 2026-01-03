@@ -1,52 +1,79 @@
 import { fetchTmdbPersonDetails, fetchTmdbMediaCredits } from './tmdb.service';
 import { db, executeWithRetry } from '$lib/server/db';
 import { people, moviePeople } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+import type { PersonRecord } from '$lib/server/db/types';
 
-export async function syncPersonFromTmdb(tmdbId: number) {
+export async function syncPersonFromTmdb(tmdbId: number): Promise<PersonRecord | null> {
+	const results = await syncPeopleBatch([tmdbId]);
+	return results.get(tmdbId) ?? null;
+}
+
+export async function syncPeopleBatch(tmdbIds: number[]): Promise<Map<number, PersonRecord>> {
+	const uniqueIds = Array.from(new Set(tmdbIds.filter((id) => id > 0)));
+	const result = new Map<number, PersonRecord>();
+
+	if (uniqueIds.length === 0) return result;
+
 	try {
-		const existingPerson = await executeWithRetry(() =>
-			db.select().from(people).where(eq(people.tmdbId, tmdbId)).limit(1).get()
+		const existingPeople = await executeWithRetry(() =>
+			db.select().from(people).where(inArray(people.tmdbId, uniqueIds))
 		);
 
-		if (existingPerson) {
-			return existingPerson;
+		for (const p of existingPeople) {
+			result.set(p.tmdbId, p as PersonRecord);
 		}
 
-		const tmdbPerson = await fetchTmdbPersonDetails(tmdbId);
+		const missingIds = uniqueIds.filter((id) => !result.has(id));
 
-		if (!tmdbPerson) {
-			return null;
-		}
+		if (missingIds.length > 0) {
+			const missingPeopleResults = await Promise.all(
+				missingIds.map(async (id) => {
+					try {
+						const tmdbPerson = await fetchTmdbPersonDetails(id);
+						if (!tmdbPerson) return null;
 
-		await executeWithRetry(() =>
-			db
-				.insert(people)
-				.values({
-					tmdbId: tmdbPerson.id,
-					name: tmdbPerson.name,
-					biography: tmdbPerson.biography,
-					birthday: tmdbPerson.birthday,
-					deathday: tmdbPerson.deathday,
-					placeOfBirth: tmdbPerson.placeOfBirth,
-					profilePath: tmdbPerson.profilePath,
-					popularity: (tmdbPerson as any).popularity || 0,
-					knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
-					createdAt: Date.now(),
-					updatedAt: Date.now()
+						return {
+							tmdbId: tmdbPerson.id,
+							name: tmdbPerson.name,
+							biography: tmdbPerson.biography,
+							birthday: tmdbPerson.birthday,
+							deathday: tmdbPerson.deathday,
+							placeOfBirth: tmdbPerson.placeOfBirth,
+							profilePath: tmdbPerson.profilePath,
+							popularity: (tmdbPerson as any).popularity || 0,
+							knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
+							createdAt: Date.now(),
+							updatedAt: Date.now()
+						};
+					} catch (err) {
+						console.error(`Failed to fetch TMDB person details for ${id}:`, err);
+						return null;
+					}
 				})
-				.onConflictDoNothing()
-		);
+			);
 
-		const person = await executeWithRetry(() =>
-			db.select().from(people).where(eq(people.tmdbId, tmdbId)).get()
-		);
+			const validMissingPeople = missingPeopleResults.filter((p): p is NonNullable<typeof p> => p !== null);
 
-		return person ?? null;
+			if (validMissingPeople.length > 0) {
+				await executeWithRetry(() =>
+					db.insert(people).values(validMissingPeople).onConflictDoNothing()
+				);
+
+				const newlyInserted = await executeWithRetry(() =>
+					db.select().from(people).where(inArray(people.tmdbId, validMissingPeople.map(p => p.tmdbId)))
+				);
+
+				for (const p of newlyInserted) {
+					result.set(p.tmdbId, p as PersonRecord);
+				}
+			}
+		}
 	} catch (error) {
-		console.error(`Failed to sync person ${tmdbId}:`, error);
-		return null;
+		console.error(`Failed to batch sync people:`, error);
 	}
+
+	return result;
 }
 
 export async function syncMovieCast(
@@ -61,26 +88,25 @@ export async function syncMovieCast(
 			return 0;
 		}
 
-		const castPromises = credits.cast.slice(0, 10).map(async (castMember: any) => {
-			return await syncPersonFromTmdb(castMember.id);
-		});
+		const castTmdbIds = credits.cast.slice(0, 10).map((c: any) => c.id);
+		const syncedPeopleMap = await syncPeopleBatch(castTmdbIds);
 
-		const syncedCast = await Promise.all(castPromises);
+		const relationships = castTmdbIds
+			.map((tmdbId, index) => {
+				const person = syncedPeopleMap.get(tmdbId);
+				if (!person) return null;
 
-		const relationships = syncedCast
-			.filter((person): person is NonNullable<typeof person> => person !== null)
-			.map((person) => {
-				const castMember = credits.cast.find((c: any) => c.id === person.tmdbId);
-				const index = credits.cast.findIndex((c: any) => c.id === person.tmdbId);
+				const castMember = credits.cast.find((c: any) => c.id === tmdbId);
 				return {
 					movieId,
-					personId: person.id!,
+					personId: person.id,
 					role: 'actor' as const,
 					character: castMember?.character || null,
-					order: index >= 0 ? index : null,
+					order: index,
 					createdAt: Date.now()
 				};
-			});
+			})
+			.filter((r): r is NonNullable<typeof r> => r !== null);
 
 		if (relationships.length > 0) {
 			await executeWithRetry(() =>
@@ -115,22 +141,20 @@ export async function syncMovieCrew(
 			)
 			.slice(0, 15);
 
-		const syncPromises = relevantCrew.map(async (crewMember: any) => {
-			return await syncPersonFromTmdb(crewMember.id);
-		});
+		const crewTmdbIds = relevantCrew.map((c: any) => c.id);
+		const syncedPeopleMap = await syncPeopleBatch(crewTmdbIds);
 
-		const syncedCrew = await Promise.all(syncPromises);
+		const relationships = relevantCrew
+			.map((crewMember: any) => {
+				const person = syncedPeopleMap.get(crewMember.id);
+				if (!person) return null;
 
-		const relationships = syncedCrew
-			.filter((person): person is NonNullable<typeof person> => person !== null)
-			.map((person: any) => {
-				const crewMember = credits.crew.find((c: any) => c.id === person.tmdbId);
 				const role = determineCrewRole(crewMember);
 				if (!role) return null;
 
 				return {
 					movieId,
-					personId: person.id!,
+					personId: person.id,
 					role,
 					job: crewMember?.job || role,
 					createdAt: Date.now()

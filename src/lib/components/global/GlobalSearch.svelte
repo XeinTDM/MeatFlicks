@@ -6,7 +6,7 @@
 	import SearchHistory from '$lib/components/search/SearchHistory.svelte';
 	import { searchHistory } from '$lib/state/stores/searchHistoryStore';
 	import { Spinner } from '$lib/components/ui/spinner/index';
-	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { watchHistory } from '$lib/state/stores/historyStore';
 
 	let query = $state('');
@@ -71,7 +71,7 @@
 		const searchTerm = query.toLowerCase().trim();
 		if (!searchTerm) return [];
 
-		const watchlistMovies = $watchlist.watchlist.map(
+		const watchlistMovies = watchlist.items.map(
 			(movie) =>
 				({
 					id: movie.id,
@@ -249,7 +249,7 @@
 
 	{#if isFocused && ($searchHistory.history.length > 0 || results.length > 0 || isLoading)}
 		<div
-			class="absolute top-full right-0 left-0 z-[100] mt-3 rounded-2xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
+			class="absolute top-full right-0 left-0 z-100 mt-3 rounded-2xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
 			transition:slide={{ duration: 200 }}
 		>
 			{#if $searchHistory.history.length > 0 && !query.trim()}
@@ -289,7 +289,7 @@
 									onclick={() => handleNavigate(movie)}
 									class="group flex w-full items-center gap-4 rounded-xl p-2 text-left transition-colors hover:bg-primary/10"
 								>
-									<div class="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+									<div class="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
 										{#if movie.posterPath}
 											<img src={movie.posterPath} alt="" class="h-full w-full object-cover" />
 										{/if}

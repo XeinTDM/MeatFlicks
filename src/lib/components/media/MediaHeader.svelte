@@ -2,7 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Star, Film, Play, Bookmark, BookmarkMinus } from '@lucide/svelte';
-	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { error as errorStore } from '$lib/state/stores/errorStore';
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 
@@ -94,7 +94,7 @@
 	}
 </script>
 
-<div class="relative mb-8 h-[32rem] w-full overflow-hidden">
+<div class="relative mb-8 h-[70vh] w-full overflow-hidden">
 	<div class="absolute top-0 -right-[5%] -left-[5%] h-full w-[calc(100%+10%)]">
 		{#if movie?.backdropPath}
 			<img
@@ -104,12 +104,12 @@
 			/>
 		{/if}
 		<div
-			class="absolute inset-0 rounded-lg bg-gradient-to-t from-background via-background/60 to-transparent"
+			class="absolute inset-0 rounded-lg bg-linear-to-t from-background via-background/60 to-transparent"
 		></div>
 	</div>
 
 	<div class="relative z-10 h-full">
-		<div class="absolute bottom-10 ml-[10%] max-w-4xl">
+		<div class="absolute bottom-[20%] ml-[10%] max-w-4xl">
 			<div class="flex flex-col gap-6">
 				{#if logoPath}
 					<img src={logoPath} alt={movie.title} class="h-32 w-auto origin-left object-contain" />

@@ -72,9 +72,8 @@
 							</div>
 						</Card.Content>
 
-						<!-- Decorative background gradient -->
 						<div
-							class="absolute inset-0 -z-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+							class="absolute inset-0 z-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"
 						></div>
 					</Card.Root>
 				</a>

@@ -35,7 +35,11 @@
 		onToggleExpanded
 	}: Props = $props();
 
-	let expanded = $state(isExpanded);
+	let expanded = $state(false);
+
+	$effect.pre(() => {
+		expanded = isExpanded;
+	});
 
 	function toggleExpanded() {
 		if (onToggleExpanded) {
@@ -53,19 +57,13 @@
 		}
 	}
 
-	let progress = $state(0);
-	let isCompleted = $state(false);
-	let completedAt = $state<string | null>(null);
-
-	$effect(() => {
-		progress = watchStatus
-			? Math.round((watchStatus.episodesWatched / watchStatus.totalEpisodes) * 100)
-			: 0;
-		isCompleted = watchStatus?.completedAt !== null;
-		completedAt = watchStatus?.completedAt
-			? new Date(watchStatus.completedAt).toLocaleDateString()
-			: null;
-	});
+	const progress = $derived(
+		watchStatus ? Math.round((watchStatus.episodesWatched / watchStatus.totalEpisodes) * 100) : 0
+	);
+	const isCompleted = $derived(watchStatus?.completedAt !== null);
+	const completedAt = $derived(
+		watchStatus?.completedAt ? new Date(watchStatus.completedAt).toLocaleDateString() : null
+	);
 </script>
 
 <Card class="mb-4">

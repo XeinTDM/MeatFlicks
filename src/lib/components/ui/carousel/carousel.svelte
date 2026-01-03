@@ -18,21 +18,58 @@
 		...restProps
 	}: WithElementRef<CarouselProps> = $props();
 
-	let carouselState = $state<EmblaContext>({
-		api: undefined,
+	let api = $state<CarouselAPI>();
+	let canScrollNext = $state(false);
+	let canScrollPrev = $state(false);
+	let scrollSnaps = $state<number[]>([]);
+	let selectedIndex = $state(0);
+
+	const carouselState: EmblaContext = {
+		get api() {
+			return api;
+		},
+		set api(value) {
+			api = value;
+		},
+		get canScrollNext() {
+			return canScrollNext;
+		},
+		set canScrollNext(value) {
+			canScrollNext = value;
+		},
+		get canScrollPrev() {
+			return canScrollPrev;
+		},
+		set canScrollPrev(value) {
+			canScrollPrev = value;
+		},
+		get scrollSnaps() {
+			return scrollSnaps;
+		},
+		set scrollSnaps(value) {
+			scrollSnaps = value;
+		},
+		get selectedIndex() {
+			return selectedIndex;
+		},
+		set selectedIndex(value) {
+			selectedIndex = value;
+		},
 		scrollPrev,
 		scrollNext,
-		orientation,
-		canScrollNext: false,
-		canScrollPrev: false,
+		get orientation() {
+			return orientation;
+		},
 		handleKeyDown,
-		options: opts,
-		plugins,
+		get options() {
+			return opts;
+		},
+		get plugins() {
+			return plugins;
+		},
 		onInit,
-		scrollSnaps: [],
-		selectedIndex: 0,
 		scrollTo
-	});
+	};
 
 	setEmblaContext(carouselState);
 

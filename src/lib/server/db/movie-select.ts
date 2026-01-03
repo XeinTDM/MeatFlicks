@@ -4,13 +4,26 @@ import { inArray } from 'drizzle-orm';
 import { mapMovieRows } from './mappers';
 import type { GenreRecord, MovieRecord, MovieRow, MovieSummary } from './types';
 
-let globalGenreCache: Map<number, { id: number; name: string }> | null = null;
+let globalGenreCache: Map<number, GenreRecord> | null = null;
+let globalGenreNameMap: Map<string, number> | null = null;
 
-const getGenreCache = async () => {
+export const getGenreCache = async () => {
 	if (globalGenreCache) return globalGenreCache;
 	const rows = await db.select().from(genres);
 	globalGenreCache = new Map(rows.map((r) => [r.id, r]));
+	globalGenreNameMap = new Map(rows.map((r) => [r.name.toLowerCase(), r.id]));
 	return globalGenreCache;
+};
+
+export const getGenreNameMap = async () => {
+	if (globalGenreNameMap) return globalGenreNameMap;
+	await getGenreCache();
+	return globalGenreNameMap!;
+};
+
+export const invalidateGenreCache = () => {
+	globalGenreCache = null;
+	globalGenreNameMap = null;
 };
 
 export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, GenreRecord[]>> => {

@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { Movie } from './watchlistStore';
+import type { Movie } from './watchlistStore.svelte';
 
 export type HistoryEntry = Omit<Movie, 'addedAt'> & {
 	watchedAt: string;

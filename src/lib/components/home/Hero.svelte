@@ -11,7 +11,7 @@
 		RefreshCcw
 	} from '@lucide/svelte';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { watchlist } from '$lib/state/stores/watchlistStore';
+	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import type { LibraryMovie } from '$lib/types/library';
@@ -310,13 +310,13 @@
 			{/if}
 
 			<div
-				class="absolute inset-0 bg-gradient-to-t from-background/50 via-background/40 to-transparent"
+				class="absolute inset-0 bg-linear-to-t from-background/50 via-background/40 to-transparent"
 			></div>
 			<div
-				class="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent"
+				class="absolute inset-0 bg-linear-to-r from-background/90 via-background/40 to-transparent"
 			></div>
 			<div
-				class="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background via-background/90 to-transparent"
+				class="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-background via-background/90 to-transparent"
 			></div>
 
 			{#if isMultiSlide || canRefresh}
@@ -478,7 +478,7 @@
 							aria-selected={index === activeIndex}
 							aria-controls={`slide-${slide.key}`}
 							aria-label={`Go to slide ${index + 1}`}
-							class={`group flex max-w-[14rem] items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur transition-colors duration-300 ${
+							class={`group flex max-w-56 items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur transition-colors duration-300 ${
 								index === activeIndex
 									? 'bg-background/70 text-primary shadow-sm'
 									: 'bg-background/40 text-foreground/80 hover:text-foreground'
@@ -501,7 +501,7 @@
 	</div>
 {:else}
 	<Card
-		class="relative flex min-h-[50vh] items-center justify-center overflow-hidden border-0 bg-gradient-to-br from-background via-background/90 to-background px-[5%] py-24 text-center text-foreground/70"
+		class="relative flex min-h-[50vh] items-center justify-center overflow-hidden border-0 bg-linear-to-br from-background via-background/90 to-background px-[5%] py-24 text-center text-foreground/70"
 	>
 		<div class="space-y-3">
 			<h2 class="text-3xl font-semibold">Stay tuned</h2>

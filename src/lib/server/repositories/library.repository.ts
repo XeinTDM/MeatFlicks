@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { movies, collections, genres, moviesGenres } from '$lib/server/db/schema';
 import { eq, and, isNotNull, desc, asc, sql, gte, lte, inArray, or } from 'drizzle-orm';
 import type { CollectionRecord, GenreRecord, MovieRow, MovieSummary } from '$lib/server/db';
-import { mapRowsToSummaries } from '$lib/server/db/movie-select';
+import { mapRowsToSummaries, getGenreNameMap } from '$lib/server/db/movie-select';
 import type { MovieFilters, SortOptions } from '$lib/types/filters';
 import type { PaginatedResult, PaginationParams } from '$lib/types/pagination';
 import { calculatePagination, calculateOffset } from '$lib/types/pagination';
@@ -28,13 +28,7 @@ const normalizeOffset = (value: number | undefined): number => {
 	return Math.floor(value);
 };
 
-let genreIdMap: Map<string, number> | null = null;
-const getGenreIdMap = async (): Promise<Map<string, number>> => {
-	if (genreIdMap) return genreIdMap;
-	const allGenres = await db.select().from(genres);
-	genreIdMap = new Map(allGenres.map((g) => [g.name.toLowerCase(), g.id]));
-	return genreIdMap;
-};
+
 
 export type CollectionWithMovies = CollectionRecord & { movies: MovieSummary[] };
 
@@ -210,7 +204,7 @@ export const libraryRepository = {
 				include_anime
 			);
 			return await withCache<MovieSummary[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const idMap = await getGenreIdMap();
+				const idMap = await getGenreNameMap();
 				const genreId = idMap.get(normalizedGenre);
 
 				if (!genreId) return [];
@@ -242,12 +236,13 @@ export const libraryRepository = {
 		}
 	},
 
-	async applyFilters(
+	applyFilters(
 		query: any,
 		conditions: any[],
 		filters: MovieFilters,
+		idMap: Map<string, number>,
 		mediaType: 'movie' | 'tv' = 'movie',
-		include_anime: 'include_anime' | 'exclude_anime' | 'only_anime' | 'include' | 'exclude' | 'only' = 'include'
+		include_anime: 'include' | 'exclude' | 'only' | 'include_anime' | 'exclude_anime' | 'only_anime' = 'include'
 	) {
 		let mediaTypeCondition;
 		const animeMode = (include_anime as string).includes('anime')
@@ -289,7 +284,6 @@ export const libraryRepository = {
 		}
 
 		if (filters.genres && filters.genres.length > 0) {
-			const idMap = await getGenreIdMap();
 			const genreIds = filters.genres
 				.map((name) => idMap.get(name.toLowerCase()))
 				.filter((id): id is number => id !== undefined);
@@ -323,20 +317,24 @@ export const libraryRepository = {
 		include_anime: 'include' | 'exclude' | 'only' = 'include'
 	): Promise<PaginatedResult<MovieSummary>> {
 		try {
+			const idMap = await getGenreNameMap();
 			const offset = calculateOffset(pagination.page, pagination.pageSize);
+			const orderByClause = this.buildOrderByClause(sort);
 
-			const [totalItems, rows] = await Promise.all([
-				this.countMoviesWithFilters(filters, mediaType, include_anime),
-				(async () => {
-					let query = db.select({ movies }).from(movies);
-					const conditions: any[] = [];
-					query = await this.applyFilters(query, conditions, filters, mediaType, include_anime);
-					const orderByClause = this.buildOrderByClause(sort);
-					query = (query as any).orderBy(...orderByClause);
-					return await query.limit(pagination.pageSize).offset(offset);
-				})()
+			const createBaseQuery = (base: any) => {
+				const conditions: any[] = [];
+				return this.applyFilters(base, conditions, filters, idMap, mediaType, include_anime);
+			};
+
+			const countBase = createBaseQuery(db.select({ count: sql<number>`count(DISTINCT ${movies.id})` }).from(movies));
+			const itemsBase = createBaseQuery(db.select({ movies }).from(movies));
+
+			const [totalItemsRes, rows] = await db.batch([
+				countBase,
+				(itemsBase as any).orderBy(...orderByClause).limit(pagination.pageSize).offset(offset)
 			]);
 
+			const totalItems = totalItemsRes[0]?.count || 0;
 			const movieRows = rows.map((r: any) => r.movies);
 			const items = await mapRowsToSummaries(movieRows as MovieRow[]);
 
@@ -362,13 +360,15 @@ export const libraryRepository = {
 		include_anime: 'include' | 'exclude' | 'only' = 'include'
 	): Promise<number> {
 		try {
+			const idMap = await getGenreNameMap();
 			let countQuery = db.select({ count: sql<number>`count(DISTINCT ${movies.id})` }).from(movies);
 			const conditions: any[] = [];
 
-			countQuery = await this.applyFilters(
+			countQuery = this.applyFilters(
 				countQuery,
 				conditions,
 				filters,
+				idMap,
 				mediaType,
 				include_anime
 			);

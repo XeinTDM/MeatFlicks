@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Wifi, RefreshCw, Home, Search, Heart } from '@lucide/svelte';
 
 	let isReconnecting = $state(false);
@@ -39,7 +38,7 @@
 		window.location.href = '/watchlist';
 	}
 
-	onMount(() => {
+	$effect(() => {
 		const interval = setInterval(() => {
 			if (navigator.onLine) {
 				handleRetryConnection();
@@ -56,7 +55,7 @@
 </svelte:head>
 
 <div
-	class="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-white"
+	class="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-white"
 >
 	<div class="w-full max-w-md">
 		<div class="mb-8 text-center">

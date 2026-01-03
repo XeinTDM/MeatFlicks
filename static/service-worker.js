@@ -163,9 +163,13 @@ async function networkFirst(request, cacheName) {
 	try {
 		const networkResponse = await fetch(request);
 
-		if (networkResponse.ok) {
+		if (networkResponse.ok && networkResponse.status !== 206) {
 			const cache = await caches.open(cacheName);
-			cache.put(request, networkResponse.clone());
+			try {
+				await cache.put(request, networkResponse.clone());
+			} catch (err) {
+				console.warn('[SW] Failed to cache response:', err);
+			}
 		}
 
 		return networkResponse;
@@ -182,15 +186,18 @@ async function networkFirst(request, cacheName) {
 async function cacheFirst(request, cacheName) {
 	const cachedResponse = await caches.match(request);
 	if (cachedResponse) {
-		console.log(`[SW] Serving from cache: ${request.url}`);
 		return cachedResponse;
 	}
 
 	try {
 		const networkResponse = await fetch(request);
-		if (networkResponse.ok) {
+		if (networkResponse.ok && networkResponse.status !== 206) {
 			const cache = await caches.open(cacheName);
-			cache.put(request, networkResponse.clone());
+			try {
+				await cache.put(request, networkResponse.clone());
+			} catch (err) {
+				console.warn('[SW] Failed to cache response:', err);
+			}
 		}
 		return networkResponse;
 	} catch (error) {
@@ -203,9 +210,13 @@ async function staleWhileRevalidate(request, cacheName) {
 	const cache = await caches.open(cacheName);
 	const cachedResponse = await cache.match(request);
 
-	const fetchPromise = fetch(request).then((networkResponse) => {
-		if (networkResponse.ok) {
-			cache.put(request, networkResponse.clone());
+	const fetchPromise = fetch(request).then(async (networkResponse) => {
+		if (networkResponse.ok && networkResponse.status !== 206) {
+			try {
+				await cache.put(request, networkResponse.clone());
+			} catch (err) {
+				console.warn('[SW] Failed to background cache response:', err);
+			}
 		}
 		return networkResponse;
 	}).catch((error) => {
