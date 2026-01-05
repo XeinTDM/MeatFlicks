@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
+	import MediaScrollContainer from '$lib/components/media/MediaScrollContainer.svelte';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
@@ -94,5 +94,5 @@
 </script>
 
 {#if !isLoading && continueWatchingMovies.length > 0}
-	<MovieScrollContainer title="Continue Watching" movies={continueWatchingMovies} />
+	<MediaScrollContainer title="Continue Watching" movies={continueWatchingMovies} />
 {/if}

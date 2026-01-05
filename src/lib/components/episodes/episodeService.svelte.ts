@@ -17,72 +17,82 @@ export type Season = {
 	posterPath: string | null;
 };
 
-export class EpisodeService {
-	selectedSeason = $state<number>(1);
-	selectedEpisode = $state<number>(1);
-	episodesList = $state<Episode[]>([]);
-	isLoadingEpisodes = $state(false);
+export type EpisodeService = {
+	episodesList: Episode[];
+	isLoadingEpisodes: boolean;
+	fetchEpisodes: (tmdbId: number | null, seasonNumber: number) => Promise<void>;
+	getNextEpisodeLabel: (seasons: Season[] | undefined, mediaType: MediaType, selectedSeason: number, selectedEpisode: number) => string;
+	getNextEpisode: (seasons: Season[] | undefined, selectedSeason: number, selectedEpisode: number) => { season: number; episode: number } | null;
+};
 
-	fetchEpisodes = async (tmdbId: number | null, seasonNumber: number) => {
-		if (!tmdbId) return;
+export function createEpisodeService(): EpisodeService {
+	let selectedSeason = $state(1);
+	let selectedEpisode = $state(1);
+	let episodesList = $state<Episode[]>([]);
+	let isLoadingEpisodes = $state(false);
 
-		this.isLoadingEpisodes = true;
-		try {
-			const response = await fetch(`/api/tv/${tmdbId}/season/${seasonNumber}`, {
-				credentials: 'include'
-			});
-			if (response.ok) {
-				const data = await response.json();
-				this.episodesList = data.episodes || [];
+	return {
+		get episodesList() {
+			return episodesList;
+		},
+		set episodesList(value: Episode[]) {
+			episodesList = value;
+		},
+		get isLoadingEpisodes() {
+			return isLoadingEpisodes;
+		},
+		set isLoadingEpisodes(value: boolean) {
+			isLoadingEpisodes = value;
+		},
+		fetchEpisodes: async (tmdbId: number | null, seasonNumber: number) => {
+			if (!tmdbId) return;
+
+			isLoadingEpisodes = true;
+			try {
+				const response = await fetch(`/api/tv/${tmdbId}/season/${seasonNumber}`, {
+					credentials: 'include'
+				});
+				if (response.ok) {
+					const data = await response.json();
+					episodesList = data.episodes || [];
+				}
+			} catch (error) {
+				console.error('Failed to fetch episodes', error);
+			} finally {
+				isLoadingEpisodes = false;
 			}
-		} catch (error) {
-			console.error('Failed to fetch episodes', error);
-		} finally {
-			this.isLoadingEpisodes = false;
-		}
-	};
+		},
+		getNextEpisodeLabel: (seasons: Season[] | undefined, mediaType: MediaType, selectedSeason: number, selectedEpisode: number) => {
+			if (!seasons || mediaType !== 'tv') return 'Next Episode';
 
-	handleSeasonChange = (seasonNumber: number) => {
-		this.selectedSeason = seasonNumber;
-		this.selectedEpisode = 1;
-		this.episodesList = [];
-	};
+			const currentSeasonData = seasons.find((s) => s.seasonNumber === selectedSeason);
+			if (!currentSeasonData) return 'Next Episode';
 
-	handleEpisodeSelect = (episodeNumber: number) => {
-		this.selectedEpisode = episodeNumber;
-	};
-
-	getNextEpisodeLabel = (seasons: Season[] | undefined, mediaType: MediaType) => {
-		if (!seasons || mediaType !== 'tv') return 'Next Episode';
-
-		const currentSeasonData = seasons.find((s) => s.seasonNumber === this.selectedSeason);
-		if (!currentSeasonData) return 'Next Episode';
-
-		if (this.selectedEpisode < currentSeasonData.episodeCount) {
-			return `S${this.selectedSeason}:E${this.selectedEpisode + 1}`;
-		} else {
-			const nextSeason = seasons.find((s) => s.seasonNumber === this.selectedSeason + 1);
-			if (nextSeason) {
-				return `S${nextSeason.seasonNumber}:E1`;
+			if (selectedEpisode < currentSeasonData.episodeCount) {
+				return `S${selectedSeason}:E${selectedEpisode + 1}`;
+			} else {
+				const nextSeason = seasons.find((s) => s.seasonNumber === selectedSeason + 1);
+				if (nextSeason) {
+					return `S${nextSeason.seasonNumber}:E1`;
+				}
 			}
-		}
-		return 'Next Episode';
-	};
+			return 'Next Episode';
+		},
+		getNextEpisode: (seasons: Season[] | undefined, selectedSeason: number, selectedEpisode: number): { season: number; episode: number } | null => {
+			if (!seasons) return null;
 
-	getNextEpisode = (seasons: Season[] | undefined): { season: number; episode: number } | null => {
-		if (!seasons) return null;
+			const currentSeasonData = seasons.find((s) => s.seasonNumber === selectedSeason);
+			if (!currentSeasonData) return null;
 
-		const currentSeasonData = seasons.find((s) => s.seasonNumber === this.selectedSeason);
-		if (!currentSeasonData) return null;
-
-		if (this.selectedEpisode < currentSeasonData.episodeCount) {
-			return { season: this.selectedSeason, episode: this.selectedEpisode + 1 };
-		} else {
-			const nextSeason = seasons.find((s) => s.seasonNumber === this.selectedSeason + 1);
-			if (nextSeason) {
-				return { season: nextSeason.seasonNumber, episode: 1 };
+			if (selectedEpisode < currentSeasonData.episodeCount) {
+				return { season: selectedSeason, episode: selectedEpisode + 1 };
+			} else {
+				const nextSeason = seasons.find((s) => s.seasonNumber === selectedSeason + 1);
+				if (nextSeason) {
+					return { season: nextSeason.seasonNumber, episode: 1 };
+				}
 			}
+			return null;
 		}
-		return null;
 	};
 }

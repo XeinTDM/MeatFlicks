@@ -25,19 +25,22 @@ const resolveCanonicalPath = (
 		return provided.startsWith('/') ? provided : `/${provided}`;
 	}
 
+	const type = payload.mediaType || payload.media_type || 'movie';
+	const prefix = type === 'tv' ? '/tv/' : '/movie/';
+
 	const imdbId = typeof payload.imdbId === 'string' ? payload.imdbId.trim() : '';
 	if (imdbId) {
-		return `/movie/${imdbId}`;
+		return `${prefix}${imdbId}`;
 	}
 
 	const tmdbId =
 		typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId) ? payload.tmdbId : null;
 
 	if (tmdbId) {
-		return `/movie/${tmdbId}`;
+		return `${prefix}${tmdbId}`;
 	}
 
-	return `/movie/${id}`;
+	return `${prefix}${id}`;
 };
 
 const sanitizeEntry = (candidate: unknown): HistoryEntry | null => {

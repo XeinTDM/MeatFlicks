@@ -113,11 +113,13 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 
 		const fallbackMovies = storedMovies.map((movie) => {
 			const libraryMovie = toLibraryMovie(movie);
+			const type = libraryMovie.mediaType || libraryMovie.media_type || 'movie';
+			const prefix = type === 'tv' ? '/tv/' : '/movie/';
 			const canonicalPath = movie.tmdbId
-				? `/movie/${movie.tmdbId}`
+				? `${prefix}${movie.tmdbId}`
 				: movie.imdbId
-					? `/movie/${movie.imdbId}`
-					: `/movie/${movie.id}`;
+					? `${prefix}${movie.imdbId}`
+					: `${prefix}${movie.id}`;
 			return {
 				...libraryMovie,
 				canonicalPath
@@ -198,7 +200,10 @@ const attachIdentifiers = (
 	const extras = movie.tmdbId ? (extrasMap.get(movie.tmdbId) ?? null) : null;
 	const imdbId = extras?.imdbId ?? null;
 	const trailerUrl = extras?.trailerUrl ?? movie.trailerUrl ?? null;
-	const canonicalPath = movie.tmdbId ? '/movie/' + movie.tmdbId : '/movie/' + (imdbId ?? movie.id);
+
+	const type = movie.mediaType || movie.media_type || 'movie';
+	const prefix = type === 'tv' ? '/tv/' : '/movie/';
+	const canonicalPath = movie.tmdbId ? prefix + movie.tmdbId : prefix + (imdbId ?? movie.id);
 
 	return {
 		...movie,

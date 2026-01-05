@@ -39,7 +39,7 @@
 	}
 </script>
 
-<section class="space-y-6 rounded-3xl p-6 sm:p-8">
+<section class="space-y-6 rounded-3xl">
 	<div class="space-y-3">
 		<h1 class="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
 			Find something to watch right now
@@ -60,6 +60,12 @@
 				placeholder="Search titles, people, or keywords..."
 				class="h-12 w-full rounded-2xl border border-border/60 bg-background/60 pl-12 text-base shadow-sm focus-visible:border-primary focus-visible:ring-primary/40"
 				bind:value={query}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						handleQuickSearch(query);
+					}
+				}}
 				aria-label="Search the MeatFlicks library"
 			/>
 		</div>

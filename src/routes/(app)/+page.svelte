@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Hero from '$lib/components/home/Hero.svelte';
 	import { PersonalizedRows } from '$lib/components/home';
-	import { MovieScrollContainer } from '$lib/components/media';
+	import { MediaScrollContainer } from '$lib/components/media';
 	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
@@ -223,7 +223,7 @@
 
 							{#each collections as collection (collection.id)}
 								{#if Array.isArray(collection.movies) && collection.movies.length > 0}
-									<MovieScrollContainer
+									<MediaScrollContainer
 										title={collection.name}
 										movies={collection.movies}
 										linkTo={`/collection/${collection.slug}`}
@@ -233,7 +233,7 @@
 
 							{#each genres as genre (genre.id)}
 								{#if Array.isArray(genre.movies) && genre.movies.length > 0}
-									<MovieScrollContainer
+									<MediaScrollContainer
 										title={genre.name}
 										movies={genre.movies}
 										linkTo={`/genre/${genre.slug}`}

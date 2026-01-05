@@ -45,13 +45,16 @@ const buildCanonicalPath = (
 	const fromPayload = typeof payload.canonicalPath === 'string' ? payload.canonicalPath.trim() : '';
 	if (fromPayload) return fromPayload.startsWith('/') ? fromPayload : `/${fromPayload}`;
 
+	const type = payload.mediaType || payload.media_type || 'movie';
+	const prefix = type === 'tv' ? '/tv/' : '/movie/';
+
 	const imdbId = typeof payload.imdbId === 'string' ? payload.imdbId.trim() : '';
-	if (imdbId) return `/movie/${imdbId}`;
+	if (imdbId) return `${prefix}${imdbId}`;
 
 	const tmdbId = typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId) ? payload.tmdbId : null;
-	if (tmdbId) return `/movie/${tmdbId}`;
+	if (tmdbId) return `${prefix}${tmdbId}`;
 
-	return `/movie/${id}`;
+	return `${prefix}${id}`;
 };
 
 const sanitizeMovie = (candidate: unknown): Movie | null => {

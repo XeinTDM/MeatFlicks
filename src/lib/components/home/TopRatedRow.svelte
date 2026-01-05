@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
+	import MediaScrollContainer from '$lib/components/media/MediaScrollContainer.svelte';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
@@ -26,5 +26,5 @@
 </script>
 
 {#if !isLoading && topRatedMovies.length > 0}
-	<MovieScrollContainer title="Top Rated" movies={topRatedMovies} />
+	<MediaScrollContainer title="Top Rated" movies={topRatedMovies} />
 {/if}

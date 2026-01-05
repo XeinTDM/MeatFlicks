@@ -23,7 +23,11 @@ export const GET: RequestHandler = async ({ url }) => {
 		const moviesWithPaths = movies.items.map(
 			(movie): LibraryMovie => ({
 				...movie,
-				canonicalPath: movie.tmdbId ? `/movie/${movie.tmdbId}` : `/movie/${movie.id}`,
+				canonicalPath: (() => {
+					const type = movie.mediaType || 'movie';
+					const prefix = type === 'tv' ? '/tv/' : '/movie/';
+					return movie.tmdbId ? `${prefix}${movie.tmdbId}` : `${prefix}${movie.id}`;
+				})(),
 				releaseDate: movie.releaseDate ?? null,
 				durationMinutes: movie.durationMinutes ?? null,
 				genres: movie.genres ?? []

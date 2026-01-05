@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
+	import MediaScrollContainer from '$lib/components/media/MediaScrollContainer.svelte';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
@@ -26,5 +26,5 @@
 </script>
 
 {#if !isLoading && recentlyAddedMovies.length > 0}
-	<MovieScrollContainer title="Recently Added" movies={recentlyAddedMovies} />
+	<MediaScrollContainer title="Recently Added" movies={recentlyAddedMovies} />
 {/if}

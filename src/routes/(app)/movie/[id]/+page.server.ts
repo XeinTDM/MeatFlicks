@@ -77,8 +77,25 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		: `/movie/${movie.tmdbId ?? movie.id}`;
 
 	try {
+		// Detect actual media type - check if it has seasons (TV series indicator)
+		const hasSeasons = (movie as any).seasons && Array.isArray((movie as any).seasons) && (movie as any).seasons.length > 0;
+		const hasSeasonCount = (movie as any).seasonCount && (movie as any).seasonCount > 0;
+		const actualMediaType = movie.isAnime
+			? 'anime'
+			: (hasSeasons || hasSeasonCount || movie.mediaType === 'tv')
+				? 'tv'
+				: (movie.mediaType || 'movie');
+
+		console.log('[movie][load] Media type detection:', {
+			title: movie.title,
+			dbMediaType: movie.mediaType,
+			hasSeasons,
+			hasSeasonCount,
+			actualMediaType
+		});
+
 		const streaming = await resolveStreaming({
-			mediaType: movie.isAnime ? 'anime' : 'movie',
+			mediaType: actualMediaType as 'movie' | 'tv' | 'anime',
 			tmdbId: Number(movie.tmdbId),
 			imdbId: movie.imdbId ?? undefined,
 			malId: movie.malId ?? undefined,
@@ -87,7 +104,8 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 
 		let recommendations: any[] = [];
 		try {
-			recommendations = await fetchTmdbRecommendations(Number(movie.tmdbId), 'movie');
+			const recommendMediaType = actualMediaType === 'anime' ? 'movie' : actualMediaType;
+			recommendations = await fetchTmdbRecommendations(Number(movie.tmdbId), recommendMediaType as 'movie' | 'tv');
 		} catch (recommendationError) {
 			console.warn(
 				'[movie][load] Failed to fetch recommendations, but continuing with streaming data',
@@ -96,7 +114,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		}
 
 		return {
-			mediaType: 'movie' as const,
+			mediaType: actualMediaType as 'movie' | 'tv' | 'anime',
 			movie,
 			streaming,
 			recommendations,
@@ -107,8 +125,9 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		};
 	} catch (error) {
 		console.error('[movie][load] Failed to resolve streaming data', error);
+		const actualMediaType = movie.isAnime ? 'anime' : (movie.mediaType || 'movie');
 		return {
-			mediaType: 'movie' as const,
+			mediaType: actualMediaType as 'movie' | 'tv' | 'anime',
 			movie,
 			streaming: { source: null, resolutions: [] },
 			recommendations: [],

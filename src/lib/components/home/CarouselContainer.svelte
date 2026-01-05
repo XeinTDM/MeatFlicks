@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TrendingMoviesSlider from './TrendingMoviesSlider.svelte';
-	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
+	import MediaScrollContainer from '$lib/components/media/MediaScrollContainer.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
 	let {
@@ -19,5 +19,5 @@
 {#if isTrendingNow}
 	<TrendingMoviesSlider {title} {movies} {linkTo} />
 {:else}
-	<MovieScrollContainer {title} {movies} {linkTo} />
+	<MediaScrollContainer {title} {movies} {linkTo} />
 {/if}

@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import Hero from '$lib/components/home/Hero.svelte';
 	import CarouselContainer from '$lib/components/home/CarouselContainer.svelte';
-	import MovieCard from '$lib/components/media/MovieCard.svelte';
+	import MediaCard from '$lib/components/media/MediaCard.svelte';
 	import FilterPanel from '$lib/components/filters/FilterPanel.svelte';
 	import ActiveFilters from '$lib/components/filters/ActiveFilters.svelte';
 	import SortDropdown from '$lib/components/filters/SortDropdown.svelte';
@@ -255,7 +255,7 @@
 									class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
 								>
 									{#each movies as movie (normalizeId(movie))}
-										<MovieCard {movie} />
+										<MediaCard {movie} />
 									{/each}
 								</div>
 

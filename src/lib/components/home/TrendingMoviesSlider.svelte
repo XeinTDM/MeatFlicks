@@ -7,7 +7,7 @@
 		CarouselNext,
 		CarouselPrevious
 	} from '$lib/components/ui/carousel';
-	import MovieCard from '$lib/components/media/MovieCard.svelte';
+	import MediaCard from '$lib/components/media/MediaCard.svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
 	let {
@@ -61,7 +61,7 @@
 			{#each movies as movie (movie.id)}
 				<CarouselItem class="basis-auto pl-4">
 					<div class="flex justify-center">
-						<MovieCard {movie} />
+						<MediaCard {movie} />
 					</div>
 				</CarouselItem>
 			{/each}

@@ -128,9 +128,14 @@
 		return rating && rating > 0 ? rating.toFixed(1) : 'NR';
 	});
 
-	const detailsHref = $derived(
-		activeMovie?.id ? (activeMovie.canonicalPath ?? `/movie/${activeMovie.id}`) : '#'
-	);
+	const detailsHref = $derived.by(() => {
+		if (!activeMovie?.id) return '#';
+		if (activeMovie.canonicalPath) return activeMovie.canonicalPath;
+
+		const type = activeMovie.mediaType || activeMovie.media_type || 'movie';
+		const prefix = type === 'tv' ? '/tv/' : '/movie/';
+		return `${prefix}${activeMovie.id}`;
+	});
 
 	const isInWatchlist = $derived(activeMovie ? watchlist.isInWatchlist(activeMovie.id) : false);
 

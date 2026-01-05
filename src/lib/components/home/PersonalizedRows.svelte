@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
-	import MovieScrollContainer from '$lib/components/media/MovieScrollContainer.svelte';
+	import MediaScrollContainer from '$lib/components/media/MediaScrollContainer.svelte';
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
@@ -33,11 +33,11 @@
 {#if hasMounted}
 	<div class="space-y-12">
 		{#if libraryHistoryEntries.length > 0}
-			<MovieScrollContainer title="Recently Viewed" movies={libraryHistoryEntries} />
+			<MediaScrollContainer title="Recently Viewed" movies={libraryHistoryEntries} />
 		{/if}
 
 		{#if libraryWatchlistEntries.length > 0}
-			<MovieScrollContainer
+			<MediaScrollContainer
 				title="Your Watchlist"
 				movies={libraryWatchlistEntries}
 				linkTo="/watchlist"

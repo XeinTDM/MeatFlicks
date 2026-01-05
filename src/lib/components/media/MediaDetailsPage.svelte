@@ -3,12 +3,16 @@
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 	import type { StreamingSource } from '$lib/streaming';
 	import { watchHistory } from '$lib/state/stores/historyStore';
-	import { MovieScrollContainer } from '$lib/components';
+	import { MediaScrollContainer } from '$lib/components';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { SEOHead, StructuredData } from '$lib/components/seo';
 	import { StreamingService, type MediaType } from '$lib/streaming/streamingService.svelte';
 	import { PlayerService } from '$lib/components/player/playerService.svelte';
-	import { EpisodeService, type Season } from '$lib/components/episodes/episodeService.svelte';
+	import {
+		createEpisodeService,
+		type EpisodeService,
+		type Season
+	} from '$lib/components/episodes/episodeService.svelte';
 	import MediaHeader from '$lib/components/media/MediaHeader.svelte';
 	import EpisodeGrid from '$lib/components/episodes/EpisodeGrid.svelte';
 	import MediaOverview from '$lib/components/media/MediaOverview.svelte';
@@ -75,8 +79,10 @@
 
 	const streamingService = new StreamingService();
 	const playerService = new PlayerService();
-	const episodeService = new EpisodeService();
+	const episodeService = createEpisodeService();
 
+	let selectedSeason = $state<number>(1);
+	let selectedEpisode = $state<number>(1);
 	let subOrDub = $state<'sub' | 'dub'>('sub');
 	let activeTab = $state<'suggested' | 'details'>('suggested');
 
@@ -91,10 +97,8 @@
 				mediaId: movie.id,
 				tmdbId: movie.tmdbId,
 				mediaType: mediaType,
-				season:
-					mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedSeason : undefined,
-				episode:
-					mediaType === 'tv' || mediaType === 'anime' ? episodeService.selectedEpisode : undefined
+				season: mediaType === 'tv' || mediaType === 'anime' ? selectedSeason : undefined,
+				episode: mediaType === 'tv' || mediaType === 'anime' ? selectedEpisode : undefined
 			});
 
 			if (data.streaming) {
@@ -124,27 +128,36 @@
 		const savedProgress = playbackStore.getProgress(
 			movie?.id ?? '',
 			mediaType,
-			mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
-			mediaType !== 'movie' ? episodeService.selectedEpisode : undefined
+			mediaType !== 'movie' ? selectedSeason : undefined,
+			mediaType !== 'movie' ? selectedEpisode : undefined
 		);
 
-		await streamingService.resolveProvider(streamingService.currentProviderId, {
+		const resolveParams = {
 			tmdbId: Number(movie?.tmdbId),
 			mediaType: mediaType,
 			imdbId: movie?.imdbId ?? undefined,
 			malId: movie?.malId ?? undefined,
 			subOrDub: mediaType === 'anime' ? subOrDub : undefined,
-			season: mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
-			episode: mediaType !== 'movie' ? episodeService.selectedEpisode : undefined,
+			season: mediaType !== 'movie' ? selectedSeason : undefined,
+			episode: mediaType !== 'movie' ? selectedEpisode : undefined,
 			preferredQuality: playerService.selectedQuality,
 			preferredSubtitleLanguage: playerService.selectedSubtitle,
 			csrfToken: data.csrfToken,
 			startAt: savedProgress?.progress ? Math.floor(savedProgress.progress) : undefined
+		};
+
+		console.log('[Play] Resolve params:', {
+			mediaType,
+			season: resolveParams.season,
+			episode: resolveParams.episode,
+			tmdbId: resolveParams.tmdbId
 		});
+
+		await streamingService.resolveProvider(streamingService.currentProviderId, resolveParams);
 	}
 
 	function handleEpisodeSelect(episodeNum: number) {
-		episodeService.handleEpisodeSelect(episodeNum);
+		selectedEpisode = episodeNum;
 
 		streamingService.reset();
 		playerService.cleanup();
@@ -155,7 +168,8 @@
 	}
 
 	function handleSeasonChange(value: string) {
-		episodeService.handleSeasonChange(Number(value));
+		selectedSeason = Number(value);
+		selectedEpisode = 1;
 
 		streamingService.reset();
 		playerService.cleanup();
@@ -163,37 +177,77 @@
 		streamingService.state.subtitles = [];
 
 		if (movie?.tmdbId && (mediaType === 'tv' || mediaType === 'anime')) {
-			episodeService.fetchEpisodes(movie.tmdbId, episodeService.selectedSeason);
+			episodeService.fetchEpisodes(movie.tmdbId, selectedSeason);
 		}
 	}
 
 	function goToNextEpisode() {
-		const next = episodeService.getNextEpisode(movie?.seasons);
+		const next = episodeService.getNextEpisode(movie?.seasons, selectedSeason, selectedEpisode);
 		if (next) {
-			if (next.season !== episodeService.selectedSeason) {
-				episodeService.handleSeasonChange(next.season);
+			if (next.season !== selectedSeason) {
+				selectedSeason = next.season;
+				selectedEpisode = 1;
+				streamingService.reset();
+				playerService.cleanup();
+				streamingService.state.qualities = [];
+				streamingService.state.subtitles = [];
+				if (movie?.tmdbId && (mediaType === 'tv' || mediaType === 'anime')) {
+					episodeService.fetchEpisodes(movie.tmdbId, selectedSeason);
+				}
 			}
 			handleEpisodeSelect(next.episode);
 		}
 	}
 
 	async function handleHeaderPlay(providerId: string) {
+		// For TV series, check if we need to default to S1E1
+		if (mediaType !== 'movie' && movie?.id) {
+			const savedProgress = playbackStore.getProgress(
+				movie.id,
+				mediaType,
+				selectedSeason,
+				selectedEpisode
+			);
+
+			// If no saved progress for current selection, check if there's any progress at all
+			if (!savedProgress) {
+				const anyProgress = playbackStore.getProgress(movie.id, mediaType);
+
+				// If no progress at all, default to S1E1
+				if (!anyProgress) {
+					selectedSeason = 1;
+					selectedEpisode = 1;
+
+					// Fetch episodes for season 1 if needed
+					if (movie.tmdbId && episodeService.episodesList.length === 0) {
+						await episodeService.fetchEpisodes(movie.tmdbId, 1);
+					}
+				}
+			}
+		}
+
 		streamingService.selectProvider(providerId);
 
 		const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
 
 		try {
+			console.log('[Play] Resolving provider:', providerId);
 			await handlePlayClick();
+
+			console.log('[Play] Provider resolved, source:', streamingService.state.source);
 			const playbackUrl =
 				streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
+
+			console.log('[Play] Playback URL:', playbackUrl);
 
 			if (win && playbackUrl) {
 				win.location.href = playbackUrl;
 			} else if (win) {
+				console.error('[Play] No playback URL available, closing window');
 				win.close();
 			}
 		} catch (e) {
-			console.error('Play failed', e);
+			console.error('[Play] Play failed:', e);
 			win?.close();
 		}
 	}
@@ -226,12 +280,6 @@
 	});
 
 	$effect(() => {
-		if (streamingService.state.source) {
-			handlePlayClick();
-		}
-	});
-
-	$effect(() => {
 		if (streamingService.isResolved && movie) {
 			playerService.startProgressTracking(movie.durationMinutes, async (progress) => {
 				if (!movie) return;
@@ -241,8 +289,8 @@
 					mediaType,
 					progress,
 					duration: movie.durationMinutes ? movie.durationMinutes * 60 : 0,
-					seasonNumber: mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
-					episodeNumber: mediaType !== 'movie' ? episodeService.selectedEpisode : undefined,
+					seasonNumber: mediaType !== 'movie' ? selectedSeason : undefined,
+					episodeNumber: mediaType !== 'movie' ? selectedEpisode : undefined,
 					updatedAt: Date.now(),
 					movieData: { ...movie, mediaType } as LibraryMovie
 				});
@@ -261,8 +309,8 @@
 								mediaType,
 								progress,
 								duration,
-								seasonNumber: mediaType !== 'movie' ? episodeService.selectedSeason : undefined,
-								episodeNumber: mediaType !== 'movie' ? episodeService.selectedEpisode : undefined
+								seasonNumber: mediaType !== 'movie' ? selectedSeason : undefined,
+								episodeNumber: mediaType !== 'movie' ? selectedEpisode : undefined
 							}),
 							credentials: 'include'
 						});
@@ -306,13 +354,9 @@
 					}
 					break;
 				case 'p':
-					if (
-						streamingService.isResolved &&
-						mediaType !== 'movie' &&
-						episodeService.selectedEpisode > 1
-					) {
+					if (streamingService.isResolved && mediaType !== 'movie' && selectedEpisode > 1) {
 						event.preventDefault();
-						handleEpisodeSelect(episodeService.selectedEpisode - 1);
+						handleEpisodeSelect(selectedEpisode - 1);
 					}
 					break;
 				case 'arrowright':
@@ -364,8 +408,8 @@
 				collectionId: movie.collectionId ?? null,
 				...(mediaType !== 'movie'
 					? {
-							season: episodeService.selectedSeason,
-							episode: episodeService.selectedEpisode
+							season: selectedSeason,
+							episode: selectedEpisode
 						}
 					: {})
 			});
@@ -374,7 +418,7 @@
 
 	$effect(() => {
 		if (mediaType !== 'movie' && movie?.tmdbId) {
-			episodeService.fetchEpisodes(movie.tmdbId, episodeService.selectedSeason);
+			episodeService.fetchEpisodes(movie.tmdbId, selectedSeason);
 		}
 	});
 
@@ -501,7 +545,7 @@
 				{#if activeTab === 'suggested'}
 					<div>
 						{#if data.recommendations && data.recommendations.length > 0}
-							<MovieScrollContainer title="" movies={data.recommendations} />
+							<MediaScrollContainer title="" movies={data.recommendations} />
 						{:else}
 							<div class="py-12 text-center text-muted-foreground">
 								No recommendations available.
@@ -515,8 +559,8 @@
 								<h3 class="mb-4 text-2xl font-bold">Episodes</h3>
 								<EpisodeGrid
 									episodes={episodeService.episodesList}
-									selectedEpisode={episodeService.selectedEpisode}
-									selectedSeason={episodeService.selectedSeason}
+									{selectedEpisode}
+									{selectedSeason}
 									seasons={movie.seasons}
 									isLoading={episodeService.isLoadingEpisodes}
 									onSeasonChange={handleSeasonChange}

@@ -10,7 +10,7 @@
 		Trash2
 	} from '@lucide/svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
-	import MovieCard from '$lib/components/media/MovieCard.svelte';
+	import MediaCard from '$lib/components/media/MediaCard.svelte';
 	import type { Movie } from '$lib/state/stores/watchlistStore.svelte';
 	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
@@ -576,7 +576,7 @@
 									class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
 								>
 									{#each group.movies as movie (movie.id)}
-										<MovieCard {movie} />
+										<MediaCard {movie} />
 									{/each}
 								</div>
 							{:else}

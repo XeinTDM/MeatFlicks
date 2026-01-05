@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import MovieCard from '$lib/components/media/MovieCard.svelte';
+	import MediaCard from '$lib/components/media/MediaCard.svelte';
 	import SearchHeader from '$lib/components/search/SearchHeader.svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import type { LibraryMovie } from '$lib/types/library';
@@ -44,6 +44,7 @@
 	let sortBy = $state<SortOption>('relevance');
 	let qualityFilter = $state<QualityFilter>('any');
 
+	let totalItems = $state(0);
 	let sentinel: HTMLDivElement | null = $state(null);
 
 	async function fetchItems(searchTerm: string, pageToLoad: number) {
@@ -66,19 +67,23 @@
 
 			if (!res.ok) throw new Error('Failed to fetch search results');
 
-			const data: LibraryMovie[] = await res.json();
+			const data: { items: LibraryMovie[]; total: number } = await res.json();
 
 			if (pageToLoad === 1) {
-				items = data;
+				items = data.items;
+				totalItems = data.total;
 				if (searchTerm.trim()) {
 					addToSearchHistory(searchTerm.trim(), browser);
 				}
 			} else {
-				items = [...items, ...data];
+				items = [...items, ...data.items];
+				// totalItems might change slightly if DB changes, but usually we just keep it or update it.
+				// For stability might stick to initial but updating is fine.
+				totalItems = data.total;
 			}
 
 			page = pageToLoad;
-			hasMore = data.length === API_FETCH_LIMIT;
+			hasMore = items.length < totalItems;
 		} catch (err) {
 			if (err instanceof DOMException && err.name === 'AbortError') return;
 			error = err instanceof Error ? err.message : 'Unable to fetch search results.';
@@ -98,10 +103,11 @@
 	}
 
 	$effect(() => {
+		const currentQuery = query; // Read to track dependency
 		if (debounceTimeout) clearTimeout(debounceTimeout);
 		debounceTimeout = setTimeout(() => {
-			if (query !== lastSubmittedQuery) {
-				void performSearch(query);
+			if (currentQuery !== lastSubmittedQuery) {
+				void performSearch(currentQuery);
 			}
 		}, DEBOUNCE_DELAY);
 	});
@@ -150,7 +156,15 @@
 				: 'No media items found.';
 		}
 
-		let summary = `Showing ${visibleCount} results`;
+		let summary = `Showing ${visibleCount}`;
+		// Use totalItems for "out of X"
+		if (totalItems > 0 && items.length <= totalItems) {
+			summary += ` out of ${totalItems} results`;
+		} else {
+			// Fallback if totalItems is 0 or weird
+			summary += ` results`;
+		}
+
 		if (lastSubmittedQuery) summary += ` for "${lastSubmittedQuery}"`;
 		if (hasActiveFilters && visibleCount !== items.length) {
 			summary += ` (filtered from ${items.length})`;
@@ -165,7 +179,7 @@
 
 <div class="min-h-screen">
 	<main class="container w-full py-2 pr-2 md:py-2">
-		<section class="space-y-4 p-6 shadow-xl backdrop-blur-sm sm:p-8">
+		<section class="mt-24 ml-24 space-y-4 shadow-xl backdrop-blur-sm">
 			<SearchHeader
 				bind:query
 				{performSearch}
@@ -189,20 +203,20 @@
 
 			{#if filteredItems.length > 0}
 				<div
-					class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+					class="grid justify-center gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
 				>
 					{#each filteredItems as item (item.id)}
-						<MovieCard movie={item as LibraryMovie} />
+						<MediaCard movie={item as LibraryMovie} />
 					{/each}
 				</div>
 			{/if}
 
 			{#if loading}
 				<div
-					class="grid justify-center gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+					class="grid justify-center gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
 				>
 					{#each Array(skeletonCount) as _index (Math.random())}
-						<MovieCard movie={null} />
+						<MediaCard movie={null} />
 					{/each}
 				</div>
 			{/if}

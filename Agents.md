@@ -1,96 +1,39 @@
-\# Project Overview
+Start: say hi + 1 motivating line. Work style: telegraph; noun-phrases ok; drop grammar; min tokens.
+
+# Project Overview
 
 This repository represent:
 
-A \*\*website\*\* built with \*\*Svelte 5 runes mode\*\*, \*\*TypeScript\*\*, \*\*TailwindCSS v4\*\*, \*\*shadcn-svelte\*\*, and \*\*lucide\*\* for icons.
+A **website** built with **Svelte 5 runes mode**, **TypeScript**, **TailwindCSS v4**, **shadcn-svelte**, and **lucide** for icons.
 
-\*\*Bun\*\* is used as the runtime, package manager, and task runner across all projects.
+**Bun** is used as the runtime, package manager, and task runner across all projects.
 
-\# Setup / Build \& Run
 
-Install dependencies:
+# Code Style & Conventions
 
-```bash
+**Language**: TypeScript in strict mode.
 
-bun install
+**Svelte**: use `<script lang="ts">` in components.
 
-```
+**TailwindCSS v4**: prefer utility-first classes over custom CSS.
 
-Development:
+**shadcn-svelte**: use provided UI primitives/components consistently.
 
-\*\*Website\*\*: `bun dev`
+**Icons**: use **lucide** icons.
 
-Production Build:
+**Formatting**: run `bun prettier --write .` before commits.
 
-\*\*Website\*\*: `bun run build`
-
-Type-check the project:
-
-```bash
-
-bun tsc --noEmit
-
-```
-
-\# File-scoped Checks
-
-Type-check a single file:
-
-```bash
-
-bun tsc --noEmit <file>
-
-```
-
-Run ESLint on a single file:
-
-```bash
-
-bun eslint --fix <file>
-
-```
-
-Format a file with Prettier:
-
-```bash
-
-bun prettier --write <file>
-
-```
-
-Run a specific test file:
-
-```bash
-
-bun test <path/to/file.test.ts>
-
-```
-
-\# Code Style \& Conventions
-
-\*\*Language\*\*: TypeScript in strict mode.
-
-\*\*Svelte\*\*: use `<script lang="ts">` in components.
-
-\*\*TailwindCSS v4\*\*: prefer utility-first classes over custom CSS.
-
-\*\*shadcn-svelte\*\*: use provided UI primitives/components consistently.
-
-\*\*Icons\*\*: use \*\*lucide\*\* icons.
-
-\*\*Formatting\*\*: run `bun prettier --write .` before commits.
-
-\*\*Imports\*\*:
+**Imports**:
 
 Prefer absolute imports from `src/` over long relative paths.
 
-\*\*Naming\*\*:
+**Naming**:
 
 Components: PascalCase (e.g. `MyButton.svelte`).
 
 Utilities, stores: camelCase or kebab-case as appropriate.
 
-\# Project Structure
+# Project Structure
 
 `src/` – main application code (Svelte + TypeScript).
 
@@ -104,9 +47,9 @@ Utilities, stores: camelCase or kebab-case as appropriate.
 
 `tests/` – unit/integration tests.
 
-\# Testing Guidelines
+# Testing Guidelines
 
-Use \*\*Vitest\*\* (or compatible runner with Bun).
+Use **Vitest** (or compatible runner with Bun).
 
 Add unit tests for new logic.
 
@@ -130,44 +73,51 @@ Run tests before committing:
 
   ```
 
-\# Do’s \& Don’ts
+# Do’s & Don’ts
 
-\## Do:
+## Do:
 
-\- Use TailwindCSS utilities instead of custom CSS.
+- Use TailwindCSS utilities instead of custom CSS.
 
-\- Use shadcn-svelte components for UI consistency.
+- Use shadcn-svelte components for UI consistency.
 
-\- Keep components small and modular.
+- Keep components small and modular.
 
-\- Use lucide icons consistently.
+- Use lucide icons consistently.
 
-\## Don’t:
+## Don’t:
 
-\- Don’t use `any` unless unavoidable (add `TODO` if used).
+- Don’t use `any` unless unavoidable (add `TODO` if used).
 
-\- Don’t hardcode secrets; use environment variables or config files.
+- Don’t hardcode secrets; use environment variables or config files.
 
-\- Don’t add dependencies without reviewing size and compatibility.
+- Don’t add dependencies without reviewing size and compatibility.
 
-\# Security
+# Security
 
-\- Exclude `.env` and secrets from version control.
+- Exclude `.env` and secrets from version control.
 
-\- For desktop apps, keep secrets in the \*\*Tauri (Rust) backend\*\*, not the frontend.
+- For desktop apps, keep secrets in the **Tauri (Rust) backend**, not the frontend.
 
-\- Never expose private APIs or keys in client-side code.
+- Never expose private APIs or keys in client-side code.
 
-\# External References
+## Critical Thinking
+- Fix root cause (not band-aid).
+- Unsure: read more code; if still stuck, ask w/ short options.
+- Conflicts: call out; pick safer path.
+- Unrecognized changes: assume other agent; keep going; focus your changes. If it causes issues, stop + ask user.
+- Leave breadcrumb notes in thread.
+
+# External References
 
 General project docs: see `README.md` and/or `docs`.
 
-Tauri v2 docs: \[https://tauri.app](https://tauri.app)
+Tauri v2 docs: [https://tauri.app](https://tauri.app)
 
-Svelte 5 docs: \[https://svelte.dev](https://svelte.dev)
+Svelte 5 docs: [https://svelte.dev](https://svelte.dev)
 
-TailwindCSS v4 docs: \[https://tailwindcss.com/docs/v4](https://tailwindcss.com/docs/v4)
+TailwindCSS v4 docs: [https://tailwindcss.com/docs/v4](https://tailwindcss.com/docs/v4)
 
-shadcn-svelte docs: \[https://shadcn-svelte.com](https://shadcn-svelte.com)
+shadcn-svelte docs: [https://shadcn-svelte.com](https://shadcn-svelte.com)
 
-lucide icons: \[https://lucide.dev](https://lucide.dev)
+lucide icons: [https://lucide.dev](https://lucide.dev)
