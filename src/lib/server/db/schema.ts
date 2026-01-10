@@ -105,7 +105,10 @@ export const cache = sqliteTable(
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
 	username: text('username').notNull().unique(),
-	passwordHash: text('password_hash').notNull()
+	passwordHash: text('password_hash').notNull(),
+	role: text('role', { enum: ['ADMIN', 'USER'] })
+		.notNull()
+		.default('USER')
 });
 
 export const sessions = sqliteTable('sessions', {

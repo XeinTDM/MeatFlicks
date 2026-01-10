@@ -58,7 +58,8 @@ export const actions: Actions = {
 			await db.insert(users).values({
 				id: userId,
 				username,
-				passwordHash
+				passwordHash,
+				role: 'USER'
 			});
 
 			const session = await lucia.createSession(userId, {

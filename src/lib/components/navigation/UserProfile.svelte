@@ -66,7 +66,12 @@
 		</div>
 
 		{#if !isAuthenticated}
-			<Button variant="default" class="mb-2 w-full justify-start" size="sm">
+			<Button
+				variant="default"
+				class="mb-2 w-full justify-start"
+				size="sm"
+				onclick={() => handleNavigate('/login')}
+			>
 				<LogIn class="mr-2 h-4 w-4" />
 				Login
 			</Button>
