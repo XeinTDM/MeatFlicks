@@ -35,8 +35,6 @@ export type EpisodeService = {
 };
 
 export function createEpisodeService(): EpisodeService {
-	let selectedSeason = $state(1);
-	let selectedEpisode = $state(1);
 	let episodesList = $state<Episode[]>([]);
 	let isLoadingEpisodes = $state(false);
 

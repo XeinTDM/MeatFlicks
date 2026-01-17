@@ -136,13 +136,19 @@
 					uploadDate: media.releaseDate || undefined
 				};
 			}
-
 			return tvData;
 		}
 	});
+
+	const structuredDataJson = $derived.by(() =>
+		JSON.stringify(structuredData).replace(/</g, '\\u003c')
+	);
+	const structuredDataScript = $derived.by(
+		() => '<' + 'script type="application/ld+json">' + structuredDataJson + '</' + 'script>'
+	);
 </script>
 
 <svelte:head>
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-	{@html '<script type="application/ld+json">' + JSON.stringify(structuredData) + '</script>'}
+	{@html structuredDataScript}
 </svelte:head>

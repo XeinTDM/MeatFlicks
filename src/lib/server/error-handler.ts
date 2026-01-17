@@ -6,7 +6,7 @@ export class AppError extends Error {
 		public message: string,
 		public status: number = 500,
 		public code?: string,
-		public details?: any,
+		public details?: unknown,
 		public context?: Record<string, unknown>
 	) {
 		super(message);
@@ -17,7 +17,7 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
 	constructor(
 		public message: string,
-		public details?: any,
+		public details?: unknown,
 		public context?: Record<string, unknown>
 	) {
 		super(message, 400, 'VALIDATION_ERROR', details, context);
@@ -86,7 +86,10 @@ export class ConflictError extends AppError {
 	}
 }
 
-export function handleError(error: unknown, event?: RequestEvent): { status: number; body: any } {
+export function handleError(
+	error: unknown,
+	event?: RequestEvent
+): { status: number; body: Record<string, string | number | unknown> } {
 	if (error instanceof AppError) {
 		logger.error({
 			error: error.message,
@@ -96,13 +99,18 @@ export function handleError(error: unknown, event?: RequestEvent): { status: num
 			path: event?.route?.id
 		});
 
+		const body: Record<string, string | number | unknown> = {
+			error: error.message,
+			code: error.code
+		};
+
+		if (error.details !== undefined) {
+			body.details = error.details;
+		}
+
 		return {
 			status: error.status,
-			body: {
-				error: error.message,
-				code: error.code,
-				...(error.details && { details: error.details })
-			}
+			body
 		};
 	}
 

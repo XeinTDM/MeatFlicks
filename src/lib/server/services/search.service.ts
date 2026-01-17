@@ -5,7 +5,6 @@ import {
 	withCache,
 	buildCacheKey,
 	CACHE_TTL_SEARCH_SECONDS,
-	CACHE_TTL_LONG_SECONDS,
 	CACHE_TTL_MEDIUM_SECONDS
 } from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
@@ -56,6 +55,15 @@ interface AutocompleteResult {
 	movies: MediaSummary[];
 	people: Array<{ id: number; name: string; type: 'actor' | 'director' }>;
 }
+
+type GenreFacetRow = { id: number; name: string; count: number };
+type YearFacetRow = { year: string; count: number };
+type RatingFacetRow = { rating_range: string; count: number };
+type SearchSuggestionRow = { title: string };
+type AutocompletePersonRow = { id: number; name: string; knownForDepartment: string | null };
+type SearchHistoryRow = { query: string; timestamp: number };
+type SearchHistoryQueryRow = { query: string; count: number };
+type RecommendationGenreRow = { genreId: number };
 
 const DEFAULT_LIMIT = 20;
 const AUTOCOMPLETE_LIMIT = 10;
@@ -343,7 +351,7 @@ async function getGenreFacets(
 	const cacheKey = buildCacheKey('search', 'facets', 'genres', filters.filterKey);
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
-			const results = await db.all(sql`
+			const results = await db.all<GenreFacetRow>(sql`
 				SELECT g.id, g.name, COUNT(DISTINCT m.id) as count
 				FROM genres g
 				JOIN media_genres mg ON g.id = mg.genreId
@@ -355,10 +363,10 @@ async function getGenreFacets(
 				LIMIT 15
 			`);
 
-			return results.map((row: any) => ({
-				id: row.id as number,
-				name: row.name as string,
-				count: row.count as number
+			return results.map((row) => ({
+				id: row.id,
+				name: row.name,
+				count: row.count
 			}));
 		} catch (error) {
 			logger.error({ error }, 'Failed to get genre facets');
@@ -374,7 +382,7 @@ async function getYearFacets(
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
 			const baseWhere = filters.hasFilters ? filters.whereClause : sql`WHERE 1=1`;
-			const results = await db.all(sql`
+			const results = await db.all<YearFacetRow>(sql`
 				SELECT strftime('%Y', m.releaseDate) as year, COUNT(*) as count
 				FROM media m
 				${baseWhere} AND m.releaseDate IS NOT NULL
@@ -384,9 +392,9 @@ async function getYearFacets(
 			`);
 
 			return results
-				.map((row: any) => ({
-					year: parseInt(row.year as string),
-					count: row.count as number
+				.map((row) => ({
+					year: parseInt(row.year),
+					count: row.count
 				}))
 				.filter((item: { year: number; count: number }) => !isNaN(item.year));
 		} catch (error) {
@@ -403,7 +411,7 @@ async function getRatingFacets(
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
 			const baseWhere = filters.hasFilters ? filters.whereClause : sql`WHERE 1=1`;
-			const results = await db.all(sql`
+			const results = await db.all<RatingFacetRow>(sql`
 				SELECT
 					CASE
 						WHEN m.rating >= 8 THEN '8+'
@@ -419,8 +427,8 @@ async function getRatingFacets(
 				ORDER BY rating_range DESC
 			`);
 
-			return results.map((row: any) => {
-				const range = row.rating_range as string;
+			return results.map((row) => {
+				const range = row.rating_range;
 				let rating: number;
 
 				if (range === '8+') rating = 8;
@@ -446,7 +454,7 @@ async function getSearchSuggestions(query: string, limit: number = 5): Promise<s
 
 	try {
 		const ftsQuery = createAutocompleteQuery(query);
-		const results = await db.all(sql`
+		const results = await db.all<SearchSuggestionRow>(sql`
 			SELECT DISTINCT m.title
 			FROM movie_fts mf
 			JOIN media m ON m.numericId = mf.rowid
@@ -454,7 +462,7 @@ async function getSearchSuggestions(query: string, limit: number = 5): Promise<s
 			LIMIT ${limit}
 		`);
 
-		return results.map((row: any) => row.title as string).filter(Boolean);
+		return results.map((row) => row.title).filter(Boolean);
 	} catch (error) {
 		logger.error({ error }, 'Failed to get search suggestions');
 		return [];
@@ -469,16 +477,16 @@ async function getAutocompletePeople(
 
 	try {
 		const likeTerm = `%${query.replace(/%/g, '%%')}%`;
-		const results = await db.all(sql`
+		const results = await db.all<AutocompletePersonRow>(sql`
 			SELECT id, name, knownForDepartment
 			FROM people
 			WHERE name LIKE ${likeTerm}
 			LIMIT ${limit}
 		`);
 
-		return results.map((row: any) => ({
-			id: row.id as number,
-			name: row.name as string,
+		return results.map((row) => ({
+			id: row.id,
+			name: row.name,
 			type: row.knownForDepartment?.toLowerCase().includes('act') ? 'actor' : 'director'
 		}));
 	} catch (error) {
@@ -633,7 +641,7 @@ async function performSearchQuery(
 					LIMIT ${limit} OFFSET ${offset}
 				`;
 
-		const rows = (await db.all(searchSql)) as any[];
+		const rows = await db.all<MediaRow>(searchSql);
 		return await mapRowsToSummaries(rows);
 	} catch (error) {
 		logger.error({ error, options }, 'Search query failed');
@@ -652,7 +660,7 @@ async function getTotalCount(
 			${filters.whereClause}
 		`;
 
-		const result = (await db.all(countSql)) as any[];
+		const result = await db.all<{ count: number }>(countSql);
 		return result[0]?.count || 0;
 	} catch (error) {
 		logger.error({ error, options }, 'Count query failed');
@@ -709,7 +717,7 @@ async function getAutocompleteMovies(query: string, limit: number): Promise<Medi
 			LIMIT ${limit}
 		`;
 
-		const rows = (await db.all(searchSql)) as any[];
+		const rows = await db.all<MediaRow>(searchSql);
 		return await mapRowsToSummaries(rows);
 	} catch (error) {
 		logger.error({ error, query }, 'Autocomplete movies failed');
@@ -722,27 +730,27 @@ export async function getSearchHistory(
 ): Promise<Array<{ query: string; timestamp: number }>> {
 	try {
 		if (userId) {
-			const results = await db.all(sql`
+			const results = await db.all<SearchHistoryRow>(sql`
 				SELECT query, searchedAt as timestamp
 				FROM search_history
 				WHERE userId = ${userId}
 				ORDER BY searchedAt DESC
 				LIMIT 10
 			`);
-			return results.map((row: any) => ({
-				query: row.query as string,
-				timestamp: row.timestamp as number
+			return results.map((row) => ({
+				query: row.query,
+				timestamp: row.timestamp
 			}));
 		} else {
-			const results = await db.all(sql`
+			const results = await db.all<SearchHistoryQueryRow>(sql`
 				SELECT query, COUNT(*) as count
 				FROM search_history
 				GROUP BY query
 				ORDER BY count DESC
 				LIMIT 10
 			`);
-			return results.map((row: any) => ({
-				query: row.query as string,
+			return results.map((row) => ({
+				query: row.query,
 				timestamp: Date.now()
 			}));
 		}
@@ -773,7 +781,7 @@ export async function getPersonalizedRecommendations(
 	const cacheKey = buildCacheKey('recommendations', userId, limit);
 	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 		try {
-			const genrePrefResults = await db.all(sql`
+			const genrePrefResults = await db.all<RecommendationGenreRow>(sql`
 				WITH CombinedHistory AS (
 					SELECT media_id FROM watch_history WHERE userId = ${userId}
 					UNION ALL
@@ -787,19 +795,19 @@ export async function getPersonalizedRecommendations(
 				LIMIT 3
 			`);
 
-			const preferredGenreIds = genrePrefResults.map((r: any) => r.genreId as number);
+			const preferredGenreIds = genrePrefResults.map((r) => r.genreId);
 
 			if (preferredGenreIds.length === 0) {
-				const popularMovies = (await db.all(sql`
+				const popularMovies = await db.all<MediaRow>(sql`
 				SELECT m.*
 				FROM media m
 				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 				LIMIT ${limit}
-			`)) as any[];
-				return await mapRowsToSummaries(popularMovies as MediaRow[]);
+			`);
+				return await mapRowsToSummaries(popularMovies);
 			}
 
-			const recommendedMovies = await db.all(sql`
+			const recommendedMovies = await db.all<MediaRow>(sql`
 				SELECT DISTINCT m.*
 				FROM media m
 				JOIN media_genres mg ON m.id = mg.mediaId
@@ -808,16 +816,16 @@ export async function getPersonalizedRecommendations(
 				LIMIT ${limit}
 			`);
 
-			return await mapRowsToSummaries(recommendedMovies as any[]);
+			return await mapRowsToSummaries(recommendedMovies);
 		} catch (error) {
 			logger.error({ error, userId }, 'Failed to get personalized recommendations');
-			const popularMovies = await db.all(sql`
+			const popularMovies = await db.all<MediaRow>(sql`
 				SELECT m.*
 				FROM media m
 				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 				LIMIT ${limit}
 			`);
-			return await mapRowsToSummaries(popularMovies as any[]);
+			return await mapRowsToSummaries(popularMovies);
 		}
 	});
 }

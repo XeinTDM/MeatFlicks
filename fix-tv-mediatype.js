@@ -5,10 +5,7 @@ import { eq } from 'drizzle-orm';
 async function fixTvSeriesMediaType() {
 	console.log('Updating Stranger Things mediaType to tv...');
 
-	const result = await db
-		.update(movies)
-		.set({ mediaType: 'tv' })
-		.where(eq(movies.imdbId, 'tt4574334'));
+	await db.update(movies).set({ mediaType: 'tv' }).where(eq(movies.imdbId, 'tt4574334'));
 
 	console.log('Update complete!');
 

@@ -10,72 +10,76 @@
 	import { addToSearchHistory, type SortOption } from '$lib/utils/searchUtils';
 	import type { MovieFilters } from '$lib/types/filters';
 	import { page as pageState } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
-	const sortOptions = [
-		{ label: 'Best Match', value: 'relevance' as SortOption },
-		{ label: 'Top Rated', value: 'rating' as SortOption },
-		{ label: 'Newest', value: 'releaseDate' as SortOption },
-		{ label: 'Title', value: 'title' as SortOption }
-	];
+const sortOptions = [
+	{ label: 'Best Match', value: 'relevance' as SortOption },
+	{ label: 'Top Rated', value: 'rating' as SortOption },
+	{ label: 'Newest', value: 'releaseDate' as SortOption },
+	{ label: 'Title', value: 'title' as SortOption }
+];
 
-	const SKELETON_COUNT_INITIAL = 12;
-	const SKELETON_COUNT_MORE = 6;
-	const DEBOUNCE_DELAY = 600;
-	const API_FETCH_LIMIT = 24;
+const SKELETON_COUNT_INITIAL = 12;
+const SKELETON_COUNT_MORE = 6;
+const DEBOUNCE_DELAY = 600;
+const API_FETCH_LIMIT = 24;
 
-	let query = $state(pageState.url.searchParams.get('q') || '');
-	let items = $state<LibraryMedia[]>([]);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
-	let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
-	let controller: AbortController | null = null;
+let query = $state(pageState.url.searchParams.get('q') || '');
+let items = $state<LibraryMedia[]>([]);
+let loading = $state(false);
+let error = $state<string | null>(null);
+let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+let controller: AbortController | null = null;
+let page = $state(1);
+let hasMore = $state(true);
+let lastSubmittedQuery = $state('');
+let availableGenres = $state<Array<{ id: number; name: string; count: number }>>([]);
 
-	let page = $state(1);
-	let hasMore = $state(true);
-	let lastSubmittedQuery = $state('');
+let filters = $state<MovieFilters>({
+	genres: pageState.url.searchParams.get('genres')?.split(',').filter(Boolean) || [],
+	minRating: pageState.url.searchParams.get('minRating')
+		? Number(pageState.url.searchParams.get('minRating'))
+		: undefined,
+	maxRating: pageState.url.searchParams.get('maxRating')
+		? Number(pageState.url.searchParams.get('maxRating'))
+		: undefined,
+	yearFrom: pageState.url.searchParams.get('yearFrom')
+		? Number(pageState.url.searchParams.get('yearFrom'))
+		: undefined,
+	yearTo: pageState.url.searchParams.get('yearTo')
+		? Number(pageState.url.searchParams.get('yearTo'))
+		: undefined,
+	runtimeMin: pageState.url.searchParams.get('runtimeMin')
+		? Number(pageState.url.searchParams.get('runtimeMin'))
+		: undefined,
+	runtimeMax: pageState.url.searchParams.get('runtimeMax')
+		? Number(pageState.url.searchParams.get('runtimeMax'))
+		: undefined,
+	language: pageState.url.searchParams.get('language') || undefined
+});
 
-	// Facet data
-	let availableGenres = $state<Array<{ id: number; name: string; count: number }>>([]);
-	let availableYears = $state<Array<{ year: number; count: number }>>([]);
-	let availableRatings = $state<Array<{ rating: number; count: number }>>([]);
+const mediaTypeParam = pageState.url.searchParams.get('type');
+const mediaTypeValue =
+	mediaTypeParam === 'movie' || mediaTypeParam === 'tv' || mediaTypeParam === 'anime'
+		? mediaTypeParam
+		: undefined;
 
-	let filters = $state<MovieFilters>({
-		genres: pageState.url.searchParams.get('genres')?.split(',').filter(Boolean) || [],
-		minRating: pageState.url.searchParams.get('minRating')
-			? Number(pageState.url.searchParams.get('minRating'))
-			: undefined,
-		maxRating: pageState.url.searchParams.get('maxRating')
-			? Number(pageState.url.searchParams.get('maxRating'))
-			: undefined,
-		yearFrom: pageState.url.searchParams.get('yearFrom')
-			? Number(pageState.url.searchParams.get('yearFrom'))
-			: undefined,
-		yearTo: pageState.url.searchParams.get('yearTo')
-			? Number(pageState.url.searchParams.get('yearTo'))
-			: undefined,
-		runtimeMin: pageState.url.searchParams.get('runtimeMin')
-			? Number(pageState.url.searchParams.get('runtimeMin'))
-			: undefined,
-		runtimeMax: pageState.url.searchParams.get('runtimeMax')
-			? Number(pageState.url.searchParams.get('runtimeMax'))
-			: undefined,
-		language: pageState.url.searchParams.get('language') || undefined
-	});
+let mediaType = $state<'movie' | 'tv' | 'anime' | undefined>(mediaTypeValue);
 
-	let mediaType = $state<'movie' | 'tv' | 'anime' | undefined>(
-		(pageState.url.searchParams.get('type') as any) || undefined
-	);
+const sortParam = pageState.url.searchParams.get('sort');
+const sortByValue = sortParam && sortOptions.some((option) => option.value === sortParam)
+	? (sortParam as SortOption)
+	: 'relevance';
 
-	let sortBy = $state<SortOption>((pageState.url.searchParams.get('sort') as any) || 'relevance');
-	let sortOrder = $state<'asc' | 'desc'>(
-		(pageState.url.searchParams.get('order') as any) || 'desc'
-	);
+let sortBy = $state<SortOption>(sortByValue);
+const sortOrderParam = pageState.url.searchParams.get('order');
+const sortOrderValue = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'desc';
+let sortOrder = $state<'asc' | 'desc'>(sortOrderValue);
 
-	let totalItems = $state(0);
-	let sentinel: HTMLDivElement | null = $state(null);
+let totalItems = $state(0);
+let sentinel: HTMLDivElement | null = $state(null);
 
-	async function fetchItems(searchTerm: string, pageToLoad: number, isInitial = false) {
+async function fetchItems(searchTerm: string, pageToLoad: number, isInitial = false) {
 		if (loading) return;
 		if (!isInitial && pageToLoad > 1 && !hasMore) return;
 
@@ -89,7 +93,7 @@
 		}
 
 		try {
-			const params = new URLSearchParams();
+			const params = new SvelteURLSearchParams();
 			if (searchTerm) params.set('q', searchTerm);
 			params.set('offset', String((pageToLoad - 1) * API_FETCH_LIMIT));
 			params.set('limit', String(API_FETCH_LIMIT));
@@ -118,10 +122,7 @@
 				items = data.results;
 				totalItems = data.total;
 
-				// Update facets
 				availableGenres = data.genres || [];
-				availableYears = data.years || [];
-				availableRatings = data.ratings || [];
 
 				if (searchTerm.trim()) {
 					addToSearchHistory(searchTerm.trim(), browser);
@@ -134,7 +135,6 @@
 			page = pageToLoad;
 			hasMore = items.length < totalItems;
 
-			// Update URL without navigation
 			if (browser) {
 				const newUrl = new URL(window.location.href);
 				if (searchTerm) newUrl.searchParams.set('q', searchTerm);
@@ -249,7 +249,6 @@
 <div class="min-h-screen pt-20">
 	<main class="container mx-auto px-4 py-8">
 		<div class="flex flex-col gap-8 lg:flex-row">
-			<!-- Sidebar -->
 			<aside class="w-full shrink-0 lg:w-64 xl:w-80">
 				<div class="sticky top-24 space-y-6">
 					<FilterPanel
@@ -266,7 +265,6 @@
 				</div>
 			</aside>
 
-			<!-- Main Content -->
 			<div class="flex-1 space-y-6">
 				<SearchHeader
 					bind:query
@@ -314,7 +312,7 @@
 						<div
 							class="grid grid-cols-2 justify-center gap-4 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 						>
-							{#each Array(skeletonCount) as _index (Math.random())}
+							{#each Array.from({ length: skeletonCount }) as _, index (index)}
 								<MediaCard movie={null} />
 							{/each}
 						</div>

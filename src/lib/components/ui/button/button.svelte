@@ -14,10 +14,10 @@
 		children,
 		...restProps
 	}: ButtonProps = $props();
+
 </script>
 
 {#if href}
-	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a
 		rel="external"
 		bind:this={ref}

@@ -128,6 +128,7 @@ export interface TmdbPersonDetails {
 	profilePath: string | null;
 	knownFor: TmdbPersonCredit[];
 	images: string[];
+	popularity?: number | null;
 }
 
 export interface TmdbMediaCredits {

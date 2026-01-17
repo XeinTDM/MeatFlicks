@@ -10,7 +10,6 @@
 	import { PlayerService } from '$lib/components/player/playerService.svelte';
 	import {
 		createEpisodeService,
-		type EpisodeService,
 		type Season
 	} from '$lib/components/episodes/episodeService.svelte';
 	import MediaHeader from '$lib/components/media/MediaHeader.svelte';

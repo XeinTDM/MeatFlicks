@@ -24,11 +24,11 @@
 
 	<!-- Content Rows Skeleton -->
 	<div class="space-y-12 px-6 sm:px-5 lg:px-5">
-		{#each Array(3) as _}
+		{#each Array.from({ length: 3 }, (_, rowIndex) => rowIndex) as rowIndex (rowIndex)}
 			<div class="space-y-4">
 				<div class="h-8 w-48 rounded bg-muted/50"></div>
 				<div class="flex gap-4 overflow-hidden">
-					{#each Array(6) as _}
+					{#each Array.from({ length: 6 }, (_, itemIndex) => itemIndex) as itemIndex (itemIndex)}
 						<div class="aspect-[2/3] w-40 shrink-0 rounded-lg bg-muted/40"></div>
 					{/each}
 				</div>

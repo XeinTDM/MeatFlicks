@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import type { RequestEvent, ResolveOptions } from '@sveltejs/kit';
 import { logger } from './logger';
 import { UnauthorizedError } from './error-handler';
 
@@ -17,6 +18,38 @@ const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 const CSRF_TOKEN_ROTATION_INTERVAL = 4 * 60 * 60 * 1000;
+
+type CsrfCookieAttributes = {
+	httpOnly: true;
+	secure: boolean;
+	sameSite: 'lax';
+	path: '/';
+	maxAge: number;
+	partitioned?: true;
+};
+
+type CsrfTokenPayload = {
+	token: string;
+	signature: string;
+	expires: number;
+};
+
+type CsrfCookieStore = {
+	get: (name: string) => string | null | undefined;
+};
+
+type CsrfCookieAccessor = {
+	cookies: CsrfCookieStore;
+};
+
+type CsrfRequestAccessor = {
+	request: CsrfRequest;
+	cookies: CsrfCookieStore;
+};
+
+type MaybePromise<T> = T | Promise<T>;
+
+type CsrfResolve = (event: RequestEvent, options?: ResolveOptions) => MaybePromise<Response>;
 
 /**
  * Generate a new CSRF token
@@ -46,7 +79,7 @@ export function generateSecureCsrfToken(): { token: string; signature: string; e
 export function createCsrfCookie(token: string): {
 	name: string;
 	value: string;
-	attributes: Record<string, any>;
+	attributes: CsrfCookieAttributes;
 } {
 	return {
 		name: CSRF_COOKIE_NAME,
@@ -72,7 +105,7 @@ export function createSecureCsrfCookie(tokenData: {
 }): {
 	name: string;
 	value: string;
-	attributes: Record<string, any>;
+	attributes: CsrfCookieAttributes;
 } {
 	return {
 		name: CSRF_COOKIE_NAME,
@@ -89,6 +122,7 @@ export function createSecureCsrfCookie(tokenData: {
 }
 
 type CsrfRequest = {
+	method: string;
 	headers: Headers;
 	clone?: () => CsrfRequest;
 	formData?: () => Promise<FormData>;
@@ -145,7 +179,7 @@ async function extractCsrfTokenFromRequest(request: CsrfRequest): Promise<string
 }
 
 export async function validateCsrfToken(
-	event: any,
+	event: CsrfRequestAccessor,
 	requiredMethods: string[] = ['POST', 'PUT', 'PATCH', 'DELETE']
 ): Promise<{ valid: boolean; token?: string; error?: string }> {
 	if (!requiredMethods.includes(event.request.method.toUpperCase())) {
@@ -186,7 +220,7 @@ export async function validateCsrfToken(
 }
 
 export async function validateSecureCsrfToken(
-	event: any,
+	event: CsrfRequestAccessor,
 	requiredMethods: string[] = ['POST', 'PUT', 'PATCH', 'DELETE']
 ): Promise<{ valid: boolean; token?: string; error?: string }> {
 	if (!requiredMethods.includes(event.request.method.toUpperCase())) {
@@ -203,11 +237,7 @@ export async function validateSecureCsrfToken(
 	}
 
 	try {
-		const tokenData = JSON.parse(csrfCookie) as {
-			token: string;
-			signature: string;
-			expires: number;
-		};
+		const tokenData = JSON.parse(csrfCookie) as CsrfTokenPayload;
 
 		if (Date.now() > tokenData.expires) {
 			logger.warn('CSRF validation failed: Token expired');
@@ -251,7 +281,7 @@ export async function validateSecureCsrfToken(
 export function csrfMiddleware() {
 	return {
 		name: 'csrf',
-		async handle({ event, resolve }: { event: any; resolve: any }) {
+		async handle({ event, resolve }: { event: RequestEvent; resolve: CsrfResolve }) {
 			const csrfCookie = event.cookies.get(CSRF_COOKIE_NAME);
 			if (!csrfCookie) {
 				const csrfToken = generateSecureCsrfToken();
@@ -260,7 +290,7 @@ export function csrfMiddleware() {
 				event.cookies.set(csrfCookie.name, csrfCookie.value, csrfCookie.attributes);
 			} else {
 				try {
-					const tokenData = JSON.parse(csrfCookie);
+					const tokenData = JSON.parse(csrfCookie) as Partial<CsrfTokenPayload>;
 					if (tokenData.expires && Date.now() > tokenData.expires - CSRF_TOKEN_ROTATION_INTERVAL) {
 						const newTokenData = generateSecureCsrfToken();
 						const newCsrfCookie = createSecureCsrfCookie(newTokenData);
@@ -294,23 +324,33 @@ export function csrfMiddleware() {
 	};
 }
 
-export function getCsrfToken(event: any): string | null {
+export function getCsrfToken(event: CsrfCookieAccessor): string | null {
 	try {
 		const csrfCookie = event.cookies.get(CSRF_COOKIE_NAME);
 		if (!csrfCookie) return null;
 
-		const tokenData = JSON.parse(csrfCookie);
-		return tokenData.token || tokenData;
+		const parsed = JSON.parse(csrfCookie) as unknown;
+		if (typeof parsed === 'string') {
+			return parsed;
+		}
+		if (typeof parsed === 'object' && parsed !== null) {
+			const data = parsed as Partial<CsrfTokenPayload>;
+			if (typeof data.token === 'string') {
+				return data.token;
+			}
+		}
+
+		return null;
 	} catch {
-		return event.cookies.get(CSRF_COOKIE_NAME);
+		return event.cookies.get(CSRF_COOKIE_NAME) ?? null;
 	}
 }
 
-export function getCsrfHeader(event: any): string | null {
+export function getCsrfHeader(event: CsrfCookieAccessor): string | null {
 	return getCsrfToken(event);
 }
 
-export function csrfInput(event: any): string {
+export function csrfInput(event: CsrfCookieAccessor): string {
 	const token = getCsrfToken(event);
 	if (!token) {
 		return '';
@@ -318,7 +358,7 @@ export function csrfInput(event: any): string {
 	return `<input type="hidden" name="csrf_token" value="${token}" />`;
 }
 
-export function csrfHeaders(event: any): Record<string, string> {
+export function csrfHeaders(event: CsrfCookieAccessor): Record<string, string> {
 	const token = getCsrfToken(event);
 	if (!token) {
 		return {};
@@ -328,7 +368,7 @@ export function csrfHeaders(event: any): Record<string, string> {
 	};
 }
 
-export async function validateCsrfForApi(event: any): Promise<void> {
+export async function validateCsrfForApi(event: CsrfRequestAccessor): Promise<void> {
 	const validation = await validateSecureCsrfToken(event);
 	if (!validation.valid) {
 		throw new UnauthorizedError(validation.error || 'CSRF token validation failed');

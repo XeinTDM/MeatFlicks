@@ -1,4 +1,3 @@
-const CACHE_NAME = 'meatflicks-v2';
 const STATIC_CACHE = 'meatflicks-static-v2';
 const API_CACHE = 'meatflicks-api-v2';
 const IMAGE_CACHE = 'meatflicks-images-v2';
@@ -24,10 +23,6 @@ const CACHEABLE_ROUTES = [
 	{ pattern: /^\/api\/home-library/, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },
 	{ pattern: /^\/api\/search\/autocomplete/, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE }
 ];
-
-const OFFLINE_FALLBACKS = {
-	'/': '/offline.html'
-};
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(

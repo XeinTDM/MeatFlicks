@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { ChevronRight, Home } from '@lucide/svelte';
 
-	type BreadcrumbItem = {
-		label: string;
-		href: string;
-	};
+type BreadcrumbItem = {
+	label: string;
+	href: string;
+};
 
 	let { items = [] }: { items?: BreadcrumbItem[] } = $props();
 
@@ -13,6 +13,11 @@
 
 		return allItems;
 	});
+
+	function normalizeHref(path: string) {
+		if (path === '/') return '/';
+		return path.startsWith('/') ? path : `/${path.replace(/^\/+/, '')}`;
+	}
 
 	const structuredData = $derived.by(() => {
 		const baseUrl = 'https://meatflicks.com';
@@ -24,15 +29,22 @@
 				'@type': 'ListItem',
 				position: index + 1,
 				name: item.label,
-				item: `${baseUrl}${item.href}`
+				item: `${baseUrl}${normalizeHref(item.href)}`
 			}))
 		};
 	});
+
+	const structuredDataJson = $derived.by(() =>
+		JSON.stringify(structuredData).replace(/</g, '\\u003c')
+	);
+	const structuredDataScript = $derived.by(
+		() => '<' + 'script type="application/ld+json">' + structuredDataJson + '</' + 'script>'
+	);
 </script>
 
 <svelte:head>
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-	{@html '<script type="application/ld+json">' + JSON.stringify(structuredData) + '</script>'}
+	{@html structuredDataScript}
 </svelte:head>
 
 <nav aria-label="Breadcrumb" class="mb-4">
@@ -57,10 +69,9 @@
 						{item.label}
 					</span>
 				{:else}
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a
 						rel="external"
-						href={`/${item.href}`}
+						href={normalizeHref(item.href)}
 						itemprop="item"
 						class="flex items-center gap-1 transition-colors hover:text-foreground"
 					>

@@ -1,7 +1,7 @@
 import Keyv from 'keyv';
 import { KeyvSqlite } from '@keyv/sqlite';
 import { LRUCache } from 'lru-cache';
-import { z, type ZodType } from 'zod';
+import type { ZodType } from 'zod';
 import { logger } from './logger';
 import { env } from '../config/env';
 
@@ -10,12 +10,35 @@ export const CACHE_TTL_MEDIUM_SECONDS = env.CACHE_TTL_MEDIUM;
 export const CACHE_TTL_LONG_SECONDS = env.CACHE_TTL_LONG;
 export const CACHE_TTL_SEARCH_SECONDS = 900;
 
+export interface CacheEntry<T> {
+	v: T;
+	t: number;
+}
+
+type CacheEntryValue = CacheEntry<unknown>;
+
+type SqliteRow = { key: string };
+
+type SqlitePreparedStatement = {
+	all: (params?: unknown) => SqliteRow[];
+};
+
+type SqliteConnection = {
+	prepare?: (sql: string) => SqlitePreparedStatement;
+	query?: (sql: string, params: unknown[]) => unknown;
+};
+
+type SqliteStore = KeyvSqlite & {
+	db?: SqliteConnection;
+	client?: SqliteConnection;
+};
+
 const CACHE_STAMPEDE_TIMEOUT_MS = 5000;
 const CACHE_STAMPEDE_MAX_WAITERS = 10;
 
 const store = new KeyvSqlite({ uri: `sqlite://${env.SQLITE_DB_PATH}`, table: 'cache_v2' });
 
-const lruStore = new LRUCache<string, any>({
+const lruStore = new LRUCache<string, CacheEntryValue>({
 	max: env.CACHE_MEMORY_MAX_ITEMS,
 	ttl: CACHE_TTL_MEDIUM_SECONDS * 1000,
 	dispose: (value, key, reason) => {
@@ -34,13 +57,13 @@ const cache = new Keyv({
 
 cache.on('error', (err) => logger.error({ err }, 'Keyv Connection Error'));
 
-interface CacheStampedeEntry {
-	promise: Promise<any>;
+interface CacheStampedeEntry<T = unknown> {
+	promise: Promise<T>;
 	timestamp: number;
 	waiters: number;
 }
 
-const stampedeProtection = new Map<string, CacheStampedeEntry>();
+const stampedeProtection = new Map<string, CacheStampedeEntry<unknown>>();
 
 setInterval(async () => {
 	try {
@@ -55,13 +78,13 @@ setInterval(async () => {
 
 		let sqliteCleaned = 0;
 		try {
-			const sqliteStore = store as any;
+			const sqliteStore = store as SqliteStore;
 			const db = sqliteStore.db || sqliteStore.client;
+			const currentTime = Date.now();
 
 			if (db && typeof db.prepare === 'function') {
-				const currentTime = Date.now();
 				const stmt = db.prepare('SELECT key FROM cache_v2 WHERE expire IS NOT NULL AND expire < ?');
-				const expiredKeys = stmt.all(currentTime) as Array<{ key: string }>;
+				const expiredKeys = stmt.all(currentTime);
 
 				for (const { key } of expiredKeys) {
 					try {
@@ -72,12 +95,13 @@ setInterval(async () => {
 					}
 				}
 			} else if (db && typeof db.query === 'function') {
-				const currentTime = Date.now();
 				const result = await db.query(
 					'SELECT key FROM cache_v2 WHERE expire IS NOT NULL AND expire < ?',
 					[currentTime]
 				);
-				const expiredKeys = Array.isArray(result) ? result : result.rows || [];
+				const expiredKeys = Array.isArray(result)
+					? result
+					: (result as { rows?: SqliteRow[] }).rows || [];
 
 				for (const row of expiredKeys) {
 					try {
@@ -130,13 +154,13 @@ export function buildCacheKey(
 		.join(':');
 }
 
-interface CacheEntry<T> {
-	v: T;
-	t: number;
-}
-
-function isCacheEntry<T>(val: any): val is CacheEntry<T> {
-	return val && typeof val === 'object' && 'v' in val && 't' in val;
+function isCacheEntry<T>(val: unknown): val is CacheEntry<T> {
+	return (
+		typeof val === 'object' &&
+		val !== null &&
+		'v' in val &&
+		't' in val
+	);
 }
 
 export async function getCachedValue<T>(key: string, schema?: ZodType<T>): Promise<T | undefined> {
@@ -255,7 +279,7 @@ export async function withCache<T>(
 	}
 
 	if (useStampedeProtection) {
-		const existingStampede = stampedeProtection.get(key);
+		const existingStampede = stampedeProtection.get(key) as CacheStampedeEntry<T> | undefined;
 		if (existingStampede) {
 			if (existingStampede.waiters >= CACHE_STAMPEDE_MAX_WAITERS) {
 				logger.warn(
@@ -273,33 +297,33 @@ export async function withCache<T>(
 		}
 	}
 
-	const pending = inflight.get(key);
-	if (pending) {
-		return pending as Promise<T>;
-	}
+const pending = inflight.get(key);
+if (pending) {
+	return pending as Promise<T>;
+}
 
-	let stampedeEntry: CacheStampedeEntry | undefined;
-	if (useStampedeProtection) {
-		const promise = (async () => {
-			try {
-				return await factory();
-			} catch (error) {
-				if (cacheOnError) {
-					await setCachedValue(key, null as T, errorTtlSeconds);
-				}
-				throw error;
+let stampedeEntry: CacheStampedeEntry<T> | undefined;
+if (useStampedeProtection) {
+	const promise = (async () => {
+		try {
+			return await factory();
+		} catch (error) {
+			if (cacheOnError) {
+				await setCachedValue(key, null as T, errorTtlSeconds);
 			}
-		})();
+			throw error;
+		}
+	})();
 
-		stampedeEntry = {
-			promise,
-			timestamp: Date.now(),
-			waiters: 1
-		};
-		stampedeProtection.set(key, stampedeEntry);
-	}
+	stampedeEntry = {
+		promise,
+		timestamp: Date.now(),
+		waiters: 1
+	};
+	stampedeProtection.set(key, stampedeEntry as CacheStampedeEntry<unknown>);
+}
 
-	const task = (async () => {
+const task: Promise<T> = (async () => {
 		try {
 			const value = stampedeEntry ? await stampedeEntry.promise : await factory();
 
@@ -427,20 +451,19 @@ export async function invalidateCachePattern(pattern: string): Promise<number> {
 		}
 
 		try {
-			const sqliteStore = store as any;
+			const sqliteStore = store as SqliteStore;
 			const db = sqliteStore.db || sqliteStore.client;
 
 			if (db) {
 				const sqlPattern = `meatflicks:${pattern.replace(/\*/g, '%')}`;
-
-				let rows: Array<{ key: string }> = [];
+				let rows: SqliteRow[] = [];
 
 				if (typeof db.prepare === 'function') {
 					const stmt = db.prepare('SELECT key FROM cache_v2 WHERE key LIKE ?');
-					rows = stmt.all(sqlPattern) as Array<{ key: string }>;
+					rows = stmt.all(sqlPattern);
 				} else if (typeof db.query === 'function') {
 					const result = await db.query('SELECT key FROM cache_v2 WHERE key LIKE ?', [sqlPattern]);
-					rows = Array.isArray(result) ? result : result.rows || [];
+					rows = Array.isArray(result) ? result : (result as { rows?: SqliteRow[] }).rows || [];
 				}
 
 				for (const row of rows) {

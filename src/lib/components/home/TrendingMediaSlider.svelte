@@ -33,7 +33,6 @@
 
 <div class="px-[10%] py-8">
 	{#if linkTo}
-		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 		<a
 			rel="external"
 			href={getResolvedPath(linkTo)}

@@ -7,8 +7,7 @@
 		Pause,
 		Play,
 		Plus,
-		Star,
-		RefreshCcw
+		Star
 	} from '@lucide/svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -23,8 +22,6 @@
 		movie?: LibraryMovie | null;
 		movies?: LibraryMovie[] | null;
 		autoPlayIntervalMs?: number;
-		onRefresh?: (() => void | Promise<void>) | null;
-		refreshing?: boolean;
 	};
 
 	type HeroSlide = {
@@ -46,13 +43,7 @@
 	const MAX_SLIDES = 5;
 	const MESSAGE_DURATION_MS = 3200;
 
-	let {
-		movie = null,
-		movies = [],
-		autoPlayIntervalMs = DEFAULT_INTERVAL_MS,
-		onRefresh = null,
-		refreshing = false
-	}: HeroProps = $props();
+	let { movie = null, movies = [], autoPlayIntervalMs = DEFAULT_INTERVAL_MS }: HeroProps = $props();
 
 	let message = $state<string | null>(null);
 	let isAutoPlaying = $state(true);
@@ -111,7 +102,6 @@
 
 	const hasSlides = $derived(slides.length > 0);
 	const isMultiSlide = $derived(slides.length > 1);
-	const canRefresh = $derived(typeof onRefresh === 'function');
 	const activeSlide = $derived(slides[activeIndex] ?? slides[0] ?? null);
 	const activeMovie = $derived(activeSlide?.movie ?? null);
 
@@ -139,10 +129,6 @@
 
 	const isInWatchlist = $derived(activeMovie ? watchlist.isInWatchlist(activeMovie.id) : false);
 
-	const backgroundImageUrl = $derived(
-		getImageUrl(activeMovie?.backdropPath || activeMovie?.posterPath, 'original')
-	);
-
 	function goToSlide(index: number) {
 		if (!slides.length) return;
 		const length = slides.length;
@@ -161,20 +147,6 @@
 	function toggleAutoplay() {
 		if (!isMultiSlide) return;
 		isAutoPlaying = !isAutoPlaying;
-	}
-
-	async function triggerRefresh() {
-		if (typeof onRefresh !== 'function' || refreshing) return;
-
-		try {
-			const outcome = onRefresh();
-			if (outcome instanceof Promise) {
-				await outcome;
-			}
-		} catch (error) {
-			console.error('Failed to refresh:', error);
-			message = 'Failed to refresh. Please try again.';
-		}
 	}
 
 	function handleWatchlistToggle() {
@@ -320,7 +292,7 @@
 				class="absolute inset-0 bg-linear-to-r from-background/90 via-transparent to-transparent"
 			></div>
 
-			{#if isMultiSlide || canRefresh}
+			{#if isMultiSlide}
 				<div class="absolute top-8 right-[5%] z-20 flex items-center gap-2">
 					{#if isMultiSlide}
 						<Button

@@ -1,5 +1,11 @@
 import type { VideoQuality, SubtitleTrack } from '$lib/streaming/types';
 
+type PlayerMessage =
+	| { type: 'qualityChange'; quality: string }
+	| { type: 'subtitleChange'; subtitle: { url: string; language: string; label: string } | null }
+	| { type: 'playbackSpeedChange'; speed: number }
+	| { type: 'seek'; time: number };
+
 export class PlayerService {
 	playbackSpeed = $state(1.0);
 	iframeElement = $state<HTMLIFrameElement | null>(null);
@@ -33,7 +39,7 @@ export class PlayerService {
 		window.addEventListener('message', this.messageHandler);
 	}
 
-	postToIframe(message: any) {
+	postToIframe(message: PlayerMessage) {
 		if (this.iframeElement?.contentWindow) {
 			this.iframeElement.contentWindow.postMessage(message, '*');
 		}

@@ -31,14 +31,16 @@
 		onProgressUpdate,
 		onPlayEpisode,
 		disabled = false,
-		isExpanded = false,
+		isExpanded,
 		onToggleExpanded
 	}: Props = $props();
 
 	let expanded = $state(false);
 
-	$effect.pre(() => {
-		expanded = isExpanded;
+	$effect(() => {
+		if (typeof isExpanded === 'boolean' && isExpanded !== expanded) {
+			expanded = isExpanded;
+		}
 	});
 
 	function toggleExpanded() {

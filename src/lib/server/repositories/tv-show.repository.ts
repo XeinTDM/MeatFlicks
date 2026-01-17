@@ -8,8 +8,8 @@ import {
 	seasonWatchStatus,
 	episodeWatchStatus
 } from '$lib/server/db/schema';
+import type { MediaRow } from '$lib/server/db';
 import type {
-	TVShow,
 	Season,
 	Episode,
 	EpisodeWatchStatus,
@@ -17,8 +17,13 @@ import type {
 	TVShowWatchStatus
 } from '$lib/types/tv-show';
 
+type TVShowInsertData = Omit<MediaRow, 'numericId' | 'createdAt' | 'updatedAt'>;
+type TVShowUpdateData = Partial<
+	Omit<MediaRow, 'numericId' | 'createdAt' | 'updatedAt' | 'id' | 'mediaType'>
+>;
+
 export class TVShowRepository {
-	async createTVShow(showData: any): Promise<any> {
+	async createTVShow(showData: TVShowInsertData): Promise<MediaRow> {
 		const [result] = await db
 			.insert(media)
 			.values({ ...showData, mediaType: 'tv' })
@@ -26,7 +31,7 @@ export class TVShowRepository {
 		return result;
 	}
 
-	async getTVShowById(id: string): Promise<any | null> {
+	async getTVShowById(id: string): Promise<MediaRow | null> {
 		const [result] = await db
 			.select()
 			.from(media)
@@ -34,7 +39,7 @@ export class TVShowRepository {
 		return result || null;
 	}
 
-	async getTVShowByTmdbId(tmdbId: number): Promise<any | null> {
+	async getTVShowByTmdbId(tmdbId: number): Promise<MediaRow | null> {
 		const [result] = await db
 			.select()
 			.from(media)
@@ -42,7 +47,7 @@ export class TVShowRepository {
 		return result || null;
 	}
 
-	async getTVShowByImdbId(imdbId: string): Promise<any | null> {
+	async getTVShowByImdbId(imdbId: string): Promise<MediaRow | null> {
 		const [result] = await db
 			.select()
 			.from(media)
@@ -50,7 +55,7 @@ export class TVShowRepository {
 		return result || null;
 	}
 
-	async updateTVShow(id: string, updateData: any): Promise<any> {
+	async updateTVShow(id: string, updateData: TVShowUpdateData): Promise<MediaRow> {
 		const [result] = await db
 			.update(media)
 			.set({ ...updateData, updatedAt: Date.now() })
@@ -505,7 +510,7 @@ export class TVShowRepository {
 		limit: number = 10
 	): Promise<
 		Array<{
-			tvShow: any;
+			tvShow: MediaRow;
 			season: Season;
 			episode: Episode;
 			watchStatus: EpisodeWatchStatus;

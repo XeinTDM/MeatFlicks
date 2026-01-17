@@ -1,10 +1,6 @@
 import { db } from '$lib/server/db';
 import { genres, tvShows as tvShowsSchema, tvShowsGenres } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
-import { mapRowsToRecords } from '$lib/server/db/movie-select';
-import { personRepository } from '$lib/server/repositories/person.repository';
-import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
 import { tmdbRateLimiter } from '$lib/server/rate-limiter';
 import {
 	fetchTmdbMovieDetails,
@@ -19,6 +15,12 @@ import { bulkUpsertMovies, type UpsertMoviePayload } from '$lib/server/db/mutati
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
+type QueryParams = Record<string, string | number | boolean | undefined>;
+
+type TmdbListResponse = {
+	results?: Array<{ id?: number | null }>;
+};
+
 const api = ofetch.create({
 	baseURL: TMDB_BASE_URL,
 	params: {
@@ -30,7 +32,7 @@ const api = ofetch.create({
 
 const fetchTmdbListIds = async (
 	path: string,
-	params: Record<string, any>,
+	params: QueryParams,
 	limit: number,
 	rateLimitKey: string
 ): Promise<number[]> => {
@@ -41,7 +43,7 @@ const fetchTmdbListIds = async (
 	const responses = await Promise.all(
 		pages.map((page) =>
 			tmdbRateLimiter.schedule(rateLimitKey, () =>
-				api(path, {
+				api<TmdbListResponse>(path, {
 					query: {
 						language: 'en-US',
 						include_adult: 'false',
@@ -55,7 +57,7 @@ const fetchTmdbListIds = async (
 
 	const ids: number[] = [];
 	for (const payload of responses) {
-		const results = (payload as any).results;
+		const results = payload.results;
 		if (!Array.isArray(results)) continue;
 
 		for (const entry of results) {
@@ -325,7 +327,7 @@ export const bulkUpsertTvShows = async (
 					...existingTvShow,
 					...tvShowData,
 					createdAt: existingTvShow.createdAt
-				} as any;
+				} satisfies InferSelectModel<typeof tvShowsSchema>;
 			} else {
 				const tvShowData = {
 					tmdbId: payload.tmdbId,
@@ -347,7 +349,7 @@ export const bulkUpsertTvShows = async (
 					updatedAt: Date.now()
 				};
 				const result = await tx.insert(tvShowsSchema).values(tvShowData).returning();
-				insertedOrUpdatedTvShow = result[0] as any;
+				insertedOrUpdatedTvShow = result[0];
 			}
 
 			if (!insertedOrUpdatedTvShow) {

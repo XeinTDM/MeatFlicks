@@ -16,9 +16,7 @@ import {
 	fetchTmdbMovieDetails,
 	fetchTmdbMovieExtras,
 	fetchTrendingMovieIds,
-	fetchTrendingTvIds,
-	type TmdbMovieDetails,
-	type TmdbMovieGenre
+	type TmdbMovieDetails
 } from '$lib/server/services/tmdb.service';
 
 const HOME_LIBRARY_CACHE_KEY = 'home-library';

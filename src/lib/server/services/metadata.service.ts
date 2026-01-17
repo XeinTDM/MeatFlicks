@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { movies, genres, collections, moviesGenres, people, moviePeople } from '../db/schema';
-import { sql, eq, and, isNotNull, ne, desc, asc, inArray, getTableColumns } from 'drizzle-orm';
+import { sql, eq, and, isNotNull, ne, desc, asc, inArray } from 'drizzle-orm';
 import { mapRowsToSummaries } from '../db/movie-select';
 import { logger } from '../logger';
 import {
@@ -19,18 +19,15 @@ interface MetadataEnhancementOptions {
 	includeCollections?: boolean;
 	limit?: number;
 	offset?: number;
+	sortBy?: 'title' | 'releaseDate' | 'rating';
+	sortOrder?: 'asc' | 'desc';
 }
 
 interface EnhancedMetadataResult {
 	movies: LibraryMovie[];
 	total: number;
 	genres: GenreRecord[];
-	collections: {
-		id: number;
-		name: string;
-		slug: string;
-		count: number;
-	}[];
+	collections: CollectionFacetResult[];
 }
 
 interface CastMember {
@@ -44,17 +41,20 @@ interface CountResult {
 	count: number;
 }
 
-interface GenreFacetResult {
-	id: number;
-	name: string;
-}
-
 interface CollectionFacetResult {
 	id: number;
 	name: string;
 	slug: string;
 	count: number;
 }
+
+type MovieMetadataUpdate = {
+	trailerUrl?: string | null;
+	imdbId?: string | null;
+	canonicalPath?: string | null;
+	addedAt?: number;
+	mediaType?: string;
+};
 
 export async function enhanceMovieMetadata(
 	mediaId: string,
@@ -97,13 +97,15 @@ export async function getEnhancedMovies(
 	options: MetadataEnhancementOptions = {}
 ): Promise<EnhancedMetadataResult> {
 	const {
-		includeTrailers = true,
-		includeCast = false,
-		includeGenres = true,
-		includeCollections = true,
-		limit = 20,
-		offset = 0
-	} = options;
+	includeTrailers = true,
+	includeCast = false,
+	includeGenres = true,
+	includeCollections = true,
+	limit = 20,
+	offset = 0,
+	sortBy = 'rating',
+	sortOrder = 'desc'
+} = options;
 
 	const cacheKey = buildCacheKey(
 		'metadata',
@@ -118,21 +120,34 @@ export async function getEnhancedMovies(
 
 	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 		try {
-			const [movieRows, totalCountResult] = await db.batch([
-				db
-					.select()
-					.from(movies)
-					.orderBy(sql`(rating IS NULL) ASC`, desc(movies.rating), desc(movies.popularity))
-					.limit(limit)
-					.offset(offset),
+			const orderFn = sortOrder === 'desc' ? desc : asc;
+			const movieQuery = (() => {
+				const base = db.select().from(movies);
+
+				switch (sortBy) {
+					case 'title':
+						return base.orderBy(orderFn(movies.title));
+					case 'releaseDate':
+						return base.orderBy(sql`(releaseDate IS NULL) ASC`, orderFn(movies.releaseDate));
+					case 'rating':
+					default:
+						return base.orderBy(
+							sql`(rating IS NULL) ASC`,
+							orderFn(movies.rating),
+							desc(movies.popularity)
+						);
+				}
+			})();
+
+			const [movieRows, totalCountResult] = (await db.batch([
+				movieQuery.limit(limit).offset(offset),
 				db.select({ count: sql<number>`count(*)` }).from(movies)
-			]);
+			])) as [MovieRow[], CountResult[]];
 
-			const moviesResult = await mapRowsToSummaries(movieRows as MovieRow[]);
+			const moviesResult = await mapRowsToSummaries(movieRows);
 			const totalCount = totalCountResult[0]?.count || 0;
-
 			const movieIds = moviesResult.map((m) => m.id);
-			let castMap = new Map<string, CastMember[]>();
+			const castMap = new Map<string, CastMember[]>();
 
 			if (includeCast && movieIds.length > 0) {
 				const castRows = await db
@@ -148,13 +163,13 @@ export async function getEnhancedMovies(
 					.where(and(inArray(moviePeople.mediaId, movieIds), eq(moviePeople.role, 'actor')))
 					.orderBy(asc(moviePeople.order));
 
-				for (const row of castRows as any) {
+				for (const row of castRows) {
 					const list = castMap.get(row.mediaId) || [];
 					if (list.length < 10) {
 						list.push({
 							id: row.id,
 							name: row.name,
-							character: row.character,
+							character: row.character ?? '',
 							profilePath: row.profilePath
 						});
 						castMap.set(row.mediaId, list);
@@ -251,9 +266,7 @@ async function getGenreFacets(): Promise<GenreRecord[]> {
 	});
 }
 
-async function getCollectionFacets(): Promise<
-	Array<{ id: number; name: string; slug: string; count: number }>
-> {
+async function getCollectionFacets(): Promise<CollectionFacetResult[]> {
 	const cacheKey = buildCacheKey('metadata', 'facets', 'collections');
 	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
 		try {
@@ -341,36 +354,31 @@ export async function getMoviesByMetadata(
 
 			const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-			let orderBy;
 			const orderFn = sortOrder === 'desc' ? desc : asc;
 
-			switch (sortBy) {
-				case 'title':
-					orderBy = [orderFn(movies.title)];
-					break;
-				case 'releaseDate':
-					orderBy = [sql`(releaseDate IS NULL) ASC`, orderFn(movies.releaseDate)];
-					break;
-				case 'rating':
-				default:
-					orderBy = [sql`(rating IS NULL) ASC`, orderFn(movies.rating)];
-			}
+			const movieQuery = (() => {
+				const base = db.select().from(movies).where(where);
 
-			const [movieRows, totalCountResult] = await db.batch([
-				db
-					.select()
-					.from(movies)
-					.where(where)
-					.orderBy(...(orderBy as any))
-					.limit(limit)
-					.offset(offset),
+				switch (sortBy) {
+					case 'title':
+						return base.orderBy(orderFn(movies.title));
+					case 'releaseDate':
+						return base.orderBy(sql`(releaseDate IS NULL) ASC`, orderFn(movies.releaseDate));
+					case 'rating':
+					default:
+						return base.orderBy(sql`(rating IS NULL) ASC`, orderFn(movies.rating));
+				}
+			})();
+
+			const [movieRows, totalCountResult] = (await db.batch([
+				movieQuery.limit(limit).offset(offset),
 				db
 					.select({ count: sql<number>`count(*)` })
 					.from(movies)
 					.where(where)
-			]);
+			])) as [MovieRow[], CountResult[]];
 
-			const moviesResult = await mapRowsToSummaries(movieRows as any[]);
+			const moviesResult = await mapRowsToSummaries(movieRows);
 			const totalCount = totalCountResult[0]?.count || 0;
 
 			const enhancedMovies = moviesResult.map((movie) => ({
@@ -403,16 +411,10 @@ export async function getMoviesByMetadata(
 
 export async function updateMovieMetadata(
 	movieId: string,
-	metadata: {
-		trailerUrl?: string;
-		imdbId?: string;
-		canonicalPath?: string;
-		addedAt?: number;
-		mediaType?: string;
-	}
+	metadata: MovieMetadataUpdate
 ): Promise<void> {
 	try {
-		const updateData: any = {};
+		const updateData: MovieMetadataUpdate = {};
 		if (metadata.trailerUrl !== undefined) updateData.trailerUrl = metadata.trailerUrl;
 		if (metadata.imdbId !== undefined) updateData.imdbId = metadata.imdbId;
 		if (metadata.canonicalPath !== undefined) updateData.canonicalPath = metadata.canonicalPath;

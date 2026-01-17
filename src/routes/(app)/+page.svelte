@@ -148,12 +148,7 @@
 						{@const genres = Array.isArray(library?.genres) ? library.genres : []}
 						{@const featuredItem = trendingMovies.at(0) ?? null}
 
-						<Hero
-							movie={featuredItem}
-							movies={trendingMovies}
-							onRefresh={refreshHomeLibrary}
-							refreshing={isRefreshing}
-						/>
+						<Hero movie={featuredItem} movies={trendingMovies} />
 
 						{#if refreshError}
 							<p class="px-[5%] text-sm text-destructive sm:px-5">{refreshError}</p>

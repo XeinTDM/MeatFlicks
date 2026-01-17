@@ -1,7 +1,8 @@
 import { fetchTmdbPersonDetails, fetchTmdbMediaCredits } from './tmdb.service';
+import type { TmdbMediaCredits } from './tmdb.service';
 import { db, executeWithRetry } from '$lib/server/db';
 import { people, moviePeople } from '$lib/server/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import type { PersonRecord } from '$lib/server/db/types';
 
 export async function syncPersonFromTmdb(tmdbId: number): Promise<PersonRecord | null> {
@@ -41,7 +42,7 @@ export async function syncPeopleBatch(tmdbIds: number[]): Promise<Map<number, Pe
 							deathday: tmdbPerson.deathday,
 							placeOfBirth: tmdbPerson.placeOfBirth,
 							profilePath: tmdbPerson.profilePath,
-							popularity: (tmdbPerson as any).popularity || 0,
+							popularity: tmdbPerson.popularity ?? 0,
 							knownForDepartment: tmdbPerson.knownFor?.[0]?.department || null,
 							createdAt: Date.now(),
 							updatedAt: Date.now()
@@ -98,7 +99,7 @@ export async function syncMovieCast(
 			return 0;
 		}
 
-		const castTmdbIds = credits.cast.slice(0, 10).map((c: any) => c.id);
+		const castTmdbIds = credits.cast.slice(0, 10).map((c) => c.id);
 		const syncedPeopleMap = await syncPeopleBatch(castTmdbIds);
 
 		const relationships = castTmdbIds
@@ -106,7 +107,7 @@ export async function syncMovieCast(
 				const person = syncedPeopleMap.get(tmdbId);
 				if (!person) return null;
 
-				const castMember = credits.cast.find((c: any) => c.id === tmdbId);
+				const castMember = credits.cast.find((c) => c.id === tmdbId);
 				return {
 					mediaId,
 					personId: person.id,
@@ -151,11 +152,11 @@ export async function syncMovieCrew(
 			)
 			.slice(0, 15);
 
-		const crewTmdbIds = relevantCrew.map((c: any) => c.id);
+		const crewTmdbIds = relevantCrew.map((c) => c.id);
 		const syncedPeopleMap = await syncPeopleBatch(crewTmdbIds);
 
 		const relationships = relevantCrew
-			.map((crewMember: any) => {
+			.map((crewMember) => {
 				const person = syncedPeopleMap.get(crewMember.id);
 				if (!person) return null;
 
@@ -185,7 +186,7 @@ export async function syncMovieCrew(
 	}
 }
 
-function determineCrewRole(crewMember: any): string | null {
+function determineCrewRole(crewMember?: TmdbMediaCredits['crew'][number]): string | null {
 	if (!crewMember) return null;
 
 	const dept = crewMember.department?.toLowerCase();

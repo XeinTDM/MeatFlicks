@@ -24,16 +24,21 @@
 	let hasMultipleItems = $derived(itemsCount > 1);
 
 	const carouselOpts = { align: 'start' } as const;
+
+	function getLinkHref(path?: string): string {
+		if (!path) return '/';
+		if (path.startsWith('/')) return path;
+		return `/${path.replace(/^\/+/, '')}`;
+	}
 </script>
 
 <div class="px-[10%] py-8">
 	<div class="mb-6 flex items-center gap-2">
 		<h2 class="text-3xl font-semibold text-foreground">{title}</h2>
 		{#if linkTo}
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a
 				rel="external"
-				href={`/${linkTo}`}
+				href={getLinkHref(linkTo)}
 				data-sveltekit-preload-data="hover"
 				class="group flex items-center text-foreground transition-colors duration-300 hover:text-primary"
 			>

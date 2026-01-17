@@ -90,7 +90,7 @@
 
 	function removeFilter(filterKey: keyof MovieFilters | 'mediaType') {
 		if (filterKey === 'mediaType') {
-			onRemove({ mediaType: undefined } as any);
+			onRemove({ mediaType: undefined });
 		} else if (filterKey === 'yearFrom') {
 			onRemove({ yearFrom: undefined, yearTo: undefined });
 		} else if (filterKey === 'runtimeMin') {
@@ -113,7 +113,7 @@
 			runtimeMax: undefined,
 			language: undefined,
 			mediaType: undefined
-		} as any);
+		});
 	}
 </script>
 
