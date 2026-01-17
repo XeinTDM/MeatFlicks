@@ -4,9 +4,9 @@ import { playbackProgressRepository } from '$lib/server/repositories/playback-pr
 import { z } from 'zod';
 import {
 	validateRequestBody,
-	validateQueryParams,
-	playbackProgressSchema
+	validateQueryParams
 } from '$lib/server/validation';
+import { errorHandler, UnauthorizedError } from '$lib/server';
 
 const saveProgressSchema = z.object({
 	mediaId: z.string(),
@@ -18,14 +18,12 @@ const saveProgressSchema = z.object({
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const session = locals.session;
-	const user = locals.user;
-
-	if (!session || !user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
 	try {
+		const user = locals.user;
+		if (!user) {
+			throw new UnauthorizedError('User must be logged in to save playback progress');
+		}
+
 		const body = await request.json();
 		const validatedBody = validateRequestBody(saveProgressSchema, body);
 
@@ -41,20 +39,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		return json({ success: true });
 	} catch (error) {
-		console.error('Error saving playback progress:', error);
-		return json({ error: 'Failed to save playback progress' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	const session = locals.session;
-	const user = locals.user;
-
-	if (!session || !user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
 	try {
+		const user = locals.user;
+		if (!user) {
+			throw new UnauthorizedError('User must be logged in to fetch playback progress');
+		}
+
 		const queryParams = validateQueryParams(
 			z.object({
 				mediaId: z.string().optional(),
@@ -80,20 +76,18 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			return json({ continueWatching });
 		}
 	} catch (error) {
-		console.error('Error fetching playback progress:', error);
-		return json({ error: 'Failed to fetch playback progress' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
 export const DELETE: RequestHandler = async ({ request, locals }) => {
-	const session = locals.session;
-	const user = locals.user;
-
-	if (!session || !user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
 	try {
+		const user = locals.user;
+		if (!user) {
+			throw new UnauthorizedError('User must be logged in to delete playback progress');
+		}
+
 		const body = await request.json();
 		const validatedBody = validateRequestBody(
 			z.object({
@@ -115,7 +109,7 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 
 		return json({ success: true });
 	} catch (error) {
-		console.error('Error deleting playback progress:', error);
-		return json({ error: 'Failed to delete playback progress' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };

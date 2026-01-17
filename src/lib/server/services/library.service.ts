@@ -5,31 +5,32 @@ import { logger } from '$lib/server/logger';
 import { libraryRepository } from '$lib/server/repositories/library.repository';
 import { ensureHomeLibraryPrimed } from '$lib/server/services/home-library-optimizer';
 import { tmdbRateLimiter } from '$lib/server/rate-limiter';
-import type { MovieSummary } from '$lib/server/db';
+import type { MediaSummary } from '$lib/server/db';
 import type {
 	HomeLibrary,
 	LibraryCollection,
 	LibraryGenre,
-	LibraryMovie
+	LibraryMedia
 } from '$lib/types/library';
 import {
 	fetchTmdbMovieDetails,
 	fetchTmdbMovieExtras,
 	fetchTrendingMovieIds,
+	fetchTrendingTvIds,
 	type TmdbMovieDetails,
 	type TmdbMovieGenre
 } from '$lib/server/services/tmdb.service';
 
 const HOME_LIBRARY_CACHE_KEY = 'home-library';
-const HOME_LIBRARY_MOVIES_LIMIT = 10;
+const HOME_LIBRARY_ITEMS_LIMIT = 10;
 const HOME_LIBRARY_COLLECTIONS_LIMIT = 10;
 const HOME_LIBRARY_GENRES_LIMIT = 10;
 
-const toLibraryMovie = (movie: MovieSummary): LibraryMovie => ({
-	...movie,
-	releaseDate: movie.releaseDate ?? null,
-	durationMinutes: movie.durationMinutes ?? null,
-	genres: movie.genres ?? []
+const toLibraryMedia = (media: MediaSummary): LibraryMedia => ({
+	...media,
+	releaseDate: media.releaseDate ?? null,
+	durationMinutes: media.durationMinutes ?? null,
+	genres: media.genres ?? []
 });
 
 const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | null> => {
@@ -52,9 +53,9 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 
 		const { upsertMovieWithGenres } = await import('$lib/server/db/mutations');
 		const { db } = await import('$lib/server/db/client');
-		const { movies } = await import('$lib/server/db/schema');
+		const { media: mediaTable } = await import('$lib/server/db/schema');
 		const { eq } = await import('drizzle-orm');
-		const storedMovies: MovieSummary[] = [];
+		const storedMedia: MediaSummary[] = [];
 
 		for (const details of detailsList.filter((d): d is TmdbMovieDetails => Boolean(d?.found))) {
 			try {
@@ -64,10 +65,10 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 
 				logger.info(
 					{ tmdbId: details.tmdbId, title: details.title },
-					'[library][fallback] Storing movie'
+					'[library][fallback] Storing media'
 				);
 
-				const storedMovie = await upsertMovieWithGenres({
+				const storedItem = await upsertMovieWithGenres({
 					tmdbId: details.tmdbId,
 					title: details.title ?? 'Untitled',
 					overview: details.overview ?? null,
@@ -83,51 +84,51 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 					trailerUrl: details.trailerUrl ?? null
 				});
 
-				if (storedMovie) {
+				if (storedItem) {
 					logger.info(
-						{ movieId: storedMovie.id, imdbId: details.imdbId },
-						'[library][fallback] Movie stored, updating IMDB ID'
+						{ mediaId: storedItem.id, imdbId: details.imdbId },
+						'[library][fallback] Media stored, updating IMDB ID'
 					);
 
 					await db
-						.update(movies)
+						.update(mediaTable)
 						.set({
 							imdbId: details.imdbId,
 							trailerUrl: details.trailerUrl,
 							updatedAt: Date.now()
 						})
-						.where(eq(movies.id, storedMovie.id));
+						.where(eq(mediaTable.id, storedItem.id));
 
-					storedMovies.push(storedMovie);
+					storedMedia.push(storedItem);
 				} else {
-					logger.warn({ tmdbId: details.tmdbId }, '[library][fallback] Failed to store movie');
+					logger.warn({ tmdbId: details.tmdbId }, '[library][fallback] Failed to store media');
 				}
 			} catch (error) {
-				logger.warn({ tmdbId: details.tmdbId, error }, '[library][fallback] failed to store movie');
+				logger.warn({ tmdbId: details.tmdbId, error }, '[library][fallback] failed to store media');
 			}
 		}
 
-		if (storedMovies.length === 0) {
+		if (storedMedia.length === 0) {
 			return null;
 		}
 
-		const fallbackMovies = storedMovies.map((movie) => {
-			const libraryMovie = toLibraryMovie(movie);
-			const type = libraryMovie.mediaType || libraryMovie.media_type || 'movie';
+		const fallbackMedia = storedMedia.map((item) => {
+			const libraryItem = toLibraryMedia(item);
+			const type = libraryItem.mediaType || libraryItem.media_type || 'movie';
 			const prefix = type === 'tv' ? '/tv/' : '/movie/';
-			const canonicalPath = movie.tmdbId
-				? `${prefix}${movie.tmdbId}`
-				: movie.imdbId
-					? `${prefix}${movie.imdbId}`
-					: `${prefix}${movie.id}`;
+			const canonicalPath = item.tmdbId
+				? `${prefix}${item.tmdbId}`
+				: item.imdbId
+					? `${prefix}${item.imdbId}`
+					: `${prefix}${item.id}`;
 			return {
-				...libraryMovie,
+				...libraryItem,
 				canonicalPath
 			};
 		});
 
 		return {
-			trendingMovies: fallbackMovies,
+			trendingMovies: fallbackMedia,
 			trendingTv: [],
 			collections: [],
 			genres: []
@@ -139,27 +140,27 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 };
 
 const buildExtrasMap = async (
-	movies: LibraryMovie[]
+	items: LibraryMedia[]
 ): Promise<Map<number, { imdbId: string | null; trailerUrl: string | null }>> => {
-	const moviesMissingData = movies.filter(
+	const itemsMissingData = items.filter(
 		(m) => m.tmdbId && (!m.imdbId || !m.trailerUrl)
 	);
 
 	const uniqueIds = Array.from(
 		new Set(
-			moviesMissingData
-				.map((movie) => movie.tmdbId)
+			itemsMissingData
+				.map((m) => m.tmdbId)
 				.filter((id): id is number => typeof id === 'number' && id > 0)
 		)
 	);
 
 	const extrasMap = new Map<number, { imdbId: string | null; trailerUrl: string | null }>();
 
-	for (const movie of movies) {
-		if (movie.tmdbId && movie.imdbId && movie.trailerUrl) {
-			extrasMap.set(movie.tmdbId, {
-				imdbId: movie.imdbId,
-				trailerUrl: movie.trailerUrl
+	for (const item of items) {
+		if (item.tmdbId && item.imdbId && item.trailerUrl) {
+			extrasMap.set(item.tmdbId, {
+				imdbId: item.imdbId,
+				trailerUrl: item.trailerUrl
 			});
 		}
 	}
@@ -169,8 +170,8 @@ const buildExtrasMap = async (
 	}
 
 	logger.info(
-		{ count: uniqueIds.length, total: movies.length },
-		'[library][tmdb] Fetching extras for movies missing data'
+		{ count: uniqueIds.length, total: items.length },
+		'[library][tmdb] Fetching extras for items missing data'
 	);
 
 	await Promise.all(
@@ -194,29 +195,29 @@ const buildExtrasMap = async (
 };
 
 const attachIdentifiers = (
-	movie: LibraryMovie,
+	media: LibraryMedia,
 	extrasMap: Map<number, { imdbId: string | null; trailerUrl: string | null }>
-): LibraryMovie => {
-	const extras = movie.tmdbId ? (extrasMap.get(movie.tmdbId) ?? null) : null;
+): LibraryMedia => {
+	const extras = media.tmdbId ? (extrasMap.get(media.tmdbId) ?? null) : null;
 	const imdbId = extras?.imdbId ?? null;
-	const trailerUrl = extras?.trailerUrl ?? movie.trailerUrl ?? null;
+	const trailerUrl = extras?.trailerUrl ?? media.trailerUrl ?? null;
 
-	const type = movie.mediaType || movie.media_type || 'movie';
+	const type = media.mediaType || media.media_type || 'movie';
 	const prefix = type === 'tv' ? '/tv/' : '/movie/';
-	const canonicalPath = movie.tmdbId ? prefix + movie.tmdbId : prefix + (imdbId ?? movie.id);
+	const canonicalPath = media.tmdbId ? prefix + media.tmdbId : prefix + (imdbId ?? media.id);
 
 	return {
-		...movie,
+		...media,
 		imdbId,
 		trailerUrl,
 		canonicalPath
-	} satisfies LibraryMovie;
+	} satisfies LibraryMedia;
 };
 
 async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
-	const [trendingRaw, trendingTvRaw, collectionsRaw, genresRaw] = await Promise.all([
-		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT, 'movie'),
-		libraryRepository.findTrendingMovies(HOME_LIBRARY_MOVIES_LIMIT, 'tv'),
+	const [trendingMoviesRaw, trendingTvRaw, collectionsRaw, genresRaw] = await Promise.all([
+		libraryRepository.findTrendingMovies(HOME_LIBRARY_ITEMS_LIMIT, 'movie'),
+		libraryRepository.findTrendingMovies(HOME_LIBRARY_ITEMS_LIMIT, 'tv'),
 		libraryRepository.listCollections(),
 		libraryRepository.listGenres()
 	]);
@@ -224,58 +225,62 @@ async function fetchHomeLibraryFromSource(): Promise<HomeLibrary> {
 	const collections = collectionsRaw.slice(0, HOME_LIBRARY_COLLECTIONS_LIMIT);
 	const genres = genresRaw.slice(0, HOME_LIBRARY_GENRES_LIMIT);
 
-	const trendingMovies = trendingRaw.map(toLibraryMovie);
-	const trendingTv = trendingTvRaw.map(toLibraryMovie);
+	const trendingMovies = trendingMoviesRaw.map(toLibraryMedia);
+	const trendingTv = trendingTvRaw.map(toLibraryMedia);
 
-	const collectionsWithMovies = await Promise.all(
+	const collectionsWithMedia = await Promise.all(
 		collections.map(async (collection) => {
-			const movies = await libraryRepository
-				.findCollectionMovies(collection.slug, HOME_LIBRARY_MOVIES_LIMIT)
-				.then((items) => items.map(toLibraryMovie));
+			const media = await libraryRepository
+				.findCollectionMovies(collection.slug, HOME_LIBRARY_ITEMS_LIMIT)
+				.then((items) => items.map(toLibraryMedia));
 			return {
 				...collection,
-				movies
+				media,
+				movies: media // Compatibility
 			} satisfies LibraryCollection;
 		})
 	);
 
-	const genresWithMovies = await Promise.all(
+	const genresWithMedia = await Promise.all(
 		genres.map(async (genre) => {
-			const movies = await libraryRepository
-				.findGenreMovies(genre.name, HOME_LIBRARY_MOVIES_LIMIT)
-				.then((items) => items.map(toLibraryMovie));
+			const media = await libraryRepository
+				.findGenreMovies(genre.name, HOME_LIBRARY_ITEMS_LIMIT)
+				.then((items) => items.map(toLibraryMedia));
 			return {
 				...genre,
 				slug: toSlug(genre.name),
-				movies
+				media,
+				movies: media // Compatibility
 			} satisfies LibraryGenre;
 		})
 	);
 
-	const allMovies = [
+	const allMedia = [
 		...trendingMovies,
 		...trendingTv,
-		...collectionsWithMovies.flatMap((collection) => collection.movies),
-		...genresWithMovies.flatMap((genre) => genre.movies)
+		...collectionsWithMedia.flatMap((collection) => collection.media),
+		...genresWithMedia.flatMap((genre) => genre.media)
 	];
 
-	const extrasMap = await buildExtrasMap(allMovies);
+	const extrasMap = await buildExtrasMap(allMedia);
 
-	const decorate = (movie: LibraryMovie) => attachIdentifiers(movie, extrasMap);
+	const decorate = (media: LibraryMedia) => attachIdentifiers(media, extrasMap);
 
-	const decoratedTrending = trendingMovies.map(decorate);
+	const decoratedTrendingMovies = trendingMovies.map(decorate);
 	const decoratedTrendingTv = trendingTv.map(decorate);
-	const decoratedCollections = collectionsWithMovies.map((collection) => ({
+	const decoratedCollections = collectionsWithMedia.map((collection) => ({
 		...collection,
-		movies: collection.movies.map(decorate)
+		media: collection.media.map(decorate),
+		movies: collection.media.map(decorate)
 	}));
-	const decoratedGenres = genresWithMovies.map((genre) => ({
+	const decoratedGenres = genresWithMedia.map((genre) => ({
 		...genre,
-		movies: genre.movies.map(decorate)
+		media: genre.media.map(decorate),
+		movies: genre.media.map(decorate)
 	}));
 
 	return {
-		trendingMovies: decoratedTrending,
+		trendingMovies: decoratedTrendingMovies,
 		trendingTv: decoratedTrendingTv,
 		collections: decoratedCollections,
 		genres: decoratedGenres
@@ -296,11 +301,10 @@ export async function fetchHomeLibrary(
 		await deleteCachedValue(HOME_LIBRARY_CACHE_KEY);
 	}
 
-	try {
-		await ensureHomeLibraryPrimed({ force: forceRefresh });
-	} catch (error) {
+	// Start priming in the background if needed, but don't block the initial fetch
+	ensureHomeLibraryPrimed({ force: forceRefresh }).catch((error) => {
 		logger.error({ error }, '[library] Failed to prime home library data');
-	}
+	});
 
 	let result: HomeLibrary;
 	try {
@@ -313,7 +317,7 @@ export async function fetchHomeLibrary(
 		logger.error({ error }, '[library] Failed to fetch home library from source');
 		try {
 			result = await withCache(HOME_LIBRARY_CACHE_KEY, CACHE_TTL_MEDIUM_SECONDS, async () => {
-				const fallback = await buildFallbackHomeLibrary(HOME_LIBRARY_MOVIES_LIMIT);
+				const fallback = await buildFallbackHomeLibrary(HOME_LIBRARY_ITEMS_LIMIT);
 				return fallback ?? { trendingMovies: [], trendingTv: [], collections: [], genres: [] };
 			});
 		} catch (fallbackError) {

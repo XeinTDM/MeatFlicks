@@ -44,9 +44,17 @@ export function extractQualities(sources: QualitySource[], fallbackUrl?: string)
 	}
 
 	return qualities.sort((a, b) => {
-		const priorityOrder = ['4K', '1080p', '720p', '480p', '360p', 'Auto'];
-		const aIndex = priorityOrder.findIndex((q) => a.resolution.includes(q));
-		const bIndex = priorityOrder.findIndex((q) => b.resolution.includes(q));
+		const priorityOrder = ['4k', 'uhd', '1080p', '720p', '480p', '360p', 'sd', 'auto'];
+		const aRes = a.resolution.toLowerCase();
+		const bRes = b.resolution.toLowerCase();
+
+		const aIndex = priorityOrder.findIndex((q) => aRes.includes(q));
+		const bIndex = priorityOrder.findIndex((q) => bRes.includes(q));
+
+		if (aIndex === -1 && bIndex === -1) return 0;
+		if (aIndex === -1) return 1;
+		if (bIndex === -1) return -1;
+
 		return aIndex - bIndex;
 	});
 }
@@ -89,13 +97,13 @@ function parseResolutionFromLabel(label: string): string {
 		const match = label.match(pattern);
 		if (match) {
 			if (match[1] && match[2]) {
-				return `${match[1]}x${match[2]}`;
+				return `${match[1]}x${match[2]}`.toLowerCase();
 			}
-			return match[0].toUpperCase();
+			return match[0].toLowerCase();
 		}
 	}
 
-	return label;
+	return label.toLowerCase();
 }
 
 /**

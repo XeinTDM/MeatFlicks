@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { RefreshCw } from '@lucide/svelte';
+	import { RefreshCw, AlertCircle, Check } from '@lucide/svelte';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 
@@ -8,23 +8,39 @@
 		resolutions,
 		selectedProvider,
 		isResolving,
+		isReporting = false,
 		hasRequestedPlayback,
 		onProviderSelect,
-		onPlayClick
+		onPlayClick,
+		onReportBroken
 	} = $props<{
 		resolutions: ProviderResolution[];
 		selectedProvider: string | null;
 		isResolving: boolean;
+		isReporting?: boolean;
 		hasRequestedPlayback: boolean;
 		onProviderSelect: (providerId: string) => void;
 		onPlayClick: () => void;
+		onReportBroken?: () => void;
 	}>();
+
+	let showReportSuccess = $state(false);
 
 	const selectedProviderLabel = $derived.by(() => {
 		const res = resolutions.find((r: ProviderResolution) => r.providerId === selectedProvider);
 		if (!res) return 'Select Provider';
 		return res.success ? res.label : `${res.label} (Unavailable)`;
 	});
+
+	async function handleReport() {
+		if (onReportBroken) {
+			onReportBroken();
+			showReportSuccess = true;
+			setTimeout(() => {
+				showReportSuccess = false;
+			}, 3000);
+		}
+	}
 </script>
 
 <div class="flex items-center gap-2">
@@ -54,15 +70,33 @@
 	</Select>
 
 	{#if hasRequestedPlayback}
-		<Button
-			variant="outline"
-			size="icon"
-			onclick={onPlayClick}
-			disabled={isResolving}
-			class="ml-auto"
-			title="Reload Player"
-		>
-			<RefreshCw class="h-5 w-5" />
-		</Button>
+		<div class="flex items-center gap-1 ml-auto">
+			<Button
+				variant="outline"
+				size="icon"
+				onclick={onPlayClick}
+				disabled={isResolving}
+				title="Reload Player"
+			>
+				<RefreshCw class="h-5 w-5" />
+			</Button>
+
+			{#if onReportBroken}
+				<Button
+					variant="outline"
+					size="icon"
+					onclick={handleReport}
+					disabled={isReporting || showReportSuccess}
+					class="text-muted-foreground hover:text-destructive"
+					title="Report provider as broken"
+				>
+					{#if showReportSuccess}
+						<Check class="h-5 w-5 text-green-500" />
+					{:else}
+						<AlertCircle class="h-5 w-5" />
+					{/if}
+				</Button>
+			{/if}
+		</div>
 	{/if}
 </div>

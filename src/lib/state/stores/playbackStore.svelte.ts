@@ -1,4 +1,4 @@
-import type { LibraryMovie } from '$lib/types/library';
+import type { LibraryMedia } from '$lib/types/library';
 
 export type PlaybackProgress = {
 	mediaId: string;
@@ -8,7 +8,7 @@ export type PlaybackProgress = {
 	seasonNumber?: number;
 	episodeNumber?: number;
 	updatedAt: number;
-	movieData?: LibraryMovie;
+	mediaData?: LibraryMedia;
 };
 
 const STORAGE_KEY = 'meatflicks.playback_progress';
@@ -81,14 +81,14 @@ export class PlaybackStore {
 			})
 			.sort((a, b) => b.updatedAt - a.updatedAt)
 			.map((p) => ({
-				...p.movieData,
+				...p.mediaData,
 				progressPercent: (p.progress / p.duration) * 100,
 				progressSeconds: p.progress,
 				durationSeconds: p.duration,
 				seasonNumber: p.seasonNumber,
 				episodeNumber: p.episodeNumber
 			}))
-			.filter((m) => !!m) as LibraryMovie[];
+			.filter((m) => !!m) as LibraryMedia[];
 	};
 }
 

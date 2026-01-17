@@ -309,15 +309,16 @@ export const bulkUpsertTvShows = async (
 					overview: payload.overview,
 					posterPath: payload.posterPath,
 					backdropPath: payload.backdropPath,
-					firstAirDate: payload.firstAirDate,
+					releaseDate: payload.firstAirDate,
 					rating: payload.rating,
-					episodeRuntime: payload.episodeRuntime,
+					durationMinutes: payload.episodeRuntime,
 					numberOfSeasons: payload.numberOfSeasons,
 					numberOfEpisodes: payload.numberOfEpisodes,
 					status: payload.status || 'not_found',
 					productionCompanies: payload.productionCompanies,
 					streamingProviders: payload.streamingProviders,
 					imdbId: payload.imdbId,
+					mediaType: 'tv',
 					updatedAt: Date.now()
 				};
 				await tx
@@ -328,7 +329,7 @@ export const bulkUpsertTvShows = async (
 					...existingTvShow,
 					...tvShowData,
 					createdAt: existingTvShow.createdAt
-				};
+				} as any;
 			} else {
 				const tvShowData = {
 					tmdbId: payload.tmdbId,
@@ -336,20 +337,21 @@ export const bulkUpsertTvShows = async (
 					overview: payload.overview,
 					posterPath: payload.posterPath,
 					backdropPath: payload.backdropPath,
-					firstAirDate: payload.firstAirDate,
+					releaseDate: payload.firstAirDate,
 					rating: payload.rating,
-					episodeRuntime: payload.episodeRuntime,
+					durationMinutes: payload.episodeRuntime,
 					numberOfSeasons: payload.numberOfSeasons,
 					numberOfEpisodes: payload.numberOfEpisodes,
 					status: payload.status || 'not_found',
 					productionCompanies: payload.productionCompanies,
 					streamingProviders: payload.streamingProviders,
 					imdbId: payload.imdbId,
+					mediaType: 'tv',
 					createdAt: Date.now(),
 					updatedAt: Date.now()
 				};
 				const result = await tx.insert(tvShowsSchema).values(tvShowData).returning();
-				insertedOrUpdatedTvShow = result[0];
+				insertedOrUpdatedTvShow = result[0] as any;
 			}
 
 			if (!insertedOrUpdatedTvShow) {
@@ -362,7 +364,7 @@ export const bulkUpsertTvShows = async (
 				await tx
 					.insert(tvShowsGenres)
 					.values({
-						tvShowId: insertedOrUpdatedTvShow.id,
+						mediaId: insertedOrUpdatedTvShow.id,
 						genreId
 					})
 					.onConflictDoNothing();

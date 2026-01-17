@@ -4,7 +4,7 @@
 	import type { StreamingSource } from '$lib/streaming';
 	import { watchHistory } from '$lib/state/stores/historyStore';
 	import { MediaScrollContainer } from '$lib/components';
-	import type { LibraryMovie } from '$lib/types/library';
+	import type { LibraryMedia } from '$lib/types/library';
 	import { SEOHead, StructuredData } from '$lib/components/seo';
 	import { StreamingService, type MediaType } from '$lib/streaming/streamingService.svelte';
 	import { PlayerService } from '$lib/components/player/playerService.svelte';
@@ -66,7 +66,7 @@
 			movie: MediaDetails | null;
 			streaming?: StreamingPayloadLike;
 			mediaType?: MediaType;
-			recommendations?: LibraryMovie[];
+			recommendations?: LibraryMedia[];
 			csrfToken?: string;
 			canonicalPath?: string;
 		} & Record<string, unknown>;
@@ -146,13 +146,6 @@
 			startAt: savedProgress?.progress ? Math.floor(savedProgress.progress) : undefined
 		};
 
-		console.log('[Play] Resolve params:', {
-			mediaType,
-			season: resolveParams.season,
-			episode: resolveParams.episode,
-			tmdbId: resolveParams.tmdbId
-		});
-
 		await streamingService.resolveProvider(streamingService.currentProviderId, resolveParams);
 	}
 
@@ -231,19 +224,14 @@
 		const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
 
 		try {
-			console.log('[Play] Resolving provider:', providerId);
 			await handlePlayClick();
 
-			console.log('[Play] Provider resolved, source:', streamingService.state.source);
 			const playbackUrl =
 				streamingService.state.source?.embedUrl ?? streamingService.state.source?.streamUrl ?? null;
-
-			console.log('[Play] Playback URL:', playbackUrl);
 
 			if (win && playbackUrl) {
 				win.location.href = playbackUrl;
 			} else if (win) {
-				console.error('[Play] No playback URL available, closing window');
 				win.close();
 			}
 		} catch (e) {
@@ -292,7 +280,7 @@
 					seasonNumber: mediaType !== 'movie' ? selectedSeason : undefined,
 					episodeNumber: mediaType !== 'movie' ? selectedEpisode : undefined,
 					updatedAt: Date.now(),
-					movieData: { ...movie, mediaType } as LibraryMovie
+					mediaData: { ...movie, mediaType } as LibraryMedia
 				});
 
 				try {
@@ -399,7 +387,7 @@
 				rating: movie.rating ?? 0,
 				genres: normalizedGenres,
 				trailerUrl: movie.trailerUrl ?? null,
-				media_type: mediaType,
+				mediaType: mediaType,
 				is4K: Boolean(movie.is4K),
 				isHD: movie.isHD ?? undefined,
 				tmdbId: movie.tmdbId ?? undefined,
@@ -545,7 +533,7 @@
 				{#if activeTab === 'suggested'}
 					<div>
 						{#if data.recommendations && data.recommendations.length > 0}
-							<MediaScrollContainer title="" movies={data.recommendations} />
+							<MediaScrollContainer title="" media={data.recommendations} />
 						{:else}
 							<div class="py-12 text-center text-muted-foreground">
 								No recommendations available.

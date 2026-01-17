@@ -8,20 +8,20 @@
 		CarouselPrevious
 	} from '$lib/components/ui/carousel';
 	import MediaCard from './MediaCard.svelte';
-	import type { LibraryMovie } from '$lib/types/library';
+	import type { LibraryMedia } from '$lib/types/library';
 
 	let {
 		title,
-		movies,
+		media: items,
 		linkTo
 	}: {
 		title: string;
-		movies: LibraryMovie[];
+		media: LibraryMedia[];
 		linkTo?: string;
 	} = $props();
 
-	let moviesCount = $derived(movies?.length ?? 0);
-	let hasMultipleMovies = $derived(moviesCount > 1);
+	let itemsCount = $derived(items?.length ?? 0);
+	let hasMultipleItems = $derived(itemsCount > 1);
 
 	const carouselOpts = { align: 'start' } as const;
 </script>
@@ -49,15 +49,15 @@
 
 	<Carousel class="w-full" opts={carouselOpts}>
 		<CarouselContent class="pb-4">
-			{#each movies as movie (movie.id)}
+			{#each items as item (item.id)}
 				<CarouselItem class="basis-auto pl-4">
 					<div class="flex justify-center">
-						<MediaCard {movie} />
+						<MediaCard movie={item} />
 					</div>
 				</CarouselItem>
 			{/each}
 		</CarouselContent>
-		{#if hasMultipleMovies}
+		{#if hasMultipleItems}
 			<CarouselPrevious class="hidden md:inline-flex" />
 			<CarouselNext class="hidden md:inline-flex" />
 		{/if}

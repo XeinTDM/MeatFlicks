@@ -1,5 +1,5 @@
 import pino from 'pino';
-import { env } from '$lib/config/env';
+import { env } from '../config/env';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 

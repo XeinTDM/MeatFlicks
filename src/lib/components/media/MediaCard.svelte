@@ -10,9 +10,12 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { LibraryMovie } from '$lib/types/library';
 
+	import { getImageUrl } from '$lib/utils/image';
+
 	let { movie }: { movie: LibraryMovie | WatchlistMovie | null } = $props();
 
 	const isInWatchlist = $derived(movie ? watchlist.isInWatchlist(movie.id) : false);
+	const posterUrl = $derived(getImageUrl(movie?.posterPath, 'w342'));
 
 	function handleWatchlistToggle(event: MouseEvent) {
 		event.stopPropagation();
@@ -56,7 +59,7 @@
 		<div class="relative h-full w-full flex-1">
 			{#if movie?.posterPath}
 				<img
-					src={movie.posterPath}
+					src={posterUrl}
 					alt={`${movie.title} Poster`}
 					loading="lazy"
 					class="h-full w-full object-cover transition-opacity duration-400 ease-in-out"

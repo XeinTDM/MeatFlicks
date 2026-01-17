@@ -8,6 +8,7 @@ import {
 	unique
 } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
+import { createId } from '../id';
 
 export const schemaInfo = sqliteTable('schema_info', {
 	key: text('key').primaryKey(),
@@ -21,12 +22,13 @@ export const collections = sqliteTable('collections', {
 	description: text('description')
 });
 
-export const movies = sqliteTable(
-	'movies',
+export const media = sqliteTable(
+	'media',
 	{
 		numericId: integer('numericId').primaryKey({ autoIncrement: true }),
-		id: text('id').notNull().unique(),
+		id: text('id').notNull().unique().$defaultFn(() => createId()),
 		tmdbId: integer('tmdbId').notNull().unique(),
+		imdbId: text('imdbId'),
 		title: text('title').notNull(),
 		overview: text('overview'),
 		posterPath: text('posterPath'),
@@ -42,11 +44,17 @@ export const movies = sqliteTable(
 			onDelete: 'set null'
 		}),
 		trailerUrl: text('trailerUrl'),
-		imdbId: text('imdbId'),
 		canonicalPath: text('canonicalPath'),
 		addedAt: integer('addedAt'),
-		mediaType: text('mediaType').notNull().default('movie'),
+		mediaType: text('mediaType').notNull().default('movie'), // 'movie', 'tv', 'anime'
 		streamingProviders: text('streamingProviders'),
+		
+		// TV Specific columns
+		status: text('status'),
+		numberOfSeasons: integer('numberOfSeasons'),
+		numberOfEpisodes: integer('numberOfEpisodes'),
+		productionCompanies: text('productionCompanies'),
+
 		createdAt: integer('createdAt')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -55,18 +63,16 @@ export const movies = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		index('idx_movies_tmdbId').on(table.tmdbId),
-		index('idx_movies_collectionId').on(table.collectionId),
-		index('idx_movies_rating').on(table.rating),
-		index('idx_movies_language').on(table.language),
-		index('idx_movies_popularity').on(table.popularity),
-		index('idx_movies_releaseDate').on(table.releaseDate),
-		index('idx_movies_durationMinutes').on(table.durationMinutes),
-		index('idx_movies_mediaType').on(table.mediaType),
-		index('idx_movies_addedAt').on(table.addedAt),
-		index('idx_movies_imdbId').on(table.imdbId),
-		index('idx_movies_trailerUrl').on(table.trailerUrl),
-		index('idx_movies_common_sort').on(table.rating, table.releaseDate, table.title)
+		index('idx_media_tmdbId').on(table.tmdbId),
+		index('idx_media_imdbId').on(table.imdbId),
+		index('idx_media_collectionId').on(table.collectionId),
+		index('idx_media_rating').on(table.rating),
+		index('idx_media_language').on(table.language),
+		index('idx_media_popularity').on(table.popularity),
+		index('idx_media_releaseDate').on(table.releaseDate),
+		index('idx_media_mediaType').on(table.mediaType),
+		index('idx_media_addedAt').on(table.addedAt),
+		index('idx_media_common_sort').on(table.rating, table.releaseDate, table.title)
 	]
 );
 
@@ -75,20 +81,20 @@ export const genres = sqliteTable('genres', {
 	name: text('name').notNull().unique()
 });
 
-export const moviesGenres = sqliteTable(
-	'movies_genres',
+export const mediaGenres = sqliteTable(
+	'media_genres',
 	{
-		movieId: text('movieId')
+		mediaId: text('mediaId')
 			.notNull()
-			.references(() => movies.id, { onDelete: 'cascade' }),
+			.references(() => media.id, { onDelete: 'cascade' }),
 		genreId: integer('genreId')
 			.notNull()
 			.references(() => genres.id, { onDelete: 'cascade' })
 	},
 	(table) => [
-		primaryKey({ columns: [table.movieId, table.genreId] }),
-		index('idx_movies_genres_movie').on(table.movieId),
-		index('idx_movies_genres_genre').on(table.genreId)
+		primaryKey({ columns: [table.mediaId, table.genreId] }),
+		index('idx_media_genres_media').on(table.mediaId),
+		index('idx_media_genres_genre').on(table.genreId)
 	]
 );
 
@@ -167,16 +173,16 @@ export const watchlistItemTags = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		movieId: text('movie_id').notNull(),
-		tagId: integer('tag_id').notNull(),
+		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
+		tagId: integer('tag_id').notNull().references(() => watchlistTags.id, { onDelete: 'cascade' }),
 		createdAt: integer('created_at')
 			.notNull()
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.userId, table.movieId, table.tagId] }),
+		primaryKey({ columns: [table.userId, table.mediaId, table.tagId] }),
 		index('idx_watchlist_item_tags_user').on(table.userId),
-		index('idx_watchlist_item_tags_movie').on(table.movieId),
+		index('idx_watchlist_item_tags_media').on(table.mediaId),
 		index('idx_watchlist_item_tags_tag').on(table.tagId)
 	]
 );
@@ -187,15 +193,14 @@ export const watchlist = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		movieId: text('movie_id').notNull(),
-		movieData: text('movie_data').notNull(),
+		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
 		addedAt: integer('added_at')
 			.notNull()
 			.$defaultFn(() => Date.now()),
 		folderId: integer('folder_id').references(() => watchlistFolders.id, { onDelete: 'set null' })
 	},
 	(table) => [
-		primaryKey({ columns: [table.userId, table.movieId] }),
+		primaryKey({ columns: [table.userId, table.mediaId] }),
 		index('idx_watchlist_user').on(table.userId),
 		index('idx_watchlist_addedAt').on(table.addedAt),
 		index('idx_watchlist_folder').on(table.folderId)
@@ -209,8 +214,7 @@ export const watchHistory = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		movieId: text('movie_id').notNull(),
-		movieData: text('movie_data').notNull(),
+		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
 		watchedAt: integer('watched_at').notNull()
 	},
 	(table) => [
@@ -245,7 +249,7 @@ export const playbackProgress = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		mediaId: text('media_id').notNull(),
+		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
 		mediaType: text('media_type').notNull(),
 		progress: integer('progress').notNull(),
 		duration: integer('duration').notNull(),
@@ -265,7 +269,7 @@ export const playbackProgress = sqliteTable(
 export const people = sqliteTable(
 	'people',
 	{
-		id: integer('id').primaryKey({ autoIncrement: true }),
+		id: text('id').primaryKey().$defaultFn(() => createId()),
 		tmdbId: integer('tmdbId').notNull().unique(),
 		name: text('name').notNull(),
 		biography: text('biography'),
@@ -290,13 +294,13 @@ export const people = sqliteTable(
 	]
 );
 
-export const moviePeople = sqliteTable(
-	'movie_people',
+export const mediaPeople = sqliteTable(
+	'media_people',
 	{
-		movieId: text('movieId')
+		mediaId: text('mediaId')
 			.notNull()
-			.references(() => movies.id, { onDelete: 'cascade' }),
-		personId: integer('personId')
+			.references(() => media.id, { onDelete: 'cascade' }),
+		personId: text('personId')
 			.notNull()
 			.references(() => people.id, { onDelete: 'cascade' }),
 		role: text('role').notNull(),
@@ -308,98 +312,74 @@ export const moviePeople = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		primaryKey({ columns: [table.movieId, table.personId, table.role] }),
-		index('idx_movie_people_movie').on(table.movieId),
-		index('idx_movie_people_person').on(table.personId),
-		index('idx_movie_people_role').on(table.role),
-		index('idx_movie_people_order').on(table.order)
+		primaryKey({ columns: [table.mediaId, table.personId, table.role] }),
+		index('idx_media_people_media').on(table.mediaId),
+		index('idx_media_people_person').on(table.personId),
+		index('idx_media_people_role').on(table.role),
+		index('idx_media_people_order').on(table.order)
 	]
 );
 
+// Compatibility aliases
+export const movies = media;
+export const moviesGenres = mediaGenres;
+export const moviePeople = mediaPeople;
+export const tvShows = media;
+export const tvShowsGenres = mediaGenres;
+
 export const collectionsRelations = relations(collections, ({ many }) => ({
-	movies: many(movies)
+	media: many(media)
 }));
 
-export const moviesRelations = relations(movies, ({ one, many }) => ({
+export const mediaRelations = relations(media, ({ one, many }) => ({
 	collection: one(collections, {
-		fields: [movies.collectionId],
+		fields: [media.collectionId],
 		references: [collections.id]
 	}),
-	moviesGenres: many(moviesGenres),
-	moviePeople: many(moviePeople)
+	mediaGenres: many(mediaGenres),
+	mediaPeople: many(mediaPeople),
+	seasons: many(seasons),
+	episodes: many(episodes),
+	watchStatus: many(tvShowWatchStatus)
 }));
 
 export const genresRelations = relations(genres, ({ many }) => ({
-	moviesGenres: many(moviesGenres),
-	tvShowsGenres: many(tvShowsGenres)
+	mediaGenres: many(mediaGenres)
 }));
 
-export const moviesGenresRelations = relations(moviesGenres, ({ one }) => ({
-	movie: one(movies, {
-		fields: [moviesGenres.movieId],
-		references: [movies.id]
+export const mediaGenresRelations = relations(mediaGenres, ({ one }) => ({
+	media: one(media, {
+		fields: [mediaGenres.mediaId],
+		references: [media.id]
 	}),
 	genre: one(genres, {
-		fields: [moviesGenres.genreId],
+		fields: [mediaGenres.genreId],
 		references: [genres.id]
 	})
 }));
 
 export const peopleRelations = relations(people, ({ many }) => ({
-	moviePeople: many(moviePeople)
+	mediaPeople: many(mediaPeople)
 }));
 
-export const moviePeopleRelations = relations(moviePeople, ({ one }) => ({
-	movie: one(movies, {
-		fields: [moviePeople.movieId],
-		references: [movies.id]
+export const mediaPeopleRelations = relations(mediaPeople, ({ one }) => ({
+	media: one(media, {
+		fields: [mediaPeople.mediaId],
+		references: [media.id]
 	}),
 	person: one(people, {
-		fields: [moviePeople.personId],
+		fields: [mediaPeople.personId],
 		references: [people.id]
 	})
 }));
 
-export const tvShows = sqliteTable(
-	'tv_shows',
-	{
-		id: integer('id').primaryKey({ autoIncrement: true }),
-		tmdbId: integer('tmdb_id').notNull().unique(),
-		imdbId: text('imdb_id'),
-		title: text('title').notNull(),
-		overview: text('overview'),
-		posterPath: text('poster_path'),
-		backdropPath: text('backdrop_path'),
-		firstAirDate: text('first_air_date'),
-		rating: real('rating'),
-		episodeRuntime: integer('episode_run_time'),
-		numberOfSeasons: integer('number_of_seasons'),
-		numberOfEpisodes: integer('number_of_episodes'),
-		status: text('status'),
-		productionCompanies: text('production_companies'),
-		streamingProviders: text('streamingProviders'),
-		createdAt: integer('created_at')
-			.notNull()
-			.$defaultFn(() => Date.now()),
-		updatedAt: integer('updated_at')
-			.notNull()
-			.$defaultFn(() => Date.now())
-	},
-	(table) => [
-		index('idx_tv_shows_tmdb_id').on(table.tmdbId),
-		index('idx_tv_shows_imdb_id').on(table.imdbId),
-		index('idx_tv_shows_title').on(table.title),
-		index('idx_tv_shows_first_air_date').on(table.firstAirDate)
-	]
-);
-
 export const seasons = sqliteTable(
 	'seasons',
 	{
-		id: integer('id').primaryKey({ autoIncrement: true }),
-		tvShowId: integer('tv_show_id')
+		id: text('id').primaryKey().$defaultFn(() => createId()),
+		mediaId: text('media_id')
 			.notNull()
-			.references(() => tvShows.id, { onDelete: 'cascade' }),
+			.references(() => media.id, { onDelete: 'cascade' }),
 		seasonNumber: integer('season_number').notNull(),
 		name: text('name').notNull(),
 		overview: text('overview'),
@@ -414,8 +394,8 @@ export const seasons = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		unique('unq_seasons_show_number').on(table.tvShowId, table.seasonNumber),
-		index('idx_seasons_tv_show_id').on(table.tvShowId),
+		unique('unq_seasons_media_number').on(table.mediaId, table.seasonNumber),
+		index('idx_seasons_media_id').on(table.mediaId),
 		index('idx_seasons_season_number').on(table.seasonNumber),
 		index('idx_seasons_air_date').on(table.airDate)
 	]
@@ -424,11 +404,11 @@ export const seasons = sqliteTable(
 export const episodes = sqliteTable(
 	'episodes',
 	{
-		id: integer('id').primaryKey({ autoIncrement: true }),
-		tvShowId: integer('tv_show_id')
+		id: text('id').primaryKey().$defaultFn(() => createId()),
+		mediaId: text('media_id')
 			.notNull()
-			.references(() => tvShows.id, { onDelete: 'cascade' }),
-		seasonId: integer('season_id')
+			.references(() => media.id, { onDelete: 'cascade' }),
+		seasonId: text('season_id')
 			.notNull()
 			.references(() => seasons.id, { onDelete: 'cascade' }),
 		episodeNumber: integer('episode_number').notNull(),
@@ -449,12 +429,12 @@ export const episodes = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		unique('unq_episodes_show_season_number').on(
-			table.tvShowId,
+		unique('unq_episodes_media_season_number').on(
+			table.mediaId,
 			table.seasonId,
 			table.episodeNumber
 		),
-		index('idx_episodes_tv_show_id').on(table.tvShowId),
+		index('idx_episodes_media_id').on(table.mediaId),
 		index('idx_episodes_season_id').on(table.seasonId),
 		index('idx_episodes_episode_number').on(table.episodeNumber),
 		index('idx_episodes_air_date').on(table.airDate),
@@ -469,7 +449,7 @@ export const episodeWatchStatus = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		episodeId: integer('episode_id')
+		episodeId: text('episode_id')
 			.notNull()
 			.references(() => episodes.id, { onDelete: 'cascade' }),
 		watched: integer('watched', { mode: 'boolean' }).notNull().default(false),
@@ -498,7 +478,7 @@ export const seasonWatchStatus = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		seasonId: integer('season_id')
+		seasonId: text('season_id')
 			.notNull()
 			.references(() => seasons.id, { onDelete: 'cascade' }),
 		episodesWatched: integer('episodes_watched').notNull().default(0),
@@ -525,9 +505,9 @@ export const tvShowWatchStatus = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		tvShowId: integer('tv_show_id')
+		mediaId: text('media_id')
 			.notNull()
-			.references(() => tvShows.id, { onDelete: 'cascade' }),
+			.references(() => media.id, { onDelete: 'cascade' }),
 		status: text('status').notNull().default('watching'),
 		seasonsCompleted: integer('seasons_completed').notNull().default(0),
 		totalSeasons: integer('total_seasons').notNull().default(0),
@@ -545,33 +525,26 @@ export const tvShowWatchStatus = sqliteTable(
 			.$defaultFn(() => Date.now())
 	},
 	(table) => [
-		unique('unq_tv_show_watch_status_user_show').on(table.userId, table.tvShowId),
+		unique('unq_tv_show_watch_status_user_media').on(table.userId, table.mediaId),
 		index('idx_tv_show_watch_status_user_id').on(table.userId),
-		index('idx_tv_show_watch_status_tv_show_id').on(table.tvShowId),
+		index('idx_tv_show_watch_status_media_id').on(table.mediaId),
 		index('idx_tv_show_watch_status_status').on(table.status)
 	]
 );
 
-export const tvShowsRelations = relations(tvShows, ({ many }) => ({
-	seasons: many(seasons),
-	episodes: many(episodes),
-	tvShowWatchStatus: many(tvShowWatchStatus),
-	tvShowsGenres: many(tvShowsGenres)
-}));
-
 export const seasonsRelations = relations(seasons, ({ one, many }) => ({
-	tvShow: one(tvShows, {
-		fields: [seasons.tvShowId],
-		references: [tvShows.id]
+	media: one(media, {
+		fields: [seasons.mediaId],
+		references: [media.id]
 	}),
 	episodes: many(episodes),
 	seasonWatchStatus: many(seasonWatchStatus)
 }));
 
 export const episodesRelations = relations(episodes, ({ one, many }) => ({
-	tvShow: one(tvShows, {
-		fields: [episodes.tvShowId],
-		references: [tvShows.id]
+	media: one(media, {
+		fields: [episodes.mediaId],
+		references: [media.id]
 	}),
 	season: one(seasons, {
 		fields: [episodes.seasonId],
@@ -602,42 +575,14 @@ export const seasonWatchStatusRelations = relations(seasonWatchStatus, ({ one })
 	})
 }));
 
-export const tvShowsGenres = sqliteTable(
-	'tv_shows_genres',
-	{
-		tvShowId: integer('tv_show_id')
-			.notNull()
-			.references(() => tvShows.id, { onDelete: 'cascade' }),
-		genreId: integer('genre_id')
-			.notNull()
-			.references(() => genres.id, { onDelete: 'cascade' })
-	},
-	(table) => [
-		primaryKey({ columns: [table.tvShowId, table.genreId] }),
-		index('idx_tv_shows_genres_tv_show').on(table.tvShowId),
-		index('idx_tv_shows_genres_genre').on(table.genreId)
-	]
-);
-
-export const tvShowsGenresRelations = relations(tvShowsGenres, ({ one }) => ({
-	tvShow: one(tvShows, {
-		fields: [tvShowsGenres.tvShowId],
-		references: [tvShows.id]
-	}),
-	genre: one(genres, {
-		fields: [tvShowsGenres.genreId],
-		references: [genres.id]
-	})
-}));
-
 export const tvShowWatchStatusRelations = relations(tvShowWatchStatus, ({ one }) => ({
 	user: one(users, {
 		fields: [tvShowWatchStatus.userId],
 		references: [users.id]
 	}),
-	tvShow: one(tvShows, {
-		fields: [tvShowWatchStatus.tvShowId],
-		references: [tvShows.id]
+	media: one(media, {
+		fields: [tvShowWatchStatus.mediaId],
+		references: [media.id]
 	})
 }));
 
@@ -678,8 +623,8 @@ export const watchlistItemTagsRelations = relations(watchlistItemTags, ({ one })
 		fields: [watchlistItemTags.tagId],
 		references: [watchlistTags.id]
 	}),
-	watchlistItem: one(watchlist, {
-		fields: [watchlistItemTags.userId, watchlistItemTags.movieId],
-		references: [watchlist.userId, watchlist.movieId]
+	watchlist: one(watchlist, {
+		fields: [watchlistItemTags.userId, watchlistItemTags.mediaId],
+		references: [watchlist.userId, watchlist.mediaId]
 	})
 }));

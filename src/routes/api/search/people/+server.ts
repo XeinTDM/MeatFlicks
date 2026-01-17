@@ -1,39 +1,11 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { fetchTmdbPersonDetails } from '$lib/server/services/tmdb.service';
 import { buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, withCache } from '$lib/server/cache';
 import { createHash } from 'node:crypto';
 import { validateQueryParams, searchPeopleSchema } from '$lib/server/validation';
-
-const DEFAULT_LIMIT = 10;
+import { errorHandler } from '$lib/server';
+import { env } from '$lib/config/env';
 
 const normalizeQuery = (value: string) => value.trim();
-
-const parseLimit = (value: string | null): number => {
-	if (!value) {
-		return DEFAULT_LIMIT;
-	}
-
-	const parsed = Number.parseInt(value, 10);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return DEFAULT_LIMIT;
-	}
-
-	return Math.min(parsed, DEFAULT_LIMIT);
-};
-
-const sanitizeForFts = (term: string): string => {
-	const cleaned = term
-		.toLowerCase()
-		.replace(/[^a-z0-9\s]/gi, ' ')
-		.split(/\s+/)
-		.filter(Boolean);
-
-	if (cleaned.length === 0) {
-		return '';
-	}
-
-	return cleaned.map((token) => `${token}*`).join(' ');
-};
 
 export interface PersonSearchResult {
 	id: number;
@@ -63,8 +35,8 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		return json(results);
 	} catch (error) {
-		console.error('Error searching people:', error);
-		return json({ error: 'Internal Server Error' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
@@ -76,7 +48,7 @@ async function searchTmdbPeople(query: string, limit: number): Promise<PersonSea
 			)}&include_adult=false&language=en-US&page=1`,
 			{
 				headers: {
-					Authorization: `Bearer ${process.env.TMDB_API_KEY || process.env.TMDB_READ_ACCESS_TOKEN}`
+					Authorization: `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`
 				}
 			}
 		);

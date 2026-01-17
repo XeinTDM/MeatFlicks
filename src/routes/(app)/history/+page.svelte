@@ -33,9 +33,8 @@
 	let searchTerm = $state('');
 	let mediaTypeFilter = $state<string>('all');
 
-	const historyState = $derived($watchHistory);
-	const historyEntries = $derived(historyState.entries);
-	const historyError = $derived(historyState.error);
+	const historyEntries = $derived(watchHistory.entries);
+	const historyError = $derived(watchHistory.error);
 
 	const normalizedEntries = $derived.by<NormalizedHistoryEntry[]>(() =>
 		historyEntries.map((entry) => {

@@ -6,10 +6,10 @@
 	import type { PageData } from './$types';
 	import type { HomeLibrary } from '$lib/types/library';
 	import { SEOHead } from '$lib/components/seo';
-	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad.svelte.ts';
+	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad.svelte';
 
 	let continueWatchingRef = $state({ value: null as HTMLElement | null });
-	let trendingMoviesRef = $state({ value: null as HTMLElement | null });
+	let trendingMediaRef = $state({ value: null as HTMLElement | null });
 	let trendingTvRef = $state({ value: null as HTMLElement | null });
 	let recentlyAddedRef = $state({ value: null as HTMLElement | null });
 	let topRatedRef = $state({ value: null as HTMLElement | null });
@@ -20,8 +20,8 @@
 	);
 
 	const trendingLazy = useLazyComponentOnVisible(
-		trendingMoviesRef,
-		() => import('$lib/components/home/TrendingMoviesSlider.svelte')
+		trendingMediaRef,
+		() => import('$lib/components/home/TrendingMediaSlider.svelte')
 	);
 
 	const recentlyAddedLazy = useLazyComponentOnVisible(
@@ -35,7 +35,7 @@
 	);
 
 	const ContinueWatchingRow = $derived(continueWatchingLazy.component);
-	const TrendingMoviesSlider = $derived(trendingLazy.component);
+	const TrendingMediaSlider = $derived(trendingLazy.component);
 	const RecentlyAddedRow = $derived(recentlyAddedLazy.component);
 	const TopRatedRow = $derived(topRatedLazy.component);
 
@@ -92,25 +92,22 @@
 
 	$effect(() => {
 		// Reset manual refresh promise when page data changes (navigation)
-		data;
 		refreshPromise = null;
 	});
 	$effect(() => {
 		const promise = homeLibraryPromise;
-		if (!promise) {
-			return;
-		}
+		if (!promise) return;
 
-		const current = promise;
-		activePromise = current;
-		current
+		activePromise = promise;
+		promise
 			.then((value) => {
-				if (activePromise !== current) return;
-				if (value) {
+				if (activePromise === promise && value) {
 					lastResolvedLibrary = value;
 				}
 			})
-			.catch(() => undefined);
+			.catch(() => {
+				/* ignore error */
+			});
 	});
 </script>
 
@@ -149,10 +146,10 @@
 						{@const trendingTv = Array.isArray(library?.trendingTv) ? library.trendingTv : []}
 						{@const collections = Array.isArray(library?.collections) ? library.collections : []}
 						{@const genres = Array.isArray(library?.genres) ? library.genres : []}
-						{@const featuredMovie = trendingMovies.at(0) ?? null}
+						{@const featuredItem = trendingMovies.at(0) ?? null}
 
 						<Hero
-							movie={featuredMovie}
+							movie={featuredItem}
 							movies={trendingMovies}
 							onRefresh={refreshHomeLibrary}
 							refreshing={isRefreshing}
@@ -176,19 +173,19 @@
 							</div>
 
 							{#if trendingMovies.length > 0}
-								{#if TrendingMoviesSlider}
-									<TrendingMoviesSlider title="Trending Movies" movies={trendingMovies} />
+								{#if TrendingMediaSlider}
+									<TrendingMediaSlider title="Trending Movies" movies={trendingMovies} />
 								{:else}
 									<div
-										bind:this={trendingMoviesRef.value}
+										bind:this={trendingMediaRef.value}
 										class="h-48 animate-pulse rounded-lg bg-muted/50"
 									></div>
 								{/if}
 							{/if}
 
 							{#if trendingTv.length > 0}
-								{#if TrendingMoviesSlider}
-									<TrendingMoviesSlider title="Trending TV Series" movies={trendingTv} />
+								{#if TrendingMediaSlider}
+									<TrendingMediaSlider title="Trending TV Series" movies={trendingTv} />
 								{:else}
 									<div
 										bind:this={trendingTvRef.value}
@@ -217,25 +214,25 @@
 
 							{#if trendingMovies.length === 0 && collections.length === 0 && genres.length === 0}
 								<p class="text-sm text-foreground/70">
-									No movies available yet. Try refreshing the library.
+									No media available yet. Try refreshing the library.
 								</p>
 							{/if}
 
 							{#each collections as collection (collection.id)}
-								{#if Array.isArray(collection.movies) && collection.movies.length > 0}
+								{#if Array.isArray(collection.media) && collection.media.length > 0}
 									<MediaScrollContainer
 										title={collection.name}
-										movies={collection.movies}
+										media={collection.media}
 										linkTo={`/collection/${collection.slug}`}
 									/>
 								{/if}
 							{/each}
 
 							{#each genres as genre (genre.id)}
-								{#if Array.isArray(genre.movies) && genre.movies.length > 0}
+								{#if Array.isArray(genre.media) && genre.media.length > 0}
 									<MediaScrollContainer
 										title={genre.name}
-										movies={genre.movies}
+										media={genre.media}
 										linkTo={`/genre/${genre.slug}`}
 									/>
 								{/if}

@@ -1,13 +1,17 @@
-import type { GenreRecord, MovieRecord, MovieRow } from './types';
+import type { GenreRecord, MediaRecord, MediaRow } from './types';
 
-export const mapMovieRow = (row: MovieRow, genres: GenreRecord[] = []): MovieRecord => ({
+export const mapMediaRow = (row: MediaRow, genres: GenreRecord[] = []): MediaRecord => ({
 	...row,
 	genres
 });
 
-export const mapMovieRows = (
-	rows: MovieRow[],
+export const mapMediaRows = (
+	rows: MediaRow[],
 	genreLookup: Map<string, GenreRecord[]>
-): MovieRecord[] => {
-	return rows.map((row) => mapMovieRow(row, genreLookup.get(row.id) ?? []));
+): MediaRecord[] => {
+	return rows.map((row) => mapMediaRow(row, genreLookup.get(row.id) ?? []));
 };
+
+// Compatibility aliases
+export const mapMovieRow = mapMediaRow;
+export const mapMovieRows = mapMediaRows;

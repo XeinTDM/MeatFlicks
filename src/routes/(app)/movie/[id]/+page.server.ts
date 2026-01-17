@@ -37,8 +37,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	}
 
 	const queryMode = detectQueryMode(identifier);
-	const apiPath = `/api/movies/${identifier}${queryMode === 'id' ? '' : `?by=${queryMode}`}`;
-	const response = await fetch(apiPath);
+			const apiPath = `/api/media/${identifier}${queryMode === 'id' ? '' : `?by=${queryMode}`}`;	const response = await fetch(apiPath);
 
 	if (!response.ok) {
 		if (response.status === 404) {

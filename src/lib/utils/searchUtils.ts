@@ -1,4 +1,4 @@
-import type { LibraryMovie } from '$lib/types/library';
+import type { LibraryMedia } from '$lib/types/library';
 
 export interface SearchHistoryItem {
 	query: string;
@@ -45,12 +45,12 @@ export function clearSearchHistory(browser: boolean): string[] {
 
 export type SortOption = 'relevance' | 'rating' | 'newest';
 
-export function sortMovies(movies: LibraryMovie[], sortBy: SortOption): LibraryMovie[] {
-	const result = [...movies];
+export function sortMovies(items: LibraryMedia[], sortBy: SortOption): LibraryMedia[] {
+	const result = [...items];
 	if (sortBy === 'rating') {
 		result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 	} else if (sortBy === 'newest') {
-		const toTimestamp = (value: LibraryMovie['releaseDate']) => {
+		const toTimestamp = (value: LibraryMedia['releaseDate']) => {
 			if (!value) return 0;
 			const date = typeof value === 'string' ? new Date(value) : value;
 			return date instanceof Date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
@@ -63,14 +63,14 @@ export function sortMovies(movies: LibraryMovie[], sortBy: SortOption): LibraryM
 export type QualityFilter = 'any' | 'hd' | '4k';
 
 export function filterMoviesByQuality(
-	movies: LibraryMovie[],
+	items: LibraryMedia[],
 	qualityFilter: QualityFilter
-): LibraryMovie[] {
+): LibraryMedia[] {
 	if (qualityFilter === '4k') {
-		return movies.filter((movie) => movie.is4K);
+		return items.filter((item) => item.is4K);
 	}
 	if (qualityFilter === 'hd') {
-		return movies.filter((movie) => movie.is4K || movie.isHD);
+		return items.filter((item) => item.is4K || item.isHD);
 	}
-	return movies;
+	return items;
 }

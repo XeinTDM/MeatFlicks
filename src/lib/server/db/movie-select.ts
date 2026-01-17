@@ -1,8 +1,16 @@
 import { db } from './client';
-import { moviesGenres, genres } from './schema';
+import { mediaGenres, genres } from './schema';
 import { inArray } from 'drizzle-orm';
-import { mapMovieRows } from './mappers';
-import type { GenreRecord, MovieRecord, MovieRow, MovieSummary } from './types';
+import { mapMediaRows } from './mappers';
+import type { 
+	GenreRecord, 
+	MediaRecord, 
+	MediaRow, 
+	MediaSummary,
+	MovieRecord,
+	MovieRow,
+	MovieSummary
+} from './types';
 
 let globalGenreCache: Map<number, GenreRecord> | null = null;
 let globalGenreNameMap: Map<string, number> | null = null;
@@ -26,7 +34,7 @@ export const invalidateGenreCache = () => {
 	globalGenreNameMap = null;
 };
 
-export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, GenreRecord[]>> => {
+export const fetchGenresForMedia = async (ids: string[]): Promise<Map<string, GenreRecord[]>> => {
 	const lookup = new Map<string, GenreRecord[]>();
 
 	if (ids.length === 0) {
@@ -36,11 +44,11 @@ export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, G
 	const [rows, genreCache] = await Promise.all([
 		db
 			.select({
-				movieId: moviesGenres.movieId,
-				genreId: moviesGenres.genreId
+				mediaId: mediaGenres.mediaId,
+				genreId: mediaGenres.genreId
 			})
-			.from(moviesGenres)
-			.where(inArray(moviesGenres.movieId, ids)),
+			.from(mediaGenres)
+			.where(inArray(mediaGenres.mediaId, ids)),
 		getGenreCache()
 	]);
 
@@ -48,10 +56,10 @@ export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, G
 		const genre = genreCache.get(row.genreId);
 		if (!genre) continue;
 
-		if (!lookup.has(row.movieId)) {
-			lookup.set(row.movieId, []);
+		if (!lookup.has(row.mediaId)) {
+			lookup.set(row.mediaId, []);
 		}
-		lookup.get(row.movieId)!.push(genre);
+		lookup.get(row.mediaId)!.push(genre);
 	}
 
 	for (const genreList of lookup.values()) {
@@ -61,25 +69,30 @@ export const fetchGenresForMovies = async (ids: string[]): Promise<Map<string, G
 	return lookup;
 };
 
-export const mapRowsToRecords = async (rows: MovieRow[]): Promise<MovieRecord[]> => {
+export const mapRowsToRecords = async (rows: MediaRow[]): Promise<MediaRecord[]> => {
 	if (rows.length === 0) {
 		return [];
 	}
 
 	const ids = rows.map((row) => row.id);
-	const genresLookup = await fetchGenresForMovies(ids);
-	return mapMovieRows(rows, genresLookup);
+	const genresLookup = await fetchGenresForMedia(ids);
+	return mapMediaRows(rows, genresLookup);
 };
 
-export const toMovieSummary = (movie: MovieRecord): MovieSummary => {
-	const { ...rest } = movie;
+export const toMediaSummary = (media: MediaRecord): MediaSummary => {
+	const { ...rest } = media;
 	return rest;
 };
 
-export const mapRowsToSummaries = async (rows: MovieRow[]): Promise<MovieSummary[]> => {
+export const mapRowsToSummaries = async (rows: MediaRow[]): Promise<MediaSummary[]> => {
 	const records = await mapRowsToRecords(rows);
-	return records.map(toMovieSummary);
+	return records.map(toMediaSummary);
 };
 
-export const MOVIE_COLUMNS = '*';
+// Compatibility aliases
+export const fetchGenresForMovies = fetchGenresForMedia;
+export const toMovieSummary = toMediaSummary;
+
+export const MEDIA_COLUMNS = '*';
+export const MOVIE_COLUMNS = MEDIA_COLUMNS;
 export const MOVIE_ORDER_BY = '';

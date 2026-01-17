@@ -1,5 +1,5 @@
 export interface TVShow {
-	id: number;
+	id: string;
 	tmdbId: number;
 	imdbId?: string | null;
 	title: string;
@@ -18,8 +18,8 @@ export interface TVShow {
 }
 
 export interface Season {
-	id: number;
-	tvShowId: number;
+	id: string;
+	mediaId: string;
 	seasonNumber: number;
 	name: string;
 	overview?: string | null;
@@ -31,9 +31,9 @@ export interface Season {
 }
 
 export interface Episode {
-	id: number;
-	tvShowId: number;
-	seasonId: number;
+	id: string;
+	mediaId: string;
+	seasonId: string;
 	episodeNumber: number;
 	name: string;
 	overview?: string | null;
@@ -51,7 +51,7 @@ export interface Episode {
 export interface EpisodeWatchStatus {
 	id: number;
 	userId: string;
-	episodeId: number;
+	episodeId: string;
 	watched: boolean;
 	watchTime: number;
 	totalTime: number;
@@ -63,7 +63,7 @@ export interface EpisodeWatchStatus {
 export interface SeasonWatchStatus {
 	id: number;
 	userId: string;
-	seasonId: number;
+	seasonId: string;
 	episodesWatched: number;
 	totalEpisodes: number;
 	completedAt?: number | null;
@@ -74,7 +74,7 @@ export interface SeasonWatchStatus {
 export interface TVShowWatchStatus {
 	id: number;
 	userId: string;
-	tvShowId: number;
+	mediaId: string;
 	status: 'watching' | 'completed' | 'on_hold' | 'dropped' | 'plan_to_watch';
 	seasonsCompleted: number;
 	totalSeasons: number;

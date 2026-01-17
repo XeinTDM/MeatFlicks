@@ -6,6 +6,8 @@
 	import { error as errorStore } from '$lib/state/stores/errorStore';
 	import type { ProviderResolution } from '$lib/streaming/provider-registry';
 
+	import { getImageUrl } from '$lib/utils/image';
+
 	let {
 		movie,
 		logoPath,
@@ -32,6 +34,8 @@
 	}>();
 
 	const isInWatchlist = $derived(movie ? watchlist.isInWatchlist(movie.id) : false);
+	const backdropUrl = $derived(getImageUrl(movie?.backdropPath, 'w1280'));
+	const logoUrl = $derived(getImageUrl(logoPath, 'w500'));
 
 	function handleWatchlistToggle() {
 		if (!movie) return;
@@ -98,7 +102,7 @@
 	<div class="absolute top-0 -right-[5%] -left-[5%] h-full w-[calc(100%+10%)]">
 		{#if movie?.backdropPath}
 			<img
-				src={movie.backdropPath}
+				src={backdropUrl}
 				alt={movie.title}
 				class="h-full w-full rounded-lg object-cover"
 			/>
@@ -112,7 +116,7 @@
 		<div class="absolute bottom-[20%] ml-[10%] max-w-4xl">
 			<div class="flex flex-col gap-6">
 				{#if logoPath}
-					<img src={logoPath} alt={movie.title} class="h-32 w-auto origin-left object-contain" />
+					<img src={logoUrl} alt={movie.title} class="h-32 w-auto origin-left object-contain" />
 				{:else}
 					<h1 class="text-6xl font-extrabold tracking-tight text-foreground">{movie?.title}</h1>
 				{/if}

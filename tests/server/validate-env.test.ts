@@ -41,8 +41,7 @@ describe('Environment Validation', () => {
 
 	it('should throw error for missing required environment variable', () => {
 		process.env.NODE_ENV = 'test';
-		// @ts-expect-error - clear the env variable
-		delete process.env.TMDB_API_KEY;
+		delete (process.env as any).TMDB_API_KEY;
 		expect(() => getEnv('TMDB_API_KEY')).not.toThrow();
 	});
 

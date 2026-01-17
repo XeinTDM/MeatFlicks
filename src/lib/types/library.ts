@@ -1,15 +1,15 @@
-import type { CollectionRecord, GenreRecord, MovieSummary } from '$lib/server/db';
+import type { CollectionRecord, GenreRecord, MediaSummary } from '$lib/server/db';
 
 export type CastMember = {
-	id: number;
+	id: string;
 	name: string;
 	character: string;
 };
 
 export type GenreSummary = GenreRecord;
 
-export type LibraryMovie = MovieSummary & {
-	releaseDate: MovieSummary['releaseDate'] | string | null;
+export type LibraryMedia = MediaSummary & {
+	releaseDate: MediaSummary['releaseDate'] | string | null;
 	trailerUrl?: string | null;
 	media_type?: string | null;
 	genres?: GenreSummary[] | string[];
@@ -22,19 +22,26 @@ export type LibraryMovie = MovieSummary & {
 	episode?: number | null;
 };
 
+// Compatibility alias
+export type LibraryMovie = LibraryMedia;
+
 export type LibraryCollection = CollectionRecord & {
-	movies: LibraryMovie[];
+	media: LibraryMedia[];
+	// Compatibility
+	movies?: LibraryMedia[];
 };
 
 export type LibraryGenre = GenreRecord & {
 	slug: string;
-	movies: LibraryMovie[];
+	media: LibraryMedia[];
+	// Compatibility
+	movies?: LibraryMedia[];
 };
 
 export type HomeLibrary = {
-	trendingMovies: LibraryMovie[];
+	trendingMovies: LibraryMedia[];
+	trendingTv?: LibraryMedia[];
 	collections: LibraryCollection[];
 	genres: LibraryGenre[];
-	trendingTv?: LibraryMovie[];
-	popularTv?: LibraryMovie[];
+	popularTv?: LibraryMedia[];
 };

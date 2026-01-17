@@ -115,6 +115,7 @@ export const TmdbTvSchema = z
 		episode_run_time: z.array(z.number()).optional(),
 		number_of_seasons: z.number().nullable().optional(),
 		number_of_episodes: z.number().nullable().optional(),
+		status: z.string().nullable().optional(),
 		seasons: z.array(TmdbTvSeasonSchema).optional(),
 		genres: z.array(TmdbGenreSchema).optional(),
 		external_ids: z
@@ -129,6 +130,8 @@ export const TmdbTvSchema = z
 			})
 			.optional(),
 		production_companies: z.array(TmdbProductionCompanySchema).optional(),
+		production_countries: z.array(TmdbProductionCountrySchema).optional(),
+		vote_count: z.number().nullable().optional(),
 		origin_country: z.array(z.string()).optional(),
 		images: z
 			.object({

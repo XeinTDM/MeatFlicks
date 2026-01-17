@@ -45,7 +45,7 @@ export const personRepository = {
 	/**
 	 * Find a person by their local database ID
 	 */
-	async findPersonById(id: number): Promise<PersonRecord | null> {
+	async findPersonById(id: string): Promise<PersonRecord | null> {
 		try {
 			const cacheKey = buildCacheKey('person', 'id', id);
 			return await withCache<PersonRecord | null>(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
@@ -98,7 +98,7 @@ export const personRepository = {
 	/**
 	 * Get movies associated with a person
 	 */
-	async getMoviesByPerson(personId: number, limit = 20, offset = 0): Promise<LibraryMovie[]> {
+	async getMoviesByPerson(personId: string, limit = 20, offset = 0): Promise<LibraryMovie[]> {
 		try {
 			const cacheKey = buildCacheKey('person', personId, 'movies', limit, offset);
 			return await withCache<LibraryMovie[]>(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
@@ -107,7 +107,7 @@ export const personRepository = {
 						movie: movies
 					})
 					.from(moviePeople)
-					.innerJoin(movies, eq(moviePeople.movieId, movies.id))
+					.innerJoin(movies, eq(moviePeople.mediaId, movies.id))
 					.where(eq(moviePeople.personId, personId))
 					.limit(limit)
 					.offset(offset)
@@ -126,7 +126,7 @@ export const personRepository = {
 	 * Get movies by multiple people IDs
 	 */
 	async getMoviesByPeople(
-		personIds: number[],
+		personIds: string[],
 		roles: string[] = [],
 		limit = 20
 	): Promise<LibraryMovie[]> {
@@ -153,7 +153,7 @@ export const personRepository = {
 						movie: movies
 					})
 					.from(moviePeople)
-					.innerJoin(movies, eq(moviePeople.movieId, movies.id))
+					.innerJoin(movies, eq(moviePeople.mediaId, movies.id))
 					.where(whereConditions)
 					.limit(limit)
 					.groupBy(movies.id)
@@ -172,7 +172,7 @@ export const personRepository = {
 	/**
 	 * Get person with their movies
 	 */
-	async getPersonWithMovies(personId: number, movieLimit = 10): Promise<PersonWithMovies | null> {
+	async getPersonWithMovies(personId: string, movieLimit = 10): Promise<PersonWithMovies | null> {
 		try {
 			const cacheKey = buildCacheKey('person', personId, 'with-movies', movieLimit);
 			return await withCache<PersonWithMovies | null>(

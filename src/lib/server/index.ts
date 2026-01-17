@@ -1,4 +1,4 @@
-export { default as db, sqlite } from './db';
+export { default as db, sqlite, runMaintenance } from './db';
 export * from './services/library.service';
 export { libraryRepository } from './repositories/library.repository';
 export { watchlistRepository } from './repositories/watchlist.repository';

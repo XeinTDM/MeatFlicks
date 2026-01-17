@@ -2,12 +2,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import type { Handle, RequestEvent } from '@sveltejs/kit';
-import { validateApiKeys } from '$lib/server';
+import { validateApiKeys, runMaintenance } from '$lib/server';
 import { logger } from '$lib/server/logger';
 import { apiRateLimiter, authRateLimiter } from '$lib/server/rate-limiter';
 import { lucia } from '$lib/server/auth';
 import { applySecurityHeaders } from '$lib/server/security-headers';
 import { csrfMiddleware } from '$lib/server/csrf';
+
+// Run maintenance on startup
+runMaintenance().catch((err) => logger.error({ err }, 'Failed to run initial maintenance'));
 
 declare global {
 	var __envValidated: boolean;

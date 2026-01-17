@@ -2,24 +2,10 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { buildCacheKey, CACHE_TTL_MEDIUM_SECONDS, withCache } from '$lib/server/cache';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import type { LibraryMovie } from '$lib/types/library';
+import type { LibraryMedia } from '$lib/types/library';
 import { validateQueryParams, movieByPeopleSchema } from '$lib/server/validation';
 import { personRepository } from '$lib/server/repositories/person.repository';
-
-const DEFAULT_LIMIT = 50;
-
-const parseLimit = (value: string | null): number => {
-	if (!value) {
-		return DEFAULT_LIMIT;
-	}
-
-	const parsed = Number.parseInt(value, 10);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return DEFAULT_LIMIT;
-	}
-
-	return Math.min(parsed, DEFAULT_LIMIT);
-};
+import { errorHandler } from '$lib/server';
 
 const parsePersonIds = (value: string | null): number[] => {
 	if (!value) {
@@ -59,63 +45,93 @@ export const GET: RequestHandler = async ({ url }) => {
 			url.searchParams
 		);
 
-		const personIds = parsePersonIds(queryParams.people);
+		const personTmdbIds = parsePersonIds(queryParams.people);
 		const roles = parseRoles(queryParams.roles ?? '');
 		const limit = queryParams.limit;
 
-		if (personIds.length === 0) {
+		if (personTmdbIds.length === 0) {
 			return json({ error: 'Valid person IDs are required' }, { status: 400 });
 		}
 
 		const hash = createHash('sha1')
-			.update(`${personIds.join(',')}:${roles.join(',')}:${limit}`)
+			.update(`${personTmdbIds.join(',')}:${roles.join(',')}:${limit}`)
 			.digest('hex');
 		const cacheKey = buildCacheKey('search', 'movies-by-people', hash);
 
 		const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
-			return await searchMoviesByPeople(personIds, roles, limit);
+			const mediaItems = await searchMediaByPeople(personTmdbIds, roles, limit);
+			
+			// Map to LibraryMedia format
+			return mediaItems.map(m => ({
+				...m,
+				canonicalPath: (() => {
+					const type = m.mediaType || 'movie';
+					const prefix = type === 'tv' ? '/tv/' : '/movie/';
+					return m.tmdbId ? `${prefix}${m.tmdbId}` : `${prefix}${m.id}`;
+				})(),
+				releaseDate: m.releaseDate ?? null,
+				durationMinutes: m.durationMinutes ?? null,
+				genres: m.genres ?? []
+			}));
 		});
 
 		return json(results);
 	} catch (error) {
-		console.error('Error searching movies by people:', error);
-		return json({ error: 'Internal Server Error' }, { status: 500 });
+		const { status, body } = errorHandler.handleError(error);
+		return json(body, { status });
 	}
 };
 
-async function searchMoviesByPeople(
-	personIds: number[],
+async function searchMediaByPeople(
+	tmdbIds: number[],
 	roles: string[],
 	limit: number
-): Promise<LibraryMovie[]> {
+): Promise<any[]> {
 	try {
-		const localResults = await personRepository.getMoviesByPeople(personIds, roles, limit);
+		// 1. Resolve TMDB IDs to Local IDs for existing people
+		const localPeople = await Promise.all(
+			tmdbIds.map((id) => personRepository.findPersonByTmdbId(id))
+		);
+		const existingLocalIds = localPeople
+			.filter((p): p is NonNullable<typeof p> => p !== null)
+			.map((p) => p.id);
 
-		if (localResults.length > 0) {
-			return localResults;
+		// 2. Try to get media for existing local people
+		if (existingLocalIds.length > 0) {
+			const localResults = await personRepository.getMoviesByPeople(existingLocalIds, roles, limit);
+
+			if (localResults.length > 0) {
+				return localResults;
+			}
 		}
 	} catch (localError) {
 		console.warn('Local person search failed, falling back to TMDB:', localError);
 	}
 
 	try {
-		await personRepository.syncPeople(personIds);
-		const syncedResults = await personRepository.getMoviesByPeople(personIds, roles, limit);
+		// 3. Sync people to ensure we have them locally
+		const syncedPeople = await personRepository.syncPeople(tmdbIds);
+		const allLocalIds = syncedPeople.map((p) => p.id);
 
-		if (syncedResults.length > 0) {
-			return syncedResults;
+		if (allLocalIds.length > 0) {
+			const syncedResults = await personRepository.getMoviesByPeople(allLocalIds, roles, limit);
+
+			if (syncedResults.length > 0) {
+				return syncedResults;
+			}
 		}
 
+		// 4. Fallback to TMDB API search
 		try {
 			const { searchTmdbMoviesByPeople } = await import('$lib/server/services/tmdb.service');
-			const tmdbResults = await searchTmdbMoviesByPeople(personIds, roles, limit);
+			const tmdbResults = await searchTmdbMoviesByPeople(tmdbIds, roles, limit);
 			return tmdbResults;
 		} catch (tmdbError) {
 			console.error('TMDB search failed:', tmdbError);
 			return [];
 		}
 	} catch (error) {
-		console.error('Error searching movies by people:', error);
+		console.error('Error searching media by people:', error);
 		return [];
 	}
 }

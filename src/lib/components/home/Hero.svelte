@@ -17,7 +17,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import type { LibraryMovie } from '$lib/types/library';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Spinner } from '$lib/components/ui/spinner/index';
+	import { getImageUrl } from '$lib/utils/image';
 
 	type HeroProps = {
 		movie?: LibraryMovie | null;
@@ -139,11 +139,7 @@
 
 	const isInWatchlist = $derived(activeMovie ? watchlist.isInWatchlist(activeMovie.id) : false);
 
-	const backgroundImageUrl = $derived.by(() => {
-		const source = activeMovie?.backdropPath ?? activeMovie?.posterPath ?? null;
-		if (!source) return null;
-		return source.startsWith('http') ? source : `https://image.tmdb.org/t/p/original${source}`;
-	});
+	const backgroundImageUrl = $derived(getImageUrl(activeMovie?.backdropPath || activeMovie?.posterPath, 'original'));
 
 	function goToSlide(index: number) {
 		if (!slides.length) return;
@@ -297,10 +293,7 @@
 			{#each slides as slide, index (slide.key)}
 				{#if index === activeIndex}
 					{#if slide.movie.backdropPath || slide.movie.posterPath}
-						{@const rawPath = slide.movie.backdropPath || slide.movie.posterPath}
-						{@const src = (rawPath || '').startsWith('http')
-							? rawPath
-							: `https://image.tmdb.org/t/p/w1280${rawPath}`}
+						{@const src = getImageUrl(slide.movie.backdropPath || slide.movie.posterPath, 'w1280')}
 
 						<div
 							class="absolute inset-x-0 top-0 -right-[5%] -left-[5%] h-full w-[calc(100%+10%)] overflow-hidden"

@@ -6,7 +6,7 @@ import {
 	fetchMalId
 } from '$lib/server/services/tmdb.service';
 import { db } from '$lib/server/db';
-import { movies } from '$lib/server/db/schema';
+import { media } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { TmdbTvDetails } from '$lib/server/services/tmdb.service';
 import { z } from 'zod';
@@ -52,7 +52,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		let localShow: any = null;
 
 		if (queryMode === 'id') {
-			const results = await db.select().from(movies).where(eq(movies.id, identifier)).limit(1);
+			const results = await db.select().from(media).where(eq(media.id, identifier)).limit(1);
 			localShow = results[0];
 			if (localShow) {
 				tmdbId = localShow.tmdbId;

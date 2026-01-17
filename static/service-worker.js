@@ -7,7 +7,6 @@ const STATIC_ASSETS = [
 	'/',
 	'/favicon.png',
 	'/manifest.json',
-	'/app.css',
 	'/robots.txt'
 ];
 
@@ -20,7 +19,6 @@ const CACHE_STRATEGIES = {
 
 const CACHEABLE_ROUTES = [
 	{ pattern: /^\/$/, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },
-	{ pattern: /^\/app\.css$/, strategy: CACHE_STRATEGIES.CACHE_FIRST },
 	{ pattern: /\.(js|css|png|jpg|jpeg|svg|woff|woff2)$/i, strategy: CACHE_STRATEGIES.CACHE_FIRST },
 	{ pattern: /^\/api\/genres/, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },
 	{ pattern: /^\/api\/home-library/, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },

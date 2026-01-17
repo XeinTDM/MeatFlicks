@@ -70,10 +70,10 @@ export const tvShowValidationChecks = [
 	check('tv_shows_title_check', sql`length(trim(${tvShows.title})) > 0`),
 	check('tv_shows_tmdb_id_check', sql`${tvShows.tmdbId} > 0`),
 	check('tv_shows_rating_check', sql`${tvShows.rating} IS NULL OR (${tvShows.rating} >= 0 AND ${tvShows.rating} <= 10)`),
-	check('tv_shows_episode_runtime_check', sql`${tvShows.episodeRuntime} IS NULL OR ${tvShows.episodeRuntime} > 0`),
+	check('tv_shows_episode_runtime_check', sql`${tvShows.durationMinutes} IS NULL OR ${tvShows.durationMinutes} > 0`),
 	check('tv_shows_seasons_check', sql`${tvShows.numberOfSeasons} IS NULL OR ${tvShows.numberOfSeasons} >= 0`),
 	check('tv_shows_episodes_check', sql`${tvShows.numberOfEpisodes} IS NULL OR ${tvShows.numberOfEpisodes} >= 0`),
-	check('tv_shows_first_air_date_check', sql`${tvShows.firstAirDate} IS NULL OR ${tvShows.firstAirDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
+	check('tv_shows_first_air_date_check', sql`${tvShows.releaseDate} IS NULL OR ${tvShows.releaseDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
 	check('tv_shows_imdb_id_check', sql`${tvShows.imdbId} IS NULL OR ${tvShows.imdbId} REGEXP '^tt\d{7,8}$'`),
 	check('tv_shows_poster_check', sql`${tvShows.posterPath} IS NULL OR ${tvShows.posterPath} LIKE 'https://%'`),
 	check('tv_shows_backdrop_check', sql`${tvShows.backdropPath} IS NULL OR ${tvShows.backdropPath} LIKE 'https://%'`)
@@ -107,7 +107,6 @@ export const personValidationChecks = [
 ];
 
 export const watchlistValidationChecks = [
-	check('watchlist_movie_data_check', sql`json_valid(${watchlist.movieData})`),
 	check('watchlist_added_at_check', sql`${watchlist.addedAt} > 0`)
 ];
 

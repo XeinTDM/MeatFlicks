@@ -1,24 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres, collections } from '$lib/server/db/schema';
+import { media, genres, mediaGenres, collections } from '$lib/server/db/schema';
 import { eq, and, count as drizzleCount, inArray, sql } from 'drizzle-orm';
-import type { MovieRecord, MovieRow } from '$lib/server/db';
+import type { MediaRecord, MediaRow } from '$lib/server/db';
 import { mapRowsToRecords, invalidateGenreCache } from '$lib/server/db/movie-select';
 import { syncMovieCast, syncMovieCrew } from '$lib/server/services/person-sync.service';
 import { validateMovieData } from './validation';
 
-export const loadMovieById = async (id: string): Promise<MovieRecord | null> => {
-	const rows = await db.select().from(movies).where(eq(movies.id, id)).limit(1);
+export const loadMovieById = async (id: string): Promise<MediaRecord | null> => {
+	const rows = await db.select().from(media).where(eq(media.id, id)).limit(1);
 	if (rows.length === 0) return null;
-	const [movie] = await mapRowsToRecords(rows as MovieRow[]);
-	return movie ?? null;
+	const [m] = await mapRowsToRecords(rows as MediaRow[]);
+	return m ?? null;
 };
 
-export const loadMovieByTmdb = async (tmdbId: number): Promise<MovieRecord | null> => {
-	const rows = await db.select().from(movies).where(eq(movies.tmdbId, tmdbId)).limit(1);
+export const loadMovieByTmdb = async (tmdbId: number): Promise<MediaRecord | null> => {
+	const rows = await db.select().from(media).where(eq(media.tmdbId, tmdbId)).limit(1);
 	if (rows.length === 0) return null;
-	const [movie] = await mapRowsToRecords(rows as MovieRow[]);
-	return movie ?? null;
+	const [m] = await mapRowsToRecords(rows as MediaRow[]);
+	return m ?? null;
 };
 
 export type UpsertMoviePayload = {
@@ -41,12 +41,12 @@ export type UpsertMoviePayload = {
 
 export const upsertMovieWithGenres = async (
 	payload: UpsertMoviePayload
-): Promise<MovieRecord | null> => {
+): Promise<MediaRecord | null> => {
 	const results = await bulkUpsertMovies([payload]);
 	return results[0] ?? null;
 };
 
-export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<MovieRecord[]> => {
+export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<MediaRecord[]> => {
 	if (payloads.length === 0) return [];
 
 	return await db
@@ -76,31 +76,31 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 			}
 
 			const tmdbIds = payloads.map((p) => p.tmdbId);
-			const existingMovies = await tx
+			const existingMedia = await tx
 				.select()
-				.from(movies)
-				.where(inArray(movies.tmdbId, tmdbIds));
+				.from(media)
+				.where(inArray(media.tmdbId, tmdbIds));
 
-			const movieMap = new Map();
-			for (const m of existingMovies) {
+			const mediaMap = new Map();
+			for (const m of existingMedia) {
 				const key = `${m.tmdbId}:${m.mediaType}`;
-				movieMap.set(key, m);
+				mediaMap.set(key, m);
 			}
 
-			const moviesToInsert: any[] = [];
-			const results: MovieRecord[] = [];
-			const genresToAssign: { movieId: string; genreId: number }[] = [];
+			const mediaToInsert: any[] = [];
+			const results: MediaRecord[] = [];
+			const genresToAssign: { mediaId: string; genreId: number }[] = [];
 
 			for (const payload of payloads) {
 				validateMovieData(payload);
 
 				const mediaType = payload.mediaType || 'movie';
 				const key = `${payload.tmdbId}:${mediaType}`;
-				const existingMovie = movieMap.get(key);
-				const movieId = existingMovie?.id ?? randomUUID();
+				const existing = mediaMap.get(key);
+				const mediaId = existing?.id ?? randomUUID();
 
-				const movieData: any = {
-					id: movieId,
+				const mediaData: any = {
+					id: mediaId,
 					tmdbId: payload.tmdbId,
 					title: payload.title,
 					overview: payload.overview,
@@ -111,33 +111,33 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 					durationMinutes: payload.durationMinutes,
 					is4K: payload.is4K,
 					isHD: payload.isHD,
-					collectionId: payload.collectionId ?? (existingMovie?.collectionId || null),
+					collectionId: payload.collectionId ?? (existing?.collectionId || null),
 					mediaType: mediaType,
-					imdbId: payload.imdbId ?? (existingMovie?.imdbId || null),
-					trailerUrl: payload.trailerUrl ?? (existingMovie?.trailerUrl || null),
-					createdAt: existingMovie?.createdAt ?? Date.now(),
+					imdbId: payload.imdbId ?? (existing?.imdbId || null),
+					trailerUrl: payload.trailerUrl ?? (existing?.trailerUrl || null),
+					createdAt: existing?.createdAt ?? Date.now(),
 					updatedAt: Date.now()
 				};
 
-				moviesToInsert.push(movieData);
+				mediaToInsert.push(mediaData);
 
 				const payloadGenreIds = payload.genreNames
 					.map((n) => genreMap.get(n.trim()))
 					.filter((id): id is number => id !== undefined);
 
 				for (const genreId of payloadGenreIds) {
-					genresToAssign.push({ movieId, genreId });
+					genresToAssign.push({ mediaId, genreId });
 				}
 
-				results.push(movieData as unknown as MovieRecord);
+				results.push(mediaData as unknown as MediaRecord);
 			}
 
-			if (moviesToInsert.length > 0) {
+			if (mediaToInsert.length > 0) {
 				await tx
-					.insert(movies)
-					.values(moviesToInsert)
+					.insert(media)
+					.values(mediaToInsert)
 					.onConflictDoUpdate({
-						target: [movies.tmdbId],
+						target: [media.tmdbId],
 						set: {
 							title: sql`excluded.title`,
 							overview: sql`excluded.overview`,
@@ -156,34 +156,40 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 					});
 			}
 
-			const movieIds = results.map((r) => r.id);
-			if (movieIds.length > 0) {
-				await tx.delete(moviesGenres).where(inArray(moviesGenres.movieId, movieIds));
+			const mediaIds = results.map((r) => r.id);
+			if (mediaIds.length > 0) {
+				await tx.delete(mediaGenres).where(inArray(mediaGenres.mediaId, mediaIds));
 			}
 
 			if (genresToAssign.length > 0) {
-				await tx.insert(moviesGenres).values(genresToAssign).onConflictDoNothing();
+				await tx.insert(mediaGenres).values(genresToAssign).onConflictDoNothing();
 			}
 
 			return results;
 		})
-		.then(async (syncedMovies) => {
-			await Promise.all(syncedMovies.map(async (movie) => {
-				try {
-					await Promise.all([
-						syncMovieCast(movie.id, movie.tmdbId!, movie.mediaType as any),
-						syncMovieCrew(movie.id, movie.tmdbId!, movie.mediaType as any)
-					]);
-				} catch (error) {
-					console.warn(`Failed to sync person data for movie ${movie.id}:`, error);
-				}
-			}));
-			return syncedMovies;
+		.then(async (syncedMedia) => {
+			const BATCH_SIZE = 5;
+			for (let i = 0; i < syncedMedia.length; i += BATCH_SIZE) {
+				const batch = syncedMedia.slice(i, i + BATCH_SIZE);
+				await Promise.all(
+					batch.map(async (m) => {
+						try {
+							await Promise.all([
+								syncMovieCast(m.id, m.tmdbId!, m.mediaType as any),
+								syncMovieCrew(m.id, m.tmdbId!, m.mediaType as any)
+							]);
+						} catch (error) {
+							console.warn(`Failed to sync person data for media ${m.id}:`, error);
+						}
+					})
+				);
+			}
+			return syncedMedia;
 		});
 };
 
 export const setMovieCollection = async (movieId: string, collectionId: number | null) => {
-	await db.update(movies).set({ collectionId }).where(eq(movies.id, movieId));
+	await db.update(media).set({ collectionId }).where(eq(media.id, movieId));
 };
 
 export const createCollection = async (
@@ -208,6 +214,6 @@ export const createCollection = async (
 };
 
 export const countMovies = async (): Promise<number> => {
-	const result = await db.select({ count: drizzleCount() }).from(movies);
+	const result = await db.select({ count: drizzleCount() }).from(media);
 	return result[0].count;
 };

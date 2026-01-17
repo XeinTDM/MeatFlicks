@@ -36,12 +36,12 @@
 			}
 
 			const movieIds = [...new Set(continueWatching.map((p: any) => p.mediaId))];
-			const moviesRes = await fetch(`/api/movies/batch?ids=${movieIds.join(',')}`, {
+			const moviesRes = await fetch(`/api/media/batch?ids=${movieIds.join(',')}`, {
 				credentials: 'include'
 			});
 			if (!moviesRes.ok) throw new Error(moviesRes.statusText);
 
-			const { movies: fetchedMovies } = await moviesRes.json();
+			const { media: fetchedMovies } = await moviesRes.json();
 			const movieLookup = new Map(fetchedMovies.map((m: any) => [m.id, m]));
 
 			const serverMovies = continueWatching
@@ -94,5 +94,5 @@
 </script>
 
 {#if !isLoading && continueWatchingMovies.length > 0}
-	<MediaScrollContainer title="Continue Watching" movies={continueWatchingMovies} />
+	<MediaScrollContainer title="Continue Watching" media={continueWatchingMovies} />
 {/if}

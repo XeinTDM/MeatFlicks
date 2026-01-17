@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Card } from '$lib/components/ui/card';
+	import { getImageUrl } from '$lib/utils/image';
 	import { User } from '@lucide/svelte';
+	import { Card } from '$lib/components/ui/card';
 
 	let { cast, productionCompanies, overview, posterPath, title } = $props<{
 		cast:
 			| {
-					id: number;
+					id: string | number;
 					name: string;
 					character: string;
 					profilePath?: string | null;
@@ -14,7 +15,7 @@
 
 		productionCompanies:
 			| {
-					id: number;
+					id: string | number;
 					name: string;
 					logoPath: string | null;
 			  }[]
@@ -40,9 +41,7 @@
 								<div class="relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md shadow-sm">
 									{#if member.profilePath}
 										<img
-											src={member.profilePath.startsWith('http')
-												? member.profilePath
-												: `https://image.tmdb.org/t/p/w185${member.profilePath}`}
+											src={getImageUrl(member.profilePath, 'w185')}
 											alt={member.name}
 											class="h-full w-full object-cover transition-transform duration-300 group-hover/cast:scale-110"
 											loading="lazy"
@@ -79,7 +78,7 @@
 							<Card class="p-3">
 								<div class="flex items-center gap-2">
 									{#if company.logoPath}
-										<img src={company.logoPath} alt={company.name} class="h-6 object-contain" />
+										<img src={getImageUrl(company.logoPath, 'w185')} alt={company.name} class="h-6 object-contain" />
 									{/if}
 									<span class="text-sm font-medium">{company.name}</span>
 								</div>
@@ -91,7 +90,7 @@
 		</div>
 		<div class="flex flex-col items-center lg:w-[30%] lg:items-end">
 			{#if posterPath}
-				<img src={posterPath} alt={title} class="mb-4 w-full max-w-sm rounded-lg object-cover" />
+				<img src={getImageUrl(posterPath, 'w500')} alt={title} class="mb-4 w-full max-w-sm rounded-lg object-cover" />
 			{/if}
 			<div class="w-full max-w-sm">
 				<h2 class="text-xl font-semibold">Overview</h2>

@@ -1,10 +1,10 @@
 import { db } from '$lib/server/db';
-import { movies, genres, moviesGenres, people, moviePeople } from '$lib/server/db/schema';
+import { media, genres, mediaGenres, people, mediaPeople } from '$lib/server/db/schema';
 import { sql, eq, and, gte, lte, desc, asc, inArray, like } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import { withCache, buildCacheKey, CACHE_TTL_SEARCH_SECONDS, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
-import type { MovieSummary, MovieRow } from '$lib/server/db';
+import type { MediaSummary, MediaRow } from '$lib/server/db';
 
 interface SearchOptions {
 	query?: string;
@@ -15,13 +15,17 @@ interface SearchOptions {
 	maxRating?: number;
 	minYear?: number;
 	maxYear?: number;
+	runtimeMin?: number;
+	runtimeMax?: number;
+	language?: string;
+	mediaType?: 'movie' | 'tv' | 'anime';
 	sortBy?: 'relevance' | 'rating' | 'releaseDate' | 'title';
 	sortOrder?: 'asc' | 'desc';
 	includeAdult?: boolean;
 }
 
 interface SearchResult {
-	results: MovieSummary[];
+	results: MediaSummary[];
 	total: number;
 	genres: { id: number; name: string; count: number }[];
 	years: { year: number; count: number }[];
@@ -31,7 +35,7 @@ interface SearchResult {
 
 interface AutocompleteResult {
 	suggestions: string[];
-	movies: MovieSummary[];
+	movies: MediaSummary[];
 	people: Array<{ id: number; name: string; type: 'actor' | 'director' }>;
 }
 
@@ -65,8 +69,8 @@ async function getGenreFacets(
 			const results = await db.all(sql`
 				SELECT g.id, g.name, COUNT(DISTINCT m.id) as count
 				FROM genres g
-				JOIN movies_genres mg ON g.id = mg.genreId
-				JOIN movies m ON mg.movieId = m.id
+				JOIN media_genres mg ON g.id = mg.genreId
+				JOIN media m ON mg.mediaId = m.id
 				${sql.raw(baseWhere)}
 				GROUP BY g.id, g.name
 				HAVING count > 0
@@ -95,7 +99,7 @@ async function getYearFacets(
 			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
 			const results = await db.all(sql`
 				SELECT strftime('%Y', m.releaseDate) as year, COUNT(*) as count
-				FROM movies m
+				FROM media m
 				${sql.raw(baseWhere)} AND m.releaseDate IS NOT NULL
 				GROUP BY year
 				ORDER BY year DESC
@@ -130,7 +134,7 @@ async function getRatingFacets(whereClause: string): Promise<{ rating: number; c
 						ELSE 'Below 5'
 					END as rating_range,
 					COUNT(*) as count
-				FROM movies m
+				FROM media m
 				${sql.raw(baseWhere)} AND m.rating IS NOT NULL
 				GROUP BY rating_range
 				ORDER BY rating_range DESC
@@ -166,7 +170,7 @@ async function getSearchSuggestions(query: string, limit: number = 5): Promise<s
 		const results = await db.all(sql`
 			SELECT DISTINCT m.title
 			FROM movie_fts mf
-			JOIN movies m ON m.numericId = mf.rowid
+			JOIN media m ON m.numericId = mf.rowid
 			WHERE mf MATCH ${ftsQuery}
 			LIMIT ${limit}
 		`);
@@ -214,6 +218,10 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 		maxRating,
 		minYear,
 		maxYear,
+		runtimeMin,
+		runtimeMax,
+		language,
+		mediaType,
 		sortBy = 'relevance',
 		sortOrder = 'desc',
 		includeAdult = false
@@ -230,6 +238,10 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 		maxRating,
 		minYear,
 		maxYear,
+		runtimeMin,
+		runtimeMax,
+		language,
+		mediaType,
 		sortBy,
 		sortOrder,
 		includeAdult
@@ -238,30 +250,17 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
 			const { whereClause, ftsQuery } = buildSearchWhereClauses(options);
-			const facetWhere = buildSearchWhereClauses({ ...options, genres: [] }).whereClause;
+			const facetWhere = buildSearchWhereClauses({ ...options, genres: [], mediaType: undefined }).whereClause;
 
 			const [results, total] = await Promise.all([
 				performSearchQuery({
+					...options,
 					query: normalizedQuery,
-					limit,
-					offset,
-					genres,
-					minRating,
-					maxRating,
-					minYear,
-					maxYear,
-					sortBy,
-					sortOrder,
-					includeAdult
+					offset
 				}),
 				getTotalCount({
-					query: normalizedQuery,
-					genres,
-					minRating,
-					maxRating,
-					minYear,
-					maxYear,
-					includeAdult
+					...options,
+					query: normalizedQuery
 				})
 			]);
 
@@ -295,6 +294,10 @@ function buildSearchWhereClauses(options: SearchOptions) {
 		maxRating,
 		minYear,
 		maxYear,
+		runtimeMin,
+		runtimeMax,
+		language,
+		mediaType,
 		includeAdult = false
 	} = options;
 
@@ -308,8 +311,10 @@ function buildSearchWhereClauses(options: SearchOptions) {
 	}
 
 	if (genres.length > 0) {
+		// Support both name strings and IDs for flexibility
+		const genreConditions = genres.map(g => isNaN(parseInt(g)) ? `g.name = ${JSON.stringify(g)}` : `mg.genreId = ${g}`);
 		whereClauses.push(`m.id IN (
-				SELECT movieId FROM movies_genres WHERE genreId IN (${genres.join(',')})
+				SELECT mediaId FROM media_genres mg JOIN genres g ON g.id = mg.genreId WHERE ${genreConditions.join(' OR ')}
 			)`);
 	}
 
@@ -329,6 +334,22 @@ function buildSearchWhereClauses(options: SearchOptions) {
 		whereClauses.push(`strftime("%Y", m.releaseDate) <= ${JSON.stringify(maxYear.toString())}`);
 	}
 
+	if (runtimeMin !== undefined) {
+		whereClauses.push(`m.durationMinutes >= ${runtimeMin}`);
+	}
+
+	if (runtimeMax !== undefined) {
+		whereClauses.push(`m.durationMinutes <= ${runtimeMax}`);
+	}
+
+	if (language) {
+		whereClauses.push(`m.language = ${JSON.stringify(language)}`);
+	}
+
+	if (mediaType) {
+		whereClauses.push(`m.mediaType = ${JSON.stringify(mediaType)}`);
+	}
+
 	if (!includeAdult) {
 		whereClauses.push('m.is4K = 0');
 	}
@@ -341,7 +362,7 @@ function buildSearchWhereClauses(options: SearchOptions) {
 
 async function performSearchQuery(
 	options: Omit<SearchOptions, 'offset'> & { offset: number }
-): Promise<MovieSummary[]> {
+): Promise<MediaSummary[]> {
 	const { limit, offset, sortBy, sortOrder, query } = options;
 
 	try {
@@ -380,7 +401,7 @@ async function performSearchQuery(
 			searchSql = sql`
 					SELECT m.*
 					FROM movie_fts mf
-					JOIN movies m ON m.numericId = mf.rowid AND ${sql.raw(whereClause.replace('m.', ''))}
+					JOIN media m ON m.numericId = mf.rowid AND ${sql.raw(whereClause.replace('m.', ''))}
 					WHERE mf MATCH ${ftsQuery}
 					${sql.raw(orderByClause.replace('m.', '').replace('ORDER BY', 'ORDER BY mf.rank,'))}
 					LIMIT ${limit} OFFSET ${offset}
@@ -388,7 +409,7 @@ async function performSearchQuery(
 		} else {
 			searchSql = sql`
 					SELECT m.*
-					FROM movies m
+					FROM media m
 					${sql.raw(whereClause)}
 					${sql.raw(orderByClause)}
 					LIMIT ${limit} OFFSET ${offset}
@@ -411,7 +432,7 @@ async function getTotalCount(
 
 		const countSql = sql`
 			SELECT COUNT(*) as count
-			FROM movies m
+			FROM media m
 			${sql.raw(whereClause)}
 		`;
 
@@ -460,13 +481,13 @@ export async function autocompleteSearch(query: string): Promise<AutocompleteRes
 	});
 }
 
-async function getAutocompleteMovies(query: string, limit: number): Promise<MovieSummary[]> {
+async function getAutocompleteMovies(query: string, limit: number): Promise<MediaSummary[]> {
 	try {
 		const ftsQuery = createAutocompleteQuery(query);
 		const searchSql = sql`
 			SELECT m.*
 			FROM movie_fts mf
-			JOIN movies m ON m.numericId = mf.rowid
+			JOIN media m ON m.numericId = mf.rowid
 			WHERE mf MATCH ${ftsQuery}
 			ORDER BY bm25(mf) ASC
 			LIMIT ${limit}
@@ -532,19 +553,19 @@ export async function saveSearchHistory(userId: string, query: string): Promise<
 export async function getPersonalizedRecommendations(
 	userId: string,
 	limit: number = 10
-): Promise<MovieSummary[]> {
+): Promise<MediaSummary[]> {
 	const cacheKey = buildCacheKey('recommendations', userId, limit);
 	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 		try {
 			const genrePrefResults = await db.all(sql`
 				WITH CombinedHistory AS (
-					SELECT movie_id FROM watch_history WHERE userId = ${userId}
+					SELECT media_id FROM watch_history WHERE userId = ${userId}
 					UNION ALL
-					SELECT movie_id FROM watchlist WHERE userId = ${userId}
+					SELECT media_id FROM watchlist WHERE userId = ${userId}
 				)
 				SELECT mg.genreId, COUNT(*) as count
 				FROM CombinedHistory ch
-				JOIN movies_genres mg ON ch.movie_id = mg.movieId
+				JOIN media_genres mg ON ch.media_id = mg.mediaId
 				GROUP BY mg.genreId
 				ORDER BY count DESC
 				LIMIT 3
@@ -555,17 +576,17 @@ export async function getPersonalizedRecommendations(
 			if (preferredGenreIds.length === 0) {
 				const popularMovies = (await db.all(sql`
 				SELECT m.*
-				FROM movies m
+				FROM media m
 				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 				LIMIT ${limit}
 			`)) as any[];
-				return await mapRowsToSummaries(popularMovies as MovieRow[]);
+				return await mapRowsToSummaries(popularMovies as MediaRow[]);
 			}
 
 			const recommendedMovies = await db.all(sql`
 				SELECT DISTINCT m.*
-				FROM movies m
-				JOIN movies_genres mg ON m.id = mg.movieId
+				FROM media m
+				JOIN media_genres mg ON m.id = mg.mediaId
 				WHERE mg.genreId IN (${sql.raw(preferredGenreIds.join(','))})
 				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 				LIMIT ${limit}
@@ -576,7 +597,7 @@ export async function getPersonalizedRecommendations(
 			logger.error({ error, userId }, 'Failed to get personalized recommendations');
 			const popularMovies = await db.all(sql`
 				SELECT m.*
-				FROM movies m
+				FROM media m
 				ORDER BY (m.rating IS NULL) ASC, m.rating DESC, m.popularity DESC
 				LIMIT ${limit}
 			`);

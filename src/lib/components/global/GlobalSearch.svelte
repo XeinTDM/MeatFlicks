@@ -8,6 +8,7 @@
 	import { Spinner } from '$lib/components/ui/spinner/index';
 	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
 	import { watchHistory } from '$lib/state/stores/historyStore';
+	import { getImageUrl } from '$lib/utils/image';
 
 	let query = $state('');
 	let results = $state<LibraryMovie[]>([]);
@@ -92,7 +93,7 @@
 				}) as LibraryMovie
 		);
 
-		const historyMovies = $watchHistory.entries.map(
+		const historyMovies = watchHistory.entries.map(
 			(entry) =>
 				({
 					id: entry.id,
@@ -291,7 +292,7 @@
 								>
 									<div class="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
 										{#if movie.posterPath}
-											<img src={movie.posterPath} alt="" class="h-full w-full object-cover" />
+											<img src={getImageUrl(movie.posterPath, 'w154')} alt="" class="h-full w-full object-cover" />
 										{/if}
 									</div>
 									<div class="min-w-0 flex-1">

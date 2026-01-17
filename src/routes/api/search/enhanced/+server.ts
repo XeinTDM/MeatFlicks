@@ -16,6 +16,10 @@ const searchOptionsSchema = z.object({
 	maxRating: z.coerce.number().min(0).max(10).optional(),
 	minYear: z.coerce.number().int().min(1900).max(new Date().getFullYear()).optional(),
 	maxYear: z.coerce.number().int().min(1900).max(new Date().getFullYear()).optional(),
+	runtimeMin: z.coerce.number().int().min(0).optional(),
+	runtimeMax: z.coerce.number().int().min(0).optional(),
+	language: z.string().optional(),
+	mediaType: z.enum(['movie', 'tv', 'anime']).optional(),
 	sortBy: z.enum(['relevance', 'rating', 'releaseDate', 'title']).default('relevance').optional(),
 	sortOrder: z.enum(['asc', 'desc']).default('desc').optional(),
 	includeAdult: z.coerce.boolean().default(false).optional()
@@ -34,6 +38,10 @@ export const GET: RequestHandler = async ({ url }) => {
 			maxRating: queryParams.maxRating,
 			minYear: queryParams.minYear,
 			maxYear: queryParams.maxYear,
+			runtimeMin: queryParams.runtimeMin,
+			runtimeMax: queryParams.runtimeMax,
+			language: queryParams.language,
+			mediaType: queryParams.mediaType,
 			sortBy: queryParams.sortBy,
 			sortOrder: queryParams.sortOrder,
 			includeAdult: queryParams.includeAdult

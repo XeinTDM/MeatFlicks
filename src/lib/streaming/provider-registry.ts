@@ -133,9 +133,26 @@ export async function resolveStreamingSource(
 	context: StreamingProviderContext,
 	preferredProviders: string[] = []
 ): Promise<StreamingSource | null> {
-	const resolutions = await collectStreamingSources(context, preferredProviders);
-	const success = resolutions.find((resolution) => resolution.success && resolution.source);
-	return success?.source ?? null;
+	const orderedProviders = orderProviders(context, preferredProviders);
+	if (orderedProviders.length === 0) return null;
+
+	const promises = orderedProviders.map(async (provider) => {
+		try {
+			const source = await provider.fetchSource(context);
+			if (!source) {
+				throw new Error(`Provider ${provider.id} returned no source`);
+			}
+			return source;
+		} catch (error) {
+			throw error;
+		}
+	});
+
+	try {
+		return await Promise.any(promises);
+	} catch (error) {
+		return null;
+	}
 }
 
 export async function resolveStreamingWithDetails(

@@ -13,8 +13,8 @@
 		watchStatus?: EpisodeWatchStatus | null;
 		tvShowTmdbId: number;
 		seasonNumber: number;
-		onWatchStatusChange?: (episodeId: number, watched: boolean) => Promise<void>;
-		onProgressUpdate?: (episodeId: number, watchTime: number, totalTime: number) => Promise<void>;
+		onWatchStatusChange?: (episodeId: string, watched: boolean) => Promise<void>;
+		onProgressUpdate?: (episodeId: string, watchTime: number, totalTime: number) => Promise<void>;
 		disabled?: boolean;
 	}
 

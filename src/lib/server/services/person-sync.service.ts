@@ -77,7 +77,7 @@ export async function syncPeopleBatch(tmdbIds: number[]): Promise<Map<number, Pe
 }
 
 export async function syncMovieCast(
-	movieId: string,
+	mediaId: string,
 	tmdbMovieId: number,
 	mediaType: 'movie' | 'tv' | 'anime' = 'movie'
 ) {
@@ -98,7 +98,7 @@ export async function syncMovieCast(
 
 				const castMember = credits.cast.find((c: any) => c.id === tmdbId);
 				return {
-					movieId,
+					mediaId,
 					personId: person.id,
 					role: 'actor' as const,
 					character: castMember?.character || null,
@@ -116,13 +116,13 @@ export async function syncMovieCast(
 
 		return relationships.length;
 	} catch (error) {
-		console.error(`Failed to sync cast for movie ${movieId}:`, error);
+		console.error(`Failed to sync cast for media ${mediaId}:`, error);
 		return 0;
 	}
 }
 
 export async function syncMovieCrew(
-	movieId: string,
+	mediaId: string,
 	tmdbMovieId: number,
 	mediaType: 'movie' | 'tv' | 'anime' = 'movie'
 ) {
@@ -153,7 +153,7 @@ export async function syncMovieCrew(
 				if (!role) return null;
 
 				return {
-					movieId,
+					mediaId,
 					personId: person.id,
 					role,
 					job: crewMember?.job || role,
@@ -170,7 +170,7 @@ export async function syncMovieCrew(
 
 		return relationships.length;
 	} catch (error) {
-		console.error(`Failed to sync crew for movie ${movieId}:`, error);
+		console.error(`Failed to sync crew for media ${mediaId}:`, error);
 		return 0;
 	}
 }

@@ -1,23 +1,18 @@
-import { writable, get } from 'svelte/store';
-import type { Movie } from './watchlistStore.svelte';
+import { page } from '$app/state';
+import type { Media } from './watchlistStore.svelte';
 
-export type HistoryEntry = Omit<Movie, 'addedAt'> & {
+export type HistoryEntry = Omit<Media, 'addedAt'> & {
 	watchedAt: string;
 	mediaType?: string;
 	season?: number;
 	episode?: number;
 };
 
-type HistoryState = {
-	entries: HistoryEntry[];
-	error: string | null;
-};
-
 const STORAGE_KEY = 'meatflicks.history';
 const hasStorage = typeof localStorage !== 'undefined';
 
 const resolveCanonicalPath = (
-	payload: Partial<Movie> & Record<string, unknown>,
+	payload: Partial<Media> & Record<string, unknown>,
 	id: string
 ): string => {
 	const provided = typeof payload.canonicalPath === 'string' ? payload.canonicalPath.trim() : '';
@@ -52,9 +47,9 @@ const sanitizeEntry = (candidate: unknown): HistoryEntry | null => {
 	const id = typeof payload.id === 'string' ? payload.id : String(payload.id ?? '');
 	const title = typeof payload.title === 'string' ? payload.title : String(payload.title ?? '');
 	const watchedAt =
-		typeof payload.watchedAt === 'string' ? payload.watchedAt : String(payload.watchedAt ?? '');
+		typeof payload.watchedAt === 'string' ? payload.watchedAt : String(payload.watchedAt ?? new Date().toISOString());
 
-	if (!id || !watchedAt) {
+	if (!id) {
 		return null;
 	}
 
@@ -122,129 +117,117 @@ const persist = (entries: HistoryEntry[]) => {
 	}
 };
 
-const normalizeForHistory = (
-	movie: Partial<Movie> & Record<string, unknown>
-): HistoryEntry | null => {
-	const id = typeof movie.id === 'string' ? movie.id : String(movie.id ?? '');
-	const title = typeof movie.title === 'string' ? movie.title : String(movie.title ?? '');
+class HistoryStore {
+	#entries = $state<HistoryEntry[]>([]);
+	#loading = $state(false);
+	#error = $state<string | null>(null);
 
-	if (!id || !title) {
-		return null;
+	constructor() {
+		if (typeof window !== 'undefined') {
+			this.#entries = readStorage();
+			this.syncFromServer();
+
+			window.addEventListener('storage', (event) => {
+				if (event.key === STORAGE_KEY) {
+					this.#entries = readStorage();
+				}
+			});
+
+			window.addEventListener('online', () => {
+				this.syncFromServer();
+			});
+		}
 	}
 
-	const ratingValue = Number(movie.rating ?? 0);
-	const timestamp = new Date().toISOString();
+	get entries() { return this.#entries; }
+	get loading() { return this.#loading; }
+	get error() { return this.#error; }
 
-	return {
-		id,
-		title,
-		posterPath: typeof movie.posterPath === 'string' ? movie.posterPath : '',
-		backdropPath: typeof movie.backdropPath === 'string' ? movie.backdropPath : '',
-		overview: typeof movie.overview === 'string' ? movie.overview : '',
-		releaseDate: typeof movie.releaseDate === 'string' ? movie.releaseDate : '',
-		rating: Number.isFinite(ratingValue) ? ratingValue : 0,
-		genres: Array.isArray(movie.genres) ? movie.genres.map(String) : [],
-		trailerUrl: typeof movie.trailerUrl === 'string' ? movie.trailerUrl : undefined,
-		tmdbId: typeof movie.tmdbId === 'number' ? movie.tmdbId : undefined,
-		imdbId: typeof movie.imdbId === 'string' ? movie.imdbId : null,
-		canonicalPath: resolveCanonicalPath(movie, id),
-		durationMinutes: typeof movie.durationMinutes === 'number' ? movie.durationMinutes : null,
-		collectionId: typeof movie.collectionId === 'number' ? movie.collectionId : null,
-		is4K: movie.is4K === true,
-		isHD: typeof movie.isHD === 'boolean' ? movie.isHD : undefined,
-		media_type: typeof movie.media_type === 'string' ? (movie.media_type as string) : undefined,
-		season: typeof movie.season === 'number' ? movie.season : undefined,
-		episode: typeof movie.episode === 'number' ? movie.episode : undefined,
-		watchedAt: timestamp
-	} satisfies HistoryEntry;
-};
+	async syncFromServer() {
+		if (typeof window === 'undefined') return;
+		if (!page.data.user) return;
 
-function createHistoryStore() {
-	const initialState: HistoryState = {
-		entries: [],
-		error: null
-	};
+		this.#loading = true;
+		try {
+			const response = await fetch('/api/history', { credentials: 'include' });
+			if (response.ok) {
+				const serverHistory = await response.json();
+				const sanitized = serverHistory
+					.map(sanitizeEntry)
+					.filter((entry: HistoryEntry | null): entry is HistoryEntry => Boolean(entry));
 
-	const store = writable<HistoryState>(initialState);
-
-	const syncFromStorage = () => {
-		const stored = readStorage();
-		store.update((state) => ({ ...state, entries: stored, error: null }));
-	};
-
-	if (hasStorage && typeof window !== 'undefined') {
-		syncFromStorage();
-		window.addEventListener('storage', (event) => {
-			if (event.key === STORAGE_KEY) {
-				syncFromStorage();
+				if (sanitized.length > 0) {
+					this.#entries = sanitized;
+					persist(sanitized);
+				}
 			}
-		});
+		} catch (error) {
+			console.error('[history][syncFromServer] Failed', error);
+		} finally {
+			this.#loading = false;
+		}
 	}
 
-	const setError = (message: string) => {
-		store.update((state) => ({ ...state, error: message }));
-	};
+	async recordWatch(media: Partial<Media> & Record<string, unknown>) {
+		const id = typeof media.id === 'string' ? media.id : String(media.id ?? '');
+		if (!id) return;
 
-	const clearError = () => {
-		store.update((state) => ({ ...state, error: null }));
-	};
+		const timestamp = new Date().toISOString();
+		const entry = sanitizeEntry({ ...media, watchedAt: timestamp });
 
-	const recordWatch = (movie: Partial<Movie> & Record<string, unknown>) => {
-		const entry = normalizeForHistory(movie);
+		if (!entry) return;
 
-		if (!entry) {
-			setError('Unable to record history entry. Movie is missing required data.');
-			return;
+		// Optimistic update
+		this.#entries = [entry, ...this.#entries.filter(e => e.id !== entry.id)].sort((a, b) => (a.watchedAt > b.watchedAt ? -1 : 1));
+		persist(this.#entries);
+
+		if (!page.data.user) return;
+
+		try {
+			const response = await fetch('/api/history', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ mediaId: entry.id }),
+				credentials: 'include'
+			});
+
+			if (!response.ok) throw new Error('Failed to sync');
+		} catch (error) {
+			console.error('[history][recordWatch] Sync failed', error);
 		}
+	}
 
-		store.update((state) => {
-			const filtered = state.entries.filter((existing) => existing.id !== entry.id);
-			const updated = [entry, ...filtered].sort((a, b) => (a.watchedAt > b.watchedAt ? -1 : 1));
-			persist(updated);
-			return { ...state, entries: updated, error: null };
-		});
-	};
+	async remove(mediaId: string) {
+		this.#entries = this.#entries.filter((entry) => entry.id !== mediaId);
+		persist(this.#entries);
+	}
 
-	const remove = (movieId: string) => {
-		if (!movieId) {
-			setError('Movie id is required to remove history entry.');
-			return;
+	async clear() {
+		this.#entries = [];
+		persist([]);
+
+		if (!page.data.user) return;
+
+		try {
+			await fetch('/api/history', { method: 'DELETE', credentials: 'include' });
+		} catch (error) {
+			console.error('[history][clear] Sync failed', error);
 		}
+	}
 
-		store.update((state) => {
-			const updated = state.entries.filter((entry) => entry.id !== movieId);
-			persist(updated);
-			return { ...state, entries: updated, error: null };
-		});
-	};
+	exportData() {
+		return $state.snapshot(this.#entries);
+	}
 
-	const replaceAll = (entries: HistoryEntry[]) => {
+	replaceAll(entries: HistoryEntry[]) {
 		const sanitized = entries
 			.map(sanitizeEntry)
 			.filter((entry): entry is HistoryEntry => Boolean(entry))
 			.sort((a, b) => (a.watchedAt > b.watchedAt ? -1 : 1));
 
-		store.update((state) => ({ ...state, entries: sanitized, error: null }));
+		this.#entries = sanitized;
 		persist(sanitized);
-	};
-
-	const clear = () => {
-		store.set({ ...initialState });
-		persist([]);
-	};
-
-	const exportData = () => structuredClone(get(store).entries);
-
-	return {
-		subscribe: store.subscribe,
-		recordWatch,
-		remove,
-		replaceAll,
-		clear,
-		exportData,
-		clearError,
-		setError
-	};
+	}
 }
 
-export const watchHistory = createHistoryStore();
+export const watchHistory = new HistoryStore();

@@ -75,9 +75,12 @@ export interface TmdbTvDetails {
 	firstAirDate: string | null;
 	seasonCount: number | null;
 	episodeCount: number | null;
+	status: string | null;
 
 	seasons: TmdbTvSeason[];
 	productionCompanies: { id: number; name: string; logoPath: string | null }[];
+	productionCountries: { iso: string; name: string }[];
+	voteCount: number | null;
 	logoPath: string | null;
 }
 
@@ -140,12 +143,14 @@ const api = ofetch.create({
 	retry: 3,
 	retryDelay: 1000,
 	onResponseError({ request, response, options }) {
-		console.error('[ofetch] Response Error:', {
-			url: request.toString(),
-			status: response.status,
-			statusText: response.statusText,
-			body: response._data
-		});
+		if (response.status !== 404) {
+			console.error('[ofetch] Response Error:', {
+				url: request.toString(),
+				status: response.status,
+				statusText: response.statusText,
+				body: response._data
+			});
+		}
 		throw new ApiError(
 			`TMDB responded with status ${response.status}: ${response._data?.status_message || response.statusText}`,
 			response.status
@@ -382,12 +387,18 @@ export async function fetchTmdbTvDetails(
 					firstAirDate: data.first_air_date || null,
 					seasonCount: data.number_of_seasons || null,
 					episodeCount: data.number_of_episodes || null,
+					status: data.status || null,
 					seasons,
 					productionCompanies: (data.production_companies || []).map((c) => ({
 						id: c.id,
 						name: c.name,
 						logoPath: buildImageUrl(c.logo_path, env.TMDB_POSTER_SIZE)
 					})),
+					productionCountries: (data.production_countries || []).map((c) => ({
+						iso: c.iso_3166_1,
+						name: c.name
+					})),
+					voteCount: data.vote_count || null,
 					logoPath: logo ? buildImageUrl(logo.file_path, env.TMDB_POSTER_SIZE) : null
 				};
 			} catch (error) {
@@ -776,7 +787,7 @@ export async function fetchTmdbRecommendations(
 	});
 }
 
-export async function fetchTmdbPersonDetails(personId: number): Promise<TmdbPersonDetails> {
+export async function fetchTmdbPersonDetails(personId: string | number): Promise<TmdbPersonDetails> {
 	const cacheKey = buildCacheKey('tmdb', 'person', personId);
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {
@@ -938,6 +949,33 @@ export async function fetchTmdbMediaCredits(
 			};
 		} catch (error) {
 			if (error instanceof ApiError && error.statusCode === 404) {
+				// If we tried 'movie' and got 404, try 'tv' as fallback
+				if (tmdbType === 'movie') {
+					try {
+						const rawData = await tmdbRateLimiter.schedule(`tmdb-tv-credits`, () =>
+							api(`/tv/${tmdbId}/credits`)
+						);
+						const data = TmdbCreditsSchema.parse(rawData);
+						return {
+							cast: (data.cast || []).map((c) => ({
+								id: c.id,
+								name: c.name,
+								character: c.character || ''
+							})),
+							crew: (data.crew || []).map((c) => ({
+								id: c.id,
+								name: c.name,
+								department: c.department || '',
+								job: c.job || ''
+							}))
+						};
+					} catch (fallbackError) {
+						if (fallbackError instanceof ApiError && fallbackError.statusCode === 404) {
+							return null;
+						}
+						throw fallbackError;
+					}
+				}
 				return null;
 			}
 			throw error;

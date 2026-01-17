@@ -1,6 +1,6 @@
-import type { MovieFilters, SortOptions } from '$lib/types/filters';
-import type { PaginationParams } from '$lib/types/pagination';
-import { DEFAULT_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE } from '$lib/types/pagination';
+import type { MovieFilters, SortOptions } from '../types/filters';
+import type { PaginationParams } from '../types/pagination';
+import { DEFAULT_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE } from '../types/pagination';
 
 export function parseFiltersFromURL(searchParams: URLSearchParams): MovieFilters {
 	const filters: MovieFilters = {};

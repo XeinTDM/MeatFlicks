@@ -228,8 +228,7 @@
 									{#if hasActiveFilters(currentFilters)}
 										<ActiveFilters
 											filters={currentFilters}
-											onRemoveFilter={handleRemoveFilter}
-											onClearAll={handleClearFilters}
+											onRemove={(updates) => handleFiltersChange({ ...currentFilters, ...updates })}
 										/>
 									{/if}
 								</div>

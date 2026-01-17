@@ -11,10 +11,10 @@
 		season: Season;
 		watchStatus?: SeasonWatchStatus | null;
 		episodes: Episode[];
-		episodeWatchStatuses: Record<number, EpisodeWatchStatus>;
+		episodeWatchStatuses: Record<string, EpisodeWatchStatus>;
 		tvShowTmdbId: number;
-		onWatchStatusChange?: (episodeId: number, watched: boolean) => Promise<void>;
-		onProgressUpdate?: (episodeId: number, watchTime: number, totalTime: number) => Promise<void>;
+		onWatchStatusChange?: (episodeId: string, watched: boolean) => Promise<void>;
+		onProgressUpdate?: (episodeId: string, watchTime: number, totalTime: number) => Promise<void>;
 		onPlayEpisode?: (episode: Episode, watchStatus?: EpisodeWatchStatus | null) => void;
 		disabled?: boolean;
 		isExpanded?: boolean;

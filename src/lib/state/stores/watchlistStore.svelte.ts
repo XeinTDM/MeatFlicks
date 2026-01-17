@@ -1,8 +1,8 @@
-import type { LibraryMovie } from '$lib/types/library';
+import type { LibraryMedia } from '$lib/types/library';
 import { notifications } from './notificationStore';
 import { page } from '$app/state';
 
-export type Movie = {
+export type Media = {
 	id: string;
 	title: string;
 	posterPath: string | null;
@@ -26,7 +26,10 @@ export type Movie = {
 	episode?: number | null;
 };
 
-type WatchlistCandidate = LibraryMovie | Movie | (Partial<Movie> & Record<string, unknown>);
+// Compatibility alias
+export type Movie = Media;
+
+type WatchlistCandidate = LibraryMedia | Media | (Partial<Media> & Record<string, unknown>);
 
 const STORAGE_KEY = 'meatflicks.watchlist';
 const hasStorage = typeof localStorage !== 'undefined';
@@ -39,7 +42,7 @@ const normalizeDateString = (value: unknown): string | null => {
 };
 
 const buildCanonicalPath = (
-	payload: Partial<Movie> & Record<string, unknown>,
+	payload: Partial<Media> & Record<string, unknown>,
 	id: string
 ): string => {
 	const fromPayload = typeof payload.canonicalPath === 'string' ? payload.canonicalPath.trim() : '';
@@ -57,9 +60,9 @@ const buildCanonicalPath = (
 	return `${prefix}${id}`;
 };
 
-const sanitizeMovie = (candidate: unknown): Movie | null => {
+const sanitizeMedia = (candidate: unknown): Media | null => {
 	if (!candidate || typeof candidate !== 'object') return null;
-	const payload = candidate as Partial<Movie> & Record<string, unknown>;
+	const payload = candidate as Partial<Media> & Record<string, unknown>;
 	const id = typeof payload.id === 'string' ? payload.id : String(payload.id ?? '');
 	const title = typeof payload.title === 'string' ? payload.title : String(payload.title ?? '');
 
@@ -93,7 +96,7 @@ const sanitizeMovie = (candidate: unknown): Movie | null => {
 	};
 };
 
-const readStorage = (): Movie[] => {
+const readStorage = (): Media[] => {
 	if (!hasStorage) return [];
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
@@ -102,12 +105,12 @@ const readStorage = (): Movie[] => {
 		if (!Array.isArray(parsed)) return [];
 
 		return parsed
-			.map(sanitizeMovie)
-			.filter((movie): movie is Movie => Boolean(movie))
-			.reduce<Movie[]>((accumulator, movie) => {
-				return accumulator.some((existing) => existing.id === movie.id)
+			.map(sanitizeMedia)
+			.filter((m): m is Media => Boolean(m))
+			.reduce<Media[]>((accumulator, m) => {
+				return accumulator.some((existing) => existing.id === m.id)
 					? accumulator
-					: [...accumulator, movie];
+					: [...accumulator, m];
 			}, []);
 	} catch (error) {
 		console.error('[watchlist][readStorage] Failed', error);
@@ -115,7 +118,7 @@ const readStorage = (): Movie[] => {
 	}
 };
 
-const persist = (items: Movie[]) => {
+const persist = (items: Media[]) => {
 	if (!hasStorage) return;
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
@@ -125,7 +128,7 @@ const persist = (items: Movie[]) => {
 };
 
 class WatchlistStore {
-	#watchlist = $state<Movie[]>([]);
+	#watchlist = $state<Media[]>([]);
 	#loading = $state(false);
 	#error = $state<string | null>(null);
 
@@ -158,10 +161,10 @@ class WatchlistStore {
 		try {
 			const response = await fetch('/api/watchlist', { credentials: 'include' });
 			if (response.ok) {
-				const serverMovies = await response.json();
-				const sanitized = serverMovies
-					.map(sanitizeMovie)
-					.filter((movie: Movie | null): movie is Movie => Boolean(movie));
+				const serverMedia = await response.json();
+				const sanitized = serverMedia
+					.map(sanitizeMedia)
+					.filter((m: Media | null): m is Media => Boolean(m));
 
 				if (sanitized.length > 0) {
 					this.#watchlist = sanitized;
@@ -175,14 +178,14 @@ class WatchlistStore {
 		}
 	}
 
-	isInWatchlist(movieId: string): boolean {
-		return this.#watchlist.some((movie) => movie.id === movieId);
+	isInWatchlist(mediaId: string): boolean {
+		return this.#watchlist.some((m) => m.id === mediaId);
 	}
 
-	async addToWatchlist(movie: WatchlistCandidate) {
-		const sanitized = sanitizeMovie(movie);
+	async addToWatchlist(mediaItem: WatchlistCandidate) {
+		const sanitized = sanitizeMedia(mediaItem);
 		if (!sanitized) {
-			this.#error = 'Missing movie data';
+			this.#error = 'Missing media data';
 			return;
 		}
 
@@ -199,7 +202,7 @@ class WatchlistStore {
 
 		if (!page.data.user) {
 			if (existingIndex < 0) {
-				notifications.movieAdded({
+				notifications.mediaAdded({
 					title: sanitized.title,
 					posterPath: sanitized.posterPath,
 					tmdbId: sanitized.tmdbId ?? 0
@@ -212,25 +215,14 @@ class WatchlistStore {
 			const response = await fetch('/api/watchlist', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movie: sanitized }),
+				body: JSON.stringify({ mediaId: sanitized.id }),
 				credentials: 'include'
 			});
-
-			if (response.status === 401 || response.status === 403) {
-				if (existingIndex < 0) {
-					notifications.movieAdded({
-						title: sanitized.title,
-						posterPath: sanitized.posterPath,
-						tmdbId: sanitized.tmdbId ?? 0
-					});
-				}
-				return;
-			}
 
 			if (!response.ok) throw new Error('Failed to sync');
 
 			if (existingIndex < 0) {
-				notifications.movieAdded({
+				notifications.mediaAdded({
 					title: sanitized.title,
 					posterPath: sanitized.posterPath,
 					tmdbId: sanitized.tmdbId ?? 0
@@ -243,15 +235,15 @@ class WatchlistStore {
 		}
 	}
 
-	async removeFromWatchlist(movieId: string) {
+	async removeFromWatchlist(mediaId: string) {
 		const previousWatchlist = [...this.#watchlist];
-		const movieTitle = this.#watchlist.find((m) => m.id === movieId)?.title ?? 'Movie';
+		const title = this.#watchlist.find((m) => m.id === mediaId)?.title ?? 'Item';
 
-		this.#watchlist = this.#watchlist.filter((m) => m.id !== movieId);
+		this.#watchlist = this.#watchlist.filter((m) => m.id !== mediaId);
 		persist(this.#watchlist);
 
 		if (!page.data.user) {
-			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
+			notifications.info('Removed', `Removed "${title}" from watchlist.`);
 			return;
 		}
 
@@ -259,17 +251,12 @@ class WatchlistStore {
 			const response = await fetch('/api/watchlist', {
 				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movieId }),
+				body: JSON.stringify({ mediaId }),
 				credentials: 'include'
 			});
 
-			if (response.status === 401 || response.status === 403) {
-				notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
-				return;
-			}
-
 			if (!response.ok) throw new Error('Failed to sync');
-			notifications.info('Removed', `Removed "${movieTitle}" from watchlist.`);
+			notifications.info('Removed', `Removed "${title}" from watchlist.`);
 		} catch (error) {
 			this.#watchlist = previousWatchlist;
 			persist(this.#watchlist);
@@ -295,27 +282,22 @@ class WatchlistStore {
 		}
 	}
 
-	async replaceAll(movies: Movie[]) {
-		const sanitized = movies.map(sanitizeMovie).filter((movie): movie is Movie => Boolean(movie));
-		this.#watchlist = sanitized;
-		persist(sanitized);
-
-		if (!page.data.user) return;
-
-		try {
-			await fetch('/api/watchlist', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ movies: sanitized }),
-				credentials: 'include'
-			});
-		} catch (error) {
-			console.error('[watchlist][replaceAll] Sync failed', error);
-		}
-	}
-
 	exportData() {
 		return $state.snapshot(this.#watchlist);
+	}
+
+	replaceAll(items: Media[]) {
+		const sanitized = items
+			.map(sanitizeMedia)
+			.filter((m): m is Media => Boolean(m))
+			.reduce<Media[]>((accumulator, m) => {
+				return accumulator.some((existing) => existing.id === m.id)
+					? accumulator
+					: [...accumulator, m];
+			}, []);
+
+		this.#watchlist = sanitized;
+		persist(sanitized);
 	}
 }
 

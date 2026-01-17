@@ -243,7 +243,7 @@ function deepSanitize<T>(obj: T): T {
 		if (typeof value === 'string') {
 			sanitized[key] = value
 				.replace(/&/g, '&')
-				.replace(/"/g, '"')
+				.replace(/"/g, '&quot;')
 				.replace(/'/g, '&#39;')
 				.replace(/\//g, '&#x2F;');
 		} else if (typeof value === 'object' && value !== null) {

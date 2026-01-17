@@ -36,10 +36,28 @@
 	const primarySource = $derived(streamingService.state.source);
 	const currentQualities = $derived(streamingService.state.qualities);
 	const currentSubtitles = $derived(streamingService.state.subtitles);
+
+	function handleReportBroken() {
+		if (confirm('Report this provider as broken? We will try to find another source for you.')) {
+			streamingService.reportBroken();
+		}
+	}
 </script>
 
 {#if displayPlayer}
 	<div class="relative mb-8 aspect-video w-full overflow-hidden rounded-lg bg-black shadow-2xl">
+		<div class="absolute top-4 right-4 z-50 flex gap-2">
+			<Button
+				variant="outline"
+				size="sm"
+				class="bg-black/50 text-white border-white/20 hover:bg-destructive hover:text-white backdrop-blur-sm"
+				onclick={handleReportBroken}
+				disabled={streamingService.state.isReporting}
+			>
+				Report Broken
+			</Button>
+		</div>
+
 		{#if currentQualities.length > 1 || currentSubtitles.length > 0}
 			<PlayerControls
 				qualities={currentQualities}

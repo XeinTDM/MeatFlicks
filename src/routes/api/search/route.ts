@@ -1,32 +1,18 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { movies } from '$lib/server/db/schema';
+import { media } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
-import type { MovieRow } from '$lib/server/db';
+import type { MediaRow } from '$lib/server/db';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
 import { buildCacheKey, CACHE_TTL_SEARCH_SECONDS, withCache } from '$lib/server/cache';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { validateQueryParams, searchQuerySchema } from '$lib/server/validation';
 import { errorHandler } from '$lib/server';
-import { personRepository } from '$lib/server/repositories/person.repository';
 
 const DEFAULT_LIMIT = 100;
 
 const normalizeQuery = (value: string) => value.trim();
-
-const parseLimit = (value: string | null): number => {
-	if (!value) {
-		return DEFAULT_LIMIT;
-	}
-
-	const parsed = Number.parseInt(value, 10);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return DEFAULT_LIMIT;
-	}
-
-	return Math.min(parsed, DEFAULT_LIMIT);
-};
 
 const sanitizeForFts = (term: string): string => {
 	return term
@@ -51,7 +37,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		const query = normalizeQuery(queryParams.q);
 		const limit = queryParams.limit ?? DEFAULT_LIMIT;
 		const hash = createHash('sha1').update(query.toLowerCase()).digest('hex');
-		const cacheKey = buildCacheKey('search', 'movies', hash, limit);
+		const cacheKey = buildCacheKey('search', 'media', hash, limit);
 
 		const results = await withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 			const ftsQuery = sanitizeForFts(query);
@@ -64,7 +50,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				const searchSql = sql`
 					SELECT m.*
 					FROM movie_fts mf
-					JOIN movies m ON m.numericId = mf.rowid
+					JOIN media m ON m.numericId = mf.rowid
 					WHERE mf MATCH ${ftsQuery}
 					ORDER BY bm25(mf) ASC,
 						(m.rating IS NULL) ASC,
@@ -75,7 +61,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					LIMIT ${limit}
 				`;
 				const rows = await db.all(searchSql);
-				return await mapRowsToSummaries(rows as MovieRow[]);
+				return await mapRowsToSummaries(rows as MediaRow[]);
 			} catch (err) {
 				console.error('[search] FTS query failed:', err);
 				return [];

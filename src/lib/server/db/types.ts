@@ -11,7 +11,7 @@ export interface CollectionRecord {
 }
 
 export interface PersonRecord {
-	id: number;
+	id: string;
 	tmdbId: number;
 	name: string;
 	biography: string | null;
@@ -25,9 +25,9 @@ export interface PersonRecord {
 	updatedAt: number;
 }
 
-export interface MoviePersonRecord {
-	movieId: string;
-	personId: number;
+export interface MediaPersonRecord {
+	mediaId: string;
+	personId: string;
 	role: string;
 	character: string | null;
 	job: string | null;
@@ -35,11 +35,13 @@ export interface MoviePersonRecord {
 	createdAt: number;
 }
 
+export type MoviePersonRecord = MediaPersonRecord;
+
 export interface PersonSearchResult extends PersonRecord {
 	score: number;
 }
 
-export interface MovieRow {
+export interface MediaRow {
 	numericId: number;
 	id: string;
 	tmdbId: number;
@@ -58,20 +60,28 @@ export interface MovieRow {
 	canonicalPath: string | null;
 	addedAt: number | null;
 	mediaType: string;
+	
+	// TV specific
+	status?: string | null;
+	numberOfSeasons?: number | null;
+	numberOfEpisodes?: number | null;
+	productionCompanies?: string | null;
+	streamingProviders?: string | null;
+
 	createdAt: number;
 	updatedAt: number;
 }
 
-export interface MovieRecord extends MovieRow {
+export interface MediaRecord extends MediaRow {
 	genres: GenreRecord[];
 }
 
-export interface MovieSearchResult extends MovieRecord {
+export interface MediaSearchResult extends MediaRecord {
 	score: number;
 }
 
-export type MovieSummary = Omit<
-	MovieRecord,
+export type MediaSummary = Omit<
+	MediaRecord,
 	| 'numericId'
 	| 'createdAt'
 	| 'updatedAt'
@@ -88,6 +98,16 @@ export type MovieSummary = Omit<
 	genres: GenreRecord[] | string[];
 	is4K?: boolean;
 	isHD?: boolean;
+	
+	// TV fields
+	status?: string | null;
+	numberOfSeasons?: number | null;
+	numberOfEpisodes?: number | null;
 };
+
+// Compatibility aliases
+export type MovieRow = MediaRow;
+export type MovieRecord = MediaRecord;
+export type MovieSummary = MediaSummary;
 
 export type SqliteTransaction<T> = () => T;

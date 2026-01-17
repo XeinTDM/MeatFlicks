@@ -1,8 +1,8 @@
-import { collectStreamingSources, resolveStreamingSource } from '$lib/streaming';
+import { collectStreamingSources, resolveStreamingSource, listStreamingProviders } from '$lib/streaming';
 import type { MediaType } from '$lib/streaming';
 import type { ProviderResolution } from '$lib/streaming/provider-registry';
-import { withCache, buildCacheKey, CACHE_TTL_SHORT_SECONDS } from '$lib/server/cache';
-import { clone } from '$lib/server/utils';
+import { withCache, buildCacheKey, CACHE_TTL_SHORT_SECONDS, getCachedValue, setCachedValue } from '$lib/server/cache';
+import { logger } from '$lib/server/logger';
 
 export interface ResolveStreamingInput {
 	mediaType: MediaType;
@@ -24,7 +24,7 @@ export interface ResolveStreamingResponse {
 	resolutions: ProviderResolution[];
 }
 
-const FAILURE_TTL = 30;
+const FAILURE_TTL = 3600; // 1 hour cooldown for broken providers
 
 export async function resolveStreaming(
 	input: ResolveStreamingInput
@@ -63,22 +63,68 @@ export async function resolveStreaming(
 			sub_label: input.sub_label
 		} as const;
 
-		const resolutions = await collectStreamingSources(context, input.preferredProviders ?? []);
-		const source = resolutions.find((resolution) => resolution.success)?.source ?? null;
+		// Get all available providers
+		const providers = listStreamingProviders();
+		
+		// Fetch failure counts for each provider
+		const providerScores = await Promise.all(
+			providers.map(async (p) => {
+				const failKey = buildCacheKey('provider-failure', p.id);
+				const failCount = (await getCachedValue<number>(failKey)) || 0;
+				// Base priority minus failures (each failure is a heavy penalty)
+				return { id: p.id, score: (p as any).priority - failCount * 10 };
+			})
+		);
 
-		const response: ResolveStreamingResponse = {
+		// Sort providers by score DESC
+		const sortedProviderIds = providerScores
+			.sort((a, b) => b.score - a.score)
+			.map(p => p.id);
+
+		// If no preferred providers were passed, use our scored order
+		const effectivePreferred = input.preferredProviders && input.preferredProviders.length > 0 
+			? input.preferredProviders 
+			: sortedProviderIds;
+
+		const source = await resolveStreamingSource(context, effectivePreferred);
+
+		const resolutions: ProviderResolution[] = [];
+		if (source) {
+			const provider = providers.find((p) => p.id === source.providerId);
+			resolutions.push({
+				providerId: source.providerId,
+				label: provider?.label ?? source.providerId,
+				success: true,
+				source
+			});
+		}
+
+		return {
 			source,
 			resolutions
 		};
-
-		return response;
 	});
 }
 
 /**
+ * Reports a provider as broken for a specific media item.
+ * Temporarily deprioritizes this provider for all users.
+ */
+export async function reportBrokenLink(providerId: string) {
+	const failKey = buildCacheKey('provider-failure', providerId);
+	const currentFails = (await getCachedValue<number>(failKey)) || 0;
+	
+	logger.warn({ providerId, currentFails }, '[streaming] Provider reported broken, incrementing failure count');
+	
+	// Increment failure count and cache for 1 hour
+	await setCachedValue(failKey, currentFails + 1, FAILURE_TTL);
+	
+	// Invalidate ALL streaming caches so providers are re-ordered
+	await invalidateStreamingCache();
+}
+
+/**
  * Invalidate streaming caches matching a pattern
- * @param pattern - Pattern to match (e.g., 'streaming:movie:*', 'streaming:tv:123:*')
- * @returns Number of cache entries invalidated
  */
 export async function invalidateStreamingCache(pattern?: string): Promise<number> {
 	const { invalidateCachePattern, invalidateCachePrefix } = await import('$lib/server/cache');
@@ -92,11 +138,6 @@ export async function invalidateStreamingCache(pattern?: string): Promise<number
 
 /**
  * Invalidate cache for a specific streaming source
- * @param tmdbId - TMDB ID to invalidate
- * @param mediaType - Media type ('movie' or 'tv')
- * @param season - Optional season number
- * @param episode - Optional episode number
- * @returns Number of cache entries invalidated
  */
 export async function invalidateStreamingSource(
 	tmdbId: number,

@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import type { LibraryMovie } from '$lib/types/library';
 
-	let historyEntries = $derived($watchHistory.entries.slice(0, 10));
+	let historyEntries = $derived(watchHistory.entries.slice(0, 10));
 	let watchlistEntries = $derived(watchlist.items.slice(0, 10));
 
 	let hasMounted = $state(false);
@@ -33,13 +33,13 @@
 {#if hasMounted}
 	<div class="space-y-12">
 		{#if libraryHistoryEntries.length > 0}
-			<MediaScrollContainer title="Recently Viewed" movies={libraryHistoryEntries} />
+			<MediaScrollContainer title="Recently Viewed" media={libraryHistoryEntries} />
 		{/if}
 
 		{#if libraryWatchlistEntries.length > 0}
 			<MediaScrollContainer
 				title="Your Watchlist"
-				movies={libraryWatchlistEntries}
+				media={libraryWatchlistEntries}
 				linkTo="/watchlist"
 			/>
 		{/if}

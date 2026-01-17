@@ -7,14 +7,14 @@
 
 	interface Props {
 		filters: MovieFilters;
-		onRemoveFilter: (filterKey: keyof MovieFilters) => void;
-		onClearAll: () => void;
+		mediaType?: 'movie' | 'tv' | 'anime';
+		onRemove: (updates: Partial<MovieFilters> & { mediaType?: undefined }) => void;
 	}
 
-	let { filters, onRemoveFilter, onClearAll }: Props = $props();
+	let { filters, mediaType, onRemove }: Props = $props();
 
 	interface FilterChip {
-		key: keyof MovieFilters;
+		key: keyof MovieFilters | 'mediaType';
 		label: string;
 		value: string;
 	}
@@ -23,6 +23,14 @@
 
 	$effect(() => {
 		const chips: FilterChip[] = [];
+
+		if (mediaType) {
+			chips.push({
+				key: 'mediaType',
+				label: `Type: ${mediaType === 'tv' ? 'TV' : mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}`,
+				value: mediaType
+			});
+		}
 
 		if (filters.yearFrom || filters.yearTo) {
 			let label = 'Year: ';
@@ -80,16 +88,32 @@
 
 	let hasActiveFilters = $derived(activeFilterChips.length > 0);
 
-	function removeFilter(filterKey: keyof MovieFilters) {
-		if (filterKey === 'yearFrom') {
-			onRemoveFilter('yearFrom');
-			onRemoveFilter('yearTo');
+	function removeFilter(filterKey: keyof MovieFilters | 'mediaType') {
+		if (filterKey === 'mediaType') {
+			onRemove({ mediaType: undefined } as any);
+		} else if (filterKey === 'yearFrom') {
+			onRemove({ yearFrom: undefined, yearTo: undefined });
 		} else if (filterKey === 'runtimeMin') {
-			onRemoveFilter('runtimeMin');
-			onRemoveFilter('runtimeMax');
+			onRemove({ runtimeMin: undefined, runtimeMax: undefined });
+		} else if (filterKey === 'genres') {
+			onRemove({ genres: [] });
 		} else {
-			onRemoveFilter(filterKey);
+			onRemove({ [filterKey]: undefined });
 		}
+	}
+
+	function clearAll() {
+		onRemove({
+			genres: [],
+			minRating: undefined,
+			maxRating: undefined,
+			yearFrom: undefined,
+			yearTo: undefined,
+			runtimeMin: undefined,
+			runtimeMax: undefined,
+			language: undefined,
+			mediaType: undefined
+		} as any);
 	}
 </script>
 
@@ -110,7 +134,7 @@
 			</Badge>
 		{/each}
 
-		<Button variant="ghost" size="sm" onclick={onClearAll} class="ml-auto h-7 gap-1.5 text-xs">
+		<Button variant="ghost" size="sm" onclick={clearAll} class="ml-auto h-7 gap-1.5 text-xs">
 			<X class="h-3 w-3" />
 			Clear all
 		</Button>

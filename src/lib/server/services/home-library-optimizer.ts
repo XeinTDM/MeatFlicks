@@ -411,17 +411,20 @@ export const ensureHomeLibraryPrimed = async (
 			return;
 		}
 
-		logger.info({ tasksToRun }, '[home-library] Starting library priming tasks');
+		logger.info({ tasksToRun }, '[home-library] Starting library priming tasks in parallel');
 
-		for (const task of tasksToRun) {
-			try {
-				await runTask(task);
-				state.lastRun[task] = Date.now();
-				await saveState(state);
-			} catch (error) {
-				logger.error({ task, error }, '[home-library] Refresh task failed');
-			}
-		}
+		await Promise.all(
+			tasksToRun.map(async (task) => {
+				try {
+					await runTask(task);
+					state.lastRun[task] = Date.now();
+				} catch (error) {
+					logger.error({ task, error }, '[home-library] Refresh task failed');
+				}
+			})
+		);
+
+		await saveState(state);
 	})().finally(() => {
 		refreshPromise = null;
 	});

@@ -73,9 +73,8 @@
 	] as const;
 
 	const watchlistState = $derived(watchlist.items);
-	const historyState = $derived($watchHistory);
+	const historyCount = $derived(watchHistory.entries.length);
 	const watchlistCount = $derived(watchlistState.length);
-	const historyCount = $derived(historyState.entries.length);
 
 	const resetPreferences = () => {
 		autoplayNext = true;

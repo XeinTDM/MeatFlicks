@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'movie-added';
+export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'media-added' | 'movie-added';
 
 export interface Notification {
 	id: string;
@@ -41,10 +41,18 @@ function createNotificationStore() {
 		success: (title: string, message: string) => add({ type: 'success', title, message }),
 		warning: (title: string, message: string) => add({ type: 'warning', title, message }),
 		error: (title: string, message: string) => add({ type: 'error', title, message }),
+		mediaAdded: (media: { title: string; posterPath?: string | null; tmdbId: number }) =>
+			add({
+				type: 'media-added',
+				title: 'Added to Watchlist',
+				message: media.title,
+				metadata: media
+			}),
+		// Compatibility
 		movieAdded: (movie: { title: string; posterPath?: string | null; tmdbId: number }) =>
 			add({
 				type: 'movie-added',
-				title: 'New Movie Added',
+				title: 'Added to Watchlist',
 				message: movie.title,
 				metadata: movie
 			})

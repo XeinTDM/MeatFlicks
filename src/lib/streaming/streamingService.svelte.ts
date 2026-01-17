@@ -10,6 +10,7 @@ type StreamingState = {
 	qualities: VideoQuality[];
 	subtitles: SubtitleTrack[];
 	isResolving: boolean;
+	isReporting: boolean;
 	error: string | null;
 };
 
@@ -32,6 +33,7 @@ export class StreamingService {
 		qualities: [],
 		subtitles: [],
 		isResolving: false,
+		isReporting: false,
 		error: null
 	});
 
@@ -131,6 +133,46 @@ export class StreamingService {
 		}
 	};
 
+	reportBroken = async () => {
+		const providerId = this.currentProviderId;
+		if (!providerId) return;
+
+		this.state.isReporting = true;
+		try {
+			const response = await fetch('/api/streaming/report-broken', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ providerId }),
+				credentials: 'include'
+			});
+
+			if (response.ok) {
+				// Successfully reported, now let's try to find another provider automatically
+				const nextAvailable = this.state.resolutions.find(r => r.success && r.providerId !== providerId);
+				if (nextAvailable) {
+					// We'll let the component handle the re-selection or just mark this one as failed locally
+					this.state.resolutions = this.state.resolutions.map(r => 
+						r.providerId === providerId ? { ...r, success: false, error: 'Reported as broken' } : r
+					);
+					
+					// Trigger a re-resolve without this provider
+					if (this.currentMedia.tmdbId && this.currentMedia.mediaType) {
+						await this.resolveProvider('', {
+							tmdbId: this.currentMedia.tmdbId,
+							mediaType: this.currentMedia.mediaType,
+							season: this.currentMedia.episodeInfo.season,
+							episode: this.currentMedia.episodeInfo.episode
+						});
+					}
+				}
+			}
+		} catch (error) {
+			console.error('[streaming][reportBroken] failed', error);
+		} finally {
+			this.state.isReporting = false;
+		}
+	};
+
 	setCurrentMedia = (mediaInfo: {
 		mediaId: string;
 		tmdbId: number | null;
@@ -181,6 +223,7 @@ export class StreamingService {
 		this.state.qualities = [];
 		this.state.subtitles = [];
 		this.state.isResolving = false;
+		this.state.isReporting = false;
 		this.state.error = null;
 		this.currentProviderId = null;
 	};

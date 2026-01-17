@@ -1,11 +1,11 @@
-import { db } from '$lib/server/db';
-import { movies, genres, collections, moviesGenres, people, moviePeople } from '$lib/server/db/schema';
+import { db } from '../db';
+import { movies, genres, collections, moviesGenres, people, moviePeople } from '../db/schema';
 import { sql, eq, and, isNotNull, ne, desc, asc, inArray, getTableColumns } from 'drizzle-orm';
-import { mapRowsToSummaries } from '$lib/server/db/movie-select';
-import { logger } from '$lib/server/logger';
-import { withCache, buildCacheKey, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '$lib/server/cache';
-import type { GenreRecord, MovieRow } from '$lib/server/db';
-import type { LibraryMovie } from '$lib/types/library';
+import { mapRowsToSummaries } from '../db/movie-select';
+import { logger } from '../logger';
+import { withCache, buildCacheKey, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '../cache';
+import type { GenreRecord, MovieRow } from '../db/types';
+import type { LibraryMovie } from '../../types/library';
 
 interface MetadataEnhancementOptions {
 	includeTrailers?: boolean;
@@ -29,7 +29,7 @@ interface EnhancedMetadataResult {
 }
 
 interface CastMember {
-	id: number;
+	id: string;
 	name: string;
 	character: string;
 	profilePath: string | null;
@@ -52,7 +52,7 @@ interface CollectionFacetResult {
 }
 
 export async function enhanceMovieMetadata(
-	movieId: string,
+	mediaId: string,
 	options: { includeCast?: boolean; includeTrailers?: boolean } = {}
 ): Promise<LibraryMovie> {
 	const { includeCast = true, includeTrailers = true } = options;
@@ -61,11 +61,11 @@ export async function enhanceMovieMetadata(
 		const movieRow = await db
 			.select()
 			.from(movies)
-			.where(eq(movies.id, movieId))
+			.where(eq(movies.id, mediaId))
 			.get();
 
 		if (!movieRow) {
-			throw new Error(`Movie not found: ${movieId}`);
+			throw new Error(`Movie not found: ${mediaId}`);
 		}
 
 		const baseMovie = (await mapRowsToSummaries([movieRow as MovieRow]))[0];
@@ -81,13 +81,13 @@ export async function enhanceMovieMetadata(
 		};
 
 		if (includeCast) {
-			const cast = await getMovieCast(movieId);
+			const cast = await getMovieCast(mediaId);
 			enhancedMovie.cast = cast;
 		}
 
 		return enhancedMovie;
 	} catch (error) {
-		logger.error({ error, movieId }, 'Failed to enhance movie metadata');
+		logger.error({ error, mediaId }, 'Failed to enhance movie metadata');
 		throw error;
 	}
 }
@@ -125,7 +125,7 @@ export async function getEnhancedMovies(
 			if (includeCast && movieIds.length > 0) {
 				const castRows = await db
 					.select({
-						movieId: moviePeople.movieId,
+						mediaId: moviePeople.mediaId,
 						id: people.id,
 						name: people.name,
 						character: moviePeople.character,
@@ -133,11 +133,11 @@ export async function getEnhancedMovies(
 					})
 					.from(moviePeople)
 					.innerJoin(people, eq(moviePeople.personId, people.id))
-					.where(and(inArray(moviePeople.movieId, movieIds), eq(moviePeople.role, 'actor')))
+					.where(and(inArray(moviePeople.mediaId, movieIds), eq(moviePeople.role, 'actor')))
 					.orderBy(asc(moviePeople.order));
 
 				for (const row of castRows as any) {
-					const list = castMap.get(row.movieId) || [];
+					const list = castMap.get(row.mediaId) || [];
 					if (list.length < 10) {
 						list.push({
 							id: row.id,
@@ -145,7 +145,7 @@ export async function getEnhancedMovies(
 							character: row.character,
 							profilePath: row.profilePath
 						});
-						castMap.set(row.movieId, list);
+						castMap.set(row.mediaId, list);
 					}
 				}
 			}
@@ -186,7 +186,7 @@ export async function getEnhancedMovies(
 	});
 }
 
-async function getMovieCast(movieId: string): Promise<CastMember[]> {
+async function getMovieCast(mediaId: string): Promise<CastMember[]> {
 	try {
 		const results = await db
 			.select({
@@ -197,7 +197,7 @@ async function getMovieCast(movieId: string): Promise<CastMember[]> {
 			})
 			.from(moviePeople)
 			.innerJoin(people, eq(moviePeople.personId, people.id))
-			.where(and(eq(moviePeople.movieId, movieId), eq(moviePeople.role, 'actor')))
+			.where(and(eq(moviePeople.mediaId, mediaId), eq(moviePeople.role, 'actor')))
 			.orderBy(asc(moviePeople.order))
 			.limit(10);
 
@@ -208,7 +208,7 @@ async function getMovieCast(movieId: string): Promise<CastMember[]> {
 			profilePath: row.profilePath
 		}));
 	} catch (error) {
-		logger.error({ error, movieId }, 'Failed to get movie cast');
+		logger.error({ error, mediaId }, 'Failed to get movie cast');
 		return [];
 	}
 }
@@ -311,7 +311,7 @@ export async function getMoviesByMetadata(
 			}
 			if (genreIds.length > 0) {
 				conditions.push(sql`${movies.id} IN (
-					SELECT movieId FROM movies_genres WHERE genreId IN (${sql.join(genreIds.map(id => sql`${id}`), sql`, `)})
+					SELECT mediaId FROM movies_genres WHERE genreId IN (${sql.join(genreIds.map(id => sql`${id}`), sql`, `)})
 				)`);
 			}
 			if (collectionIds.length > 0) {

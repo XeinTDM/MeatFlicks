@@ -1,8 +1,9 @@
 import Keyv from 'keyv';
 import { KeyvSqlite } from '@keyv/sqlite';
 import { LRUCache } from 'lru-cache';
+import { z, type ZodType } from 'zod';
 import { logger } from './logger';
-import { env } from '$lib/config/env';
+import { env } from '../config/env';
 
 export const CACHE_TTL_SHORT_SECONDS = env.CACHE_TTL_SHORT;
 export const CACHE_TTL_MEDIUM_SECONDS = env.CACHE_TTL_MEDIUM;
@@ -138,21 +139,55 @@ function isCacheEntry<T>(val: any): val is CacheEntry<T> {
 	return val && typeof val === 'object' && 'v' in val && 't' in val;
 }
 
-export async function getCachedValue<T>(key: string): Promise<T | undefined> {
-	const entry = await getCacheEntry<T>(key);
+export async function getCachedValue<T>(key: string, schema?: ZodType<T>): Promise<T | undefined> {
+	const entry = await getCacheEntry<T>(key, schema);
 	return entry?.v;
 }
 
-async function getCacheEntry<T>(key: string): Promise<CacheEntry<T> | undefined> {
+async function getCacheEntry<T>(
+	key: string,
+	schema?: ZodType<T>
+): Promise<CacheEntry<T> | undefined> {
 	const memHit = lruStore.get(key);
 	if (memHit !== undefined) {
-		if (isCacheEntry<T>(memHit)) return memHit;
-		return { v: memHit as T, t: Date.now() };
+		if (isCacheEntry<T>(memHit)) {
+			if (schema) {
+				const validation = schema.safeParse(memHit.v);
+				if (!validation.success) {
+					logger.warn({ key, err: validation.error }, 'Cache validation failed (LRU)');
+					lruStore.delete(key);
+					return undefined;
+				}
+			}
+			return memHit;
+		}
+
+		const val = memHit as T;
+		if (schema) {
+			const validation = schema.safeParse(val);
+			if (!validation.success) {
+				logger.warn({ key, err: validation.error }, 'Cache validation failed (LRU raw)');
+				lruStore.delete(key);
+				return undefined;
+			}
+		}
+
+		return { v: val, t: Date.now() };
 	}
 
 	const val = await cache.get(key);
 	if (val !== undefined) {
 		const entry: CacheEntry<T> = isCacheEntry<T>(val) ? val : { v: val as T, t: Date.now() };
+
+		if (schema) {
+			const validation = schema.safeParse(entry.v);
+			if (!validation.success) {
+				logger.warn({ key, err: validation.error }, 'Cache validation failed (DB)');
+				await cache.delete(key);
+				return undefined;
+			}
+		}
+
 		lruStore.set(key, entry);
 		return entry;
 	}
@@ -185,16 +220,18 @@ export async function withCache<T>(
 		cacheOnError?: boolean;
 		errorTtlSeconds?: number;
 		swrSeconds?: number;
+		schema?: ZodType<T>;
 	} = {}
 ): Promise<T> {
 	const {
 		stampedeProtection: useStampedeProtection = true,
 		cacheOnError = false,
 		errorTtlSeconds = 60,
-		swrSeconds
+		swrSeconds,
+		schema
 	} = options;
 
-	const entry = await getCacheEntry<T>(key);
+	const entry = await getCacheEntry<T>(key, schema);
 
 	if (entry !== undefined) {
 		if (swrSeconds !== undefined && Date.now() - entry.t > swrSeconds * 1000) {
@@ -300,9 +337,10 @@ export async function withCacheRefresh<T>(
 	key: string,
 	ttlSeconds: number,
 	factory: () => Promise<T>,
-	swrSeconds: number = Math.floor(ttlSeconds / 2)
+	swrSeconds: number = Math.floor(ttlSeconds / 2),
+	schema?: ZodType<T>
 ): Promise<T> {
-	return withCache(key, ttlSeconds, factory, { swrSeconds, stampedeProtection: true });
+	return withCache(key, ttlSeconds, factory, { swrSeconds, stampedeProtection: true, schema });
 }
 
 /**

@@ -1,6 +1,8 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { logger } from '$lib/server/logger';
 
+export * from './id';
+
 export class ApiError extends Error {
 	constructor(
 		message: string,
@@ -40,6 +42,9 @@ export const clone = <T>(value: T): T => {
 };
 
 export const toNumber = (value: unknown): number | null => {
+	if (value === null || value === undefined || value === '') {
+		return null;
+	}
 	const parsed = Number(value);
 	if (!Number.isFinite(parsed)) {
 		return null;

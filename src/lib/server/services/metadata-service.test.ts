@@ -5,7 +5,7 @@ import {
 	getMoviesByMetadata,
 	updateMovieMetadata,
 	getMetadataStatistics
-} from '$lib/server/services/metadata.service';
+} from './metadata.service';
 
 describe('Metadata Service - Function Exports', () => {
 	it('should export all metadata service functions', () => {
