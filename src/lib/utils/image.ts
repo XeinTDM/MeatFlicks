@@ -10,7 +10,7 @@ export function getImageUrl(path: string | null | undefined, width: string = 'or
 
 	// Ensure path starts with / for consistency
 	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-	
+
 	// Route through our server-side image proxy
 	return `/api/images${normalizedPath}?w=${width}`;
 }

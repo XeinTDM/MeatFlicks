@@ -101,11 +101,7 @@
 <div class="relative mb-8 h-[70vh] w-full overflow-hidden">
 	<div class="absolute top-0 -right-[5%] -left-[5%] h-full w-[calc(100%+10%)]">
 		{#if movie?.backdropPath}
-			<img
-				src={backdropUrl}
-				alt={movie.title}
-				class="h-full w-full rounded-lg object-cover"
-			/>
+			<img src={backdropUrl} alt={movie.title} class="h-full w-full rounded-lg object-cover" />
 		{/if}
 		<div
 			class="absolute inset-0 rounded-lg bg-linear-to-t from-background via-background/60 to-transparent"

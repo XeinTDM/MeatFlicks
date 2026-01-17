@@ -2,10 +2,10 @@ import { db } from './client';
 import { mediaGenres, genres } from './schema';
 import { inArray } from 'drizzle-orm';
 import { mapMediaRows } from './mappers';
-import type { 
-	GenreRecord, 
-	MediaRecord, 
-	MediaRow, 
+import type {
+	GenreRecord,
+	MediaRecord,
+	MediaRow,
 	MediaSummary,
 	MovieRecord,
 	MovieRow,

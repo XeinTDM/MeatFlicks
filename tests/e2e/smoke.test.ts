@@ -15,13 +15,13 @@ test('smoke test: homepage loads and navigation to playback works', async ({ pag
 	// We look for either the Hero Play button OR the "Stay tuned" message (empty library)
 	const heroPlayButton = page.getByRole('link', { name: 'Play' }).first();
 	const stayTuned = page.getByText('Stay tuned');
-	
+
 	console.log('Step 3: Waiting for content or empty state...');
-	
+
 	let foundContent = false;
 	for (let attempt = 1; attempt <= 3; attempt++) {
 		console.log(`Checking page content (attempt ${attempt}/3)...`);
-		
+
 		// Wait for one of the target elements to appear
 		const result = await Promise.race([
 			heroPlayButton.waitFor({ state: 'visible', timeout: 30000 }).then(() => 'content'),
@@ -35,7 +35,9 @@ test('smoke test: homepage loads and navigation to playback works', async ({ pag
 		}
 
 		if (result === 'empty') {
-			console.log('Library is empty. Background priming might be active. Waiting 15s before reload...');
+			console.log(
+				'Library is empty. Background priming might be active. Waiting 15s before reload...'
+			);
 			await page.waitForTimeout(15000);
 			await page.reload({ waitUntil: 'commit' });
 			continue;
@@ -50,7 +52,9 @@ test('smoke test: homepage loads and navigation to playback works', async ({ pag
 	if (!foundContent) {
 		// Final check
 		if (await stayTuned.isVisible()) {
-			throw new Error('Smoke test failed: Library remains empty after multiple reloads. Priming might be failing or taking too long.');
+			throw new Error(
+				'Smoke test failed: Library remains empty after multiple reloads. Priming might be failing or taking too long.'
+			);
 		}
 		await expect(heroPlayButton).toBeVisible({ timeout: 10000 });
 	}
@@ -74,7 +78,7 @@ test('smoke test: homepage loads and navigation to playback works', async ({ pag
 	// 6. Verify we are on the details page
 	const titleHeading = page.getByRole('heading', { name: movieTitle }).first();
 	const titleImage = page.getByAltText(movieTitle).first();
-	
+
 	await expect(titleHeading.or(titleImage).first()).toBeVisible({ timeout: 20000 });
 	console.log('Details page title verified.');
 

@@ -1,6 +1,12 @@
 import { writable, get } from 'svelte/store';
 
-export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'media-added' | 'movie-added';
+export type NotificationType =
+	| 'info'
+	| 'success'
+	| 'warning'
+	| 'error'
+	| 'media-added'
+	| 'movie-added';
 
 export interface Notification {
 	id: string;

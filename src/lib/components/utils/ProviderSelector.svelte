@@ -70,7 +70,7 @@
 	</Select>
 
 	{#if hasRequestedPlayback}
-		<div class="flex items-center gap-1 ml-auto">
+		<div class="ml-auto flex items-center gap-1">
 			<Button
 				variant="outline"
 				size="icon"

@@ -20,23 +20,23 @@ const ensureDirectory = (dbPath: string) => {
 };
 
 async function main() {
-  try {
-    const url = resolveDatabasePath();
-    ensureDirectory(url);
+	try {
+		const url = resolveDatabasePath();
+		ensureDirectory(url);
 
-    const sqlite = createClient({
-        url
-    });
-    
-    const db = drizzle(sqlite);
+		const sqlite = createClient({
+			url
+		});
 
-    await migrate(db, { migrationsFolder: './drizzle/migrations' });
-    console.log('Migrations completed successfully.');
-    await sqlite.close();
-  } catch (error) {
-    console.error('Error running migrations:', error);
-    process.exit(1);
-  }
+		const db = drizzle(sqlite);
+
+		await migrate(db, { migrationsFolder: './drizzle/migrations' });
+		console.log('Migrations completed successfully.');
+		await sqlite.close();
+	} catch (error) {
+		console.error('Error running migrations:', error);
+		process.exit(1);
+	}
 }
 
 main();

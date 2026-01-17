@@ -1,8 +1,13 @@
 import { db } from '$lib/server/db';
-import { media, genres, mediaGenres, people, mediaPeople } from '$lib/server/db/schema';
-import { sql, eq, and, gte, lte, desc, asc, inArray, like } from 'drizzle-orm';
+import { sql, SQL } from 'drizzle-orm';
 import { mapRowsToSummaries } from '$lib/server/db/movie-select';
-import { withCache, buildCacheKey, CACHE_TTL_SEARCH_SECONDS, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '$lib/server/cache';
+import {
+	withCache,
+	buildCacheKey,
+	CACHE_TTL_SEARCH_SECONDS,
+	CACHE_TTL_LONG_SECONDS,
+	CACHE_TTL_MEDIUM_SECONDS
+} from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
 import type { MediaSummary, MediaRow } from '$lib/server/db';
 
@@ -24,6 +29,19 @@ interface SearchOptions {
 	includeAdult?: boolean;
 }
 
+type SanitizedSearchOptions = Omit<
+	SearchOptions,
+	'limit' | 'offset' | 'sortBy' | 'sortOrder' | 'genres' | 'includeAdult' | 'query'
+> & {
+	limit: number;
+	offset: number;
+	sortBy: SearchOptions['sortBy'];
+	sortOrder: SearchOptions['sortOrder'];
+	genres: string[];
+	includeAdult: boolean;
+	query: string;
+};
+
 interface SearchResult {
 	results: MediaSummary[];
 	total: number;
@@ -41,7 +59,267 @@ interface AutocompleteResult {
 
 const DEFAULT_LIMIT = 20;
 const AUTOCOMPLETE_LIMIT = 10;
+const MAX_LIMIT = 100;
+const SORT_BY_LOOKUP: Record<string, SearchOptions['sortBy']> = {
+	relevance: 'relevance',
+	rating: 'rating',
+	releasedate: 'releaseDate',
+	title: 'title'
+};
+const SORT_ORDER_VALUES: SearchOptions['sortOrder'][] = ['asc', 'desc'];
+const MEDIA_TYPE_LOOKUP: Record<string, SearchOptions['mediaType']> = {
+	movie: 'movie',
+	tv: 'tv',
+	anime: 'anime'
+};
 
+function sanitizeGenres(genres?: SearchOptions['genres']): string[] {
+	if (!Array.isArray(genres) || genres.length === 0) {
+		return [];
+	}
+
+	const unique: string[] = [];
+	const seen = new Set<string>();
+
+	for (const raw of genres) {
+		const trimmed = `${raw ?? ''}`.trim();
+		if (!trimmed || seen.has(trimmed)) continue;
+		seen.add(trimmed);
+		unique.push(trimmed);
+		if (unique.length >= 25) break;
+	}
+
+	return unique;
+}
+
+function sanitizeLimit(value?: number): number {
+	if (!Number.isFinite(value ?? NaN)) {
+		return DEFAULT_LIMIT;
+	}
+
+	return Math.min(MAX_LIMIT, Math.max(1, Math.floor(value!)));
+}
+
+function sanitizeOffset(value?: number): number {
+	if (!Number.isFinite(value ?? NaN)) {
+		return 0;
+	}
+
+	return Math.max(0, Math.floor(value!));
+}
+
+function sanitizeSortBy(value?: string): SearchOptions['sortBy'] {
+	if (!value) {
+		return 'relevance';
+	}
+
+	const normalized = value.trim().toLowerCase();
+	return SORT_BY_LOOKUP[normalized] ?? 'relevance';
+}
+
+function sanitizeSortOrder(value?: string): SearchOptions['sortOrder'] {
+	const normalized = (value ?? '').trim().toLowerCase();
+	return SORT_ORDER_VALUES.includes(normalized as SearchOptions['sortOrder'])
+		? (normalized as SearchOptions['sortOrder'])
+		: 'desc';
+}
+
+function sanitizeMediaType(value?: string): SearchOptions['mediaType'] | undefined {
+	if (!value) {
+		return undefined;
+	}
+
+	const normalized = value.trim().toLowerCase();
+	return MEDIA_TYPE_LOOKUP[normalized] ?? undefined;
+}
+
+function sanitizeLanguage(value?: string): string | undefined {
+	if (!value) {
+		return undefined;
+	}
+
+	const trimmed = value.trim();
+	return trimmed ? trimmed : undefined;
+}
+
+function sanitizeIncludeAdult(value?: boolean): boolean {
+	return Boolean(value);
+}
+
+function sanitizeQuery(value?: string): string {
+	if (!value) {
+		return '';
+	}
+
+	return value.trim();
+}
+
+function sanitizeSearchOptions(options: SearchOptions): SanitizedSearchOptions {
+	const sanitized: SanitizedSearchOptions = {
+		...options,
+		genres: sanitizeGenres(options.genres),
+		limit: sanitizeLimit(options.limit),
+		offset: sanitizeOffset(options.offset),
+		sortBy: sanitizeSortBy(options.sortBy),
+		sortOrder: sanitizeSortOrder(options.sortOrder),
+		mediaType: sanitizeMediaType(options.mediaType),
+		language: sanitizeLanguage(options.language),
+		includeAdult: sanitizeIncludeAdult(options.includeAdult),
+		query: sanitizeQuery(options.query)
+	};
+
+	return sanitized;
+}
+
+interface SearchFilterResult {
+	whereClause: SQL;
+	clauseForFts: SQL;
+	filterKey: string;
+	ftsQuery: string | null;
+	hasFilters: boolean;
+}
+
+function normalizeGenreTokens(genres: string[] = []): { ids: number[]; names: string[] } {
+	const idSet = new Set<number>();
+	const nameSet = new Set<string>();
+
+	for (const raw of genres) {
+		const trimmed = `${raw ?? ''}`.trim();
+		if (!trimmed) continue;
+
+		const parsedNumber = Number(trimmed);
+		if (Number.isFinite(parsedNumber)) {
+			idSet.add(Math.floor(Math.abs(parsedNumber)));
+		} else {
+			nameSet.add(trimmed);
+		}
+	}
+
+	return {
+		ids: [...idSet],
+		names: [...nameSet]
+	};
+}
+
+function buildSearchFilters(options: SearchOptions): SearchFilterResult {
+	const {
+		query = '',
+		genres = [],
+		minRating,
+		maxRating,
+		minYear,
+		maxYear,
+		runtimeMin,
+		runtimeMax,
+		language,
+		mediaType,
+		includeAdult = false
+	} = options;
+
+	const normalizedQuery = query ?? '';
+	const genreTokens = normalizeGenreTokens(genres);
+	const clauses: SQL[] = [];
+	const keyParts: string[] = [];
+
+	const pushKey = (label: string, value: unknown) => {
+		if (value === undefined || value === null || value === '') return;
+		keyParts.push(`${label}:${value}`);
+	};
+
+	pushKey('q', normalizedQuery);
+
+	if (genreTokens.ids.length > 0) {
+		pushKey('genreIds', genreTokens.ids.join(','));
+	} else if (!genreTokens.names.length) {
+		keyParts.push('genre:none');
+	}
+
+	if (genreTokens.names.length > 0) {
+		pushKey('genreNames', genreTokens.names.join(','));
+	}
+
+	if (Number.isFinite(minRating ?? NaN)) {
+		clauses.push(sql`m.rating >= ${minRating}`);
+		pushKey('minRating', minRating);
+	}
+
+	if (Number.isFinite(maxRating ?? NaN)) {
+		clauses.push(sql`m.rating <= ${maxRating}`);
+		pushKey('maxRating', maxRating);
+	}
+
+	if (Number.isFinite(minYear ?? NaN)) {
+		const sanitized = Math.floor(minYear as number);
+		clauses.push(sql`strftime('%Y', m.releaseDate) >= ${String(sanitized)}`);
+		pushKey('minYear', sanitized);
+	}
+
+	if (Number.isFinite(maxYear ?? NaN)) {
+		const sanitized = Math.floor(maxYear as number);
+		clauses.push(sql`strftime('%Y', m.releaseDate) <= ${String(sanitized)}`);
+		pushKey('maxYear', sanitized);
+	}
+
+	if (Number.isFinite(runtimeMin ?? NaN)) {
+		clauses.push(sql`m.durationMinutes >= ${runtimeMin}`);
+		pushKey('runtimeMin', runtimeMin);
+	}
+
+	if (Number.isFinite(runtimeMax ?? NaN)) {
+		clauses.push(sql`m.durationMinutes <= ${runtimeMax}`);
+		pushKey('runtimeMax', runtimeMax);
+	}
+
+	if (language?.trim()) {
+		const sanitized = language.trim();
+		clauses.push(sql`m.language = ${sanitized}`);
+		pushKey('language', sanitized);
+	}
+
+	if (mediaType) {
+		clauses.push(sql`m.mediaType = ${mediaType}`);
+		pushKey('mediaType', mediaType);
+	}
+
+	pushKey('includeAdult', includeAdult);
+	if (!includeAdult) {
+		clauses.push(sql`m.is4K = 0`);
+	}
+
+	if (genreTokens.ids.length > 0 || genreTokens.names.length > 0) {
+		const genreConditions: SQL[] = [];
+		for (const id of genreTokens.ids) {
+			genreConditions.push(sql`mg.genreId = ${id}`);
+		}
+		for (const name of genreTokens.names) {
+			genreConditions.push(sql`g.name = ${name}`);
+		}
+
+		if (genreConditions.length > 0) {
+			clauses.push(
+				sql`
+					m.id IN (
+						SELECT mg.mediaId
+						FROM media_genres mg
+						JOIN genres g ON g.id = mg.genreId
+						WHERE ${sql.join(genreConditions, sql` OR `)}
+					)
+				`
+			);
+		}
+	}
+
+	const combinedConditions = clauses.length > 0 ? sql`${sql.join(clauses, sql` AND `)}` : null;
+	const whereClause = combinedConditions ? sql`WHERE ${combinedConditions}` : sql``;
+
+	return {
+		whereClause,
+		clauseForFts: combinedConditions ?? sql``,
+		filterKey: keyParts.filter(Boolean).join('|'),
+		ftsQuery: normalizedQuery ? createFuzzySearchQuery(normalizedQuery) : null,
+		hasFilters: clauses.length > 0
+	};
+}
 function normalizeQuery(query: string): string {
 	return query.trim().toLowerCase();
 }
@@ -60,18 +338,17 @@ function createAutocompleteQuery(term: string): string {
 }
 
 async function getGenreFacets(
-	whereClause: string
+	filters: SearchFilterResult
 ): Promise<{ id: number; name: string; count: number }[]> {
-	const cacheKey = buildCacheKey('search', 'facets', 'genres', whereClause);
+	const cacheKey = buildCacheKey('search', 'facets', 'genres', filters.filterKey);
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
-			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
 			const results = await db.all(sql`
 				SELECT g.id, g.name, COUNT(DISTINCT m.id) as count
 				FROM genres g
 				JOIN media_genres mg ON g.id = mg.genreId
 				JOIN media m ON mg.mediaId = m.id
-				${sql.raw(baseWhere)}
+				${filters.whereClause}
 				GROUP BY g.id, g.name
 				HAVING count > 0
 				ORDER BY count DESC, g.name ASC
@@ -91,16 +368,16 @@ async function getGenreFacets(
 }
 
 async function getYearFacets(
-	whereClause: string
+	filters: SearchFilterResult
 ): Promise<{ year: number; count: number }[]> {
-	const cacheKey = buildCacheKey('search', 'facets', 'years', whereClause);
+	const cacheKey = buildCacheKey('search', 'facets', 'years', filters.filterKey);
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
-			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
+			const baseWhere = filters.hasFilters ? filters.whereClause : sql`WHERE 1=1`;
 			const results = await db.all(sql`
 				SELECT strftime('%Y', m.releaseDate) as year, COUNT(*) as count
 				FROM media m
-				${sql.raw(baseWhere)} AND m.releaseDate IS NOT NULL
+				${baseWhere} AND m.releaseDate IS NOT NULL
 				GROUP BY year
 				ORDER BY year DESC
 				LIMIT 15
@@ -119,11 +396,13 @@ async function getYearFacets(
 	});
 }
 
-async function getRatingFacets(whereClause: string): Promise<{ rating: number; count: number }[]> {
-	const cacheKey = buildCacheKey('search', 'facets', 'ratings', whereClause);
+async function getRatingFacets(
+	filters: SearchFilterResult
+): Promise<{ rating: number; count: number }[]> {
+	const cacheKey = buildCacheKey('search', 'facets', 'ratings', filters.filterKey);
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
-			const baseWhere = whereClause ? whereClause : 'WHERE 1=1';
+			const baseWhere = filters.hasFilters ? filters.whereClause : sql`WHERE 1=1`;
 			const results = await db.all(sql`
 				SELECT
 					CASE
@@ -135,7 +414,7 @@ async function getRatingFacets(whereClause: string): Promise<{ rating: number; c
 					END as rating_range,
 					COUNT(*) as count
 				FROM media m
-				${sql.raw(baseWhere)} AND m.rating IS NOT NULL
+				${baseWhere} AND m.rating IS NOT NULL
 				GROUP BY rating_range
 				ORDER BY rating_range DESC
 			`);
@@ -209,65 +488,60 @@ async function getAutocompletePeople(
 }
 
 export async function enhancedSearch(options: SearchOptions): Promise<SearchResult> {
-	const {
-		query = '',
-		limit = DEFAULT_LIMIT,
-		offset = 0,
-		genres = [],
-		minRating,
-		maxRating,
-		minYear,
-		maxYear,
-		runtimeMin,
-		runtimeMax,
-		language,
-		mediaType,
-		sortBy = 'relevance',
-		sortOrder = 'desc',
-		includeAdult = false
-	} = options;
+	const sanitizedOptions = sanitizeSearchOptions(options);
+	const normalizedQuery = normalizeQuery(sanitizedOptions.query ?? '');
+	const searchOptions = {
+		...sanitizedOptions,
+		query: normalizedQuery
+	};
 
-	const normalizedQuery = normalizeQuery(query);
+	const filters = buildSearchFilters(searchOptions);
+	const facetFilters = buildSearchFilters({
+		...searchOptions,
+		genres: [],
+		mediaType: undefined
+	});
+
 	const cacheKey = buildCacheKey(
 		'enhanced-search',
 		normalizedQuery,
-		limit,
-		offset,
-		genres.join(','),
-		minRating,
-		maxRating,
-		minYear,
-		maxYear,
-		runtimeMin,
-		runtimeMax,
-		language,
-		mediaType,
-		sortBy,
-		sortOrder,
-		includeAdult
+		filters.filterKey,
+		searchOptions.limit,
+		searchOptions.offset,
+		searchOptions.minRating,
+		searchOptions.maxRating,
+		searchOptions.minYear,
+		searchOptions.maxYear,
+		searchOptions.runtimeMin,
+		searchOptions.runtimeMax,
+		searchOptions.language,
+		searchOptions.mediaType,
+		searchOptions.sortBy,
+		searchOptions.sortOrder,
+		searchOptions.includeAdult
 	);
 
 	return withCache(cacheKey, CACHE_TTL_SEARCH_SECONDS, async () => {
 		try {
-			const { whereClause, ftsQuery } = buildSearchWhereClauses(options);
-			const facetWhere = buildSearchWhereClauses({ ...options, genres: [], mediaType: undefined }).whereClause;
-
 			const [results, total] = await Promise.all([
-				performSearchQuery({
-					...options,
-					query: normalizedQuery,
-					offset
-				}),
-				getTotalCount({
-					...options,
-					query: normalizedQuery
-				})
+				performSearchQuery(
+					{
+						...searchOptions,
+						query: normalizedQuery,
+						limit: searchOptions.limit,
+						offset: searchOptions.offset,
+						sortBy: searchOptions.sortBy,
+						sortOrder: searchOptions.sortOrder
+					},
+					filters
+				),
+				getTotalCount(searchOptions, filters)
 			]);
 
 			const [genreFacets, yearFacets, ratingFacets, suggestions] = await Promise.all([
-				getGenreFacets(facetWhere),
-				getYearFacets(facetWhere),
-				getRatingFacets(facetWhere),
+				getGenreFacets(facetFilters),
+				getYearFacets(facetFilters),
+				getRatingFacets(facetFilters),
 				normalizedQuery.length >= 2 ? getSearchSuggestions(normalizedQuery) : Promise.resolve([])
 			]);
 
@@ -286,98 +560,36 @@ export async function enhancedSearch(options: SearchOptions): Promise<SearchResu
 	});
 }
 
-function buildSearchWhereClauses(options: SearchOptions) {
+async function performSearchQuery(
+	options: Omit<SearchOptions, 'offset'> & {
+		offset: number;
+		limit?: number;
+		sortBy?: 'relevance' | 'rating' | 'releaseDate' | 'title';
+		sortOrder?: 'asc' | 'desc';
+	},
+	filters: SearchFilterResult
+): Promise<MediaSummary[]> {
 	const {
-		query,
-		genres = [],
-		minRating,
-		maxRating,
-		minYear,
-		maxYear,
-		runtimeMin,
-		runtimeMax,
-		language,
-		mediaType,
-		includeAdult = false
+		limit = DEFAULT_LIMIT,
+		offset,
+		sortBy = 'relevance',
+		sortOrder = 'desc',
+		query
 	} = options;
 
-	const whereClauses: string[] = [];
-	const ftsQuery = query ? createFuzzySearchQuery(query) : null;
-
-	if (ftsQuery) {
-		whereClauses.push(`m.numericId IN (
-				SELECT rowid FROM movie_fts WHERE movie_fts MATCH ${JSON.stringify(ftsQuery)}
-			)`);
-	}
-
-	if (genres.length > 0) {
-		// Support both name strings and IDs for flexibility
-		const genreConditions = genres.map(g => isNaN(parseInt(g)) ? `g.name = ${JSON.stringify(g)}` : `mg.genreId = ${g}`);
-		whereClauses.push(`m.id IN (
-				SELECT mediaId FROM media_genres mg JOIN genres g ON g.id = mg.genreId WHERE ${genreConditions.join(' OR ')}
-			)`);
-	}
-
-	if (minRating !== undefined) {
-		whereClauses.push(`m.rating >= ${minRating}`);
-	}
-
-	if (maxRating !== undefined) {
-		whereClauses.push(`m.rating <= ${maxRating}`);
-	}
-
-	if (minYear !== undefined) {
-		whereClauses.push(`strftime("%Y", m.releaseDate) >= ${JSON.stringify(minYear.toString())}`);
-	}
-
-	if (maxYear !== undefined) {
-		whereClauses.push(`strftime("%Y", m.releaseDate) <= ${JSON.stringify(maxYear.toString())}`);
-	}
-
-	if (runtimeMin !== undefined) {
-		whereClauses.push(`m.durationMinutes >= ${runtimeMin}`);
-	}
-
-	if (runtimeMax !== undefined) {
-		whereClauses.push(`m.durationMinutes <= ${runtimeMax}`);
-	}
-
-	if (language) {
-		whereClauses.push(`m.language = ${JSON.stringify(language)}`);
-	}
-
-	if (mediaType) {
-		whereClauses.push(`m.mediaType = ${JSON.stringify(mediaType)}`);
-	}
-
-	if (!includeAdult) {
-		whereClauses.push('m.is4K = 0');
-	}
-
-	return {
-		whereClause: whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '',
-		ftsQuery
-	};
-}
-
-async function performSearchQuery(
-	options: Omit<SearchOptions, 'offset'> & { offset: number }
-): Promise<MediaSummary[]> {
-	const { limit, offset, sortBy, sortOrder, query } = options;
+	const sortDirection = sortOrder === 'asc' ? 'ASC' : 'DESC';
 
 	try {
-		const { whereClause, ftsQuery } = buildSearchWhereClauses(options);
-
 		let orderByClause = '';
 		switch (sortBy) {
 			case 'rating':
-				orderByClause = 'ORDER BY (m.rating IS NULL) ASC, m.rating ' + sortOrder;
+				orderByClause = 'ORDER BY (m.rating IS NULL) ASC, m.rating ' + sortDirection;
 				break;
 			case 'releaseDate':
-				orderByClause = 'ORDER BY (m.releaseDate IS NULL) ASC, m.releaseDate ' + sortOrder;
+				orderByClause = 'ORDER BY (m.releaseDate IS NULL) ASC, m.releaseDate ' + sortDirection;
 				break;
 			case 'title':
-				orderByClause = 'ORDER BY m.title COLLATE NOCASE ' + sortOrder;
+				orderByClause = 'ORDER BY m.title COLLATE NOCASE ' + sortDirection;
 				break;
 			case 'relevance':
 			default:
@@ -396,25 +608,30 @@ async function performSearchQuery(
 			orderByClause += ', m.title COLLATE NOCASE ASC';
 		}
 
-		let searchSql;
-		if (query && ftsQuery) {
-			searchSql = sql`
+		const hasFts = Boolean(query && filters.ftsQuery);
+		const ftsOrderClause = orderByClause
+			.replace(/m\./g, '')
+			.replace('ORDER BY', 'ORDER BY mf.rank,');
+
+		const ftsJoinClause = filters.hasFilters ? sql`AND ${filters.clauseForFts}` : sql``;
+
+		const searchSql = hasFts
+			? sql`
 					SELECT m.*
 					FROM movie_fts mf
-					JOIN media m ON m.numericId = mf.rowid AND ${sql.raw(whereClause.replace('m.', ''))}
-					WHERE mf MATCH ${ftsQuery}
-					${sql.raw(orderByClause.replace('m.', '').replace('ORDER BY', 'ORDER BY mf.rank,'))}
+					JOIN media m ON m.numericId = mf.rowid
+					${ftsJoinClause}
+					WHERE mf MATCH ${filters.ftsQuery}
+					${sql.raw(ftsOrderClause)}
 					LIMIT ${limit} OFFSET ${offset}
-				`;
-		} else {
-			searchSql = sql`
+				`
+			: sql`
 					SELECT m.*
 					FROM media m
-					${sql.raw(whereClause)}
+					${filters.whereClause}
 					${sql.raw(orderByClause)}
 					LIMIT ${limit} OFFSET ${offset}
 				`;
-		}
 
 		const rows = (await db.all(searchSql)) as any[];
 		return await mapRowsToSummaries(rows);
@@ -425,15 +642,14 @@ async function performSearchQuery(
 }
 
 async function getTotalCount(
-	options: Omit<SearchOptions, 'limit' | 'offset' | 'sortBy' | 'sortOrder'>
+	options: Omit<SearchOptions, 'limit' | 'offset' | 'sortBy' | 'sortOrder'>,
+	filters: SearchFilterResult
 ): Promise<number> {
 	try {
-		const { whereClause } = buildSearchWhereClauses(options);
-
 		const countSql = sql`
 			SELECT COUNT(*) as count
 			FROM media m
-			${sql.raw(whereClause)}
+			${filters.whereClause}
 		`;
 
 		const result = (await db.all(countSql)) as any[];

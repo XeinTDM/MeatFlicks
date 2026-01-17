@@ -50,7 +50,7 @@
 			<Button
 				variant="outline"
 				size="sm"
-				class="bg-black/50 text-white border-white/20 hover:bg-destructive hover:text-white backdrop-blur-sm"
+				class="border-white/20 bg-black/50 text-white backdrop-blur-sm hover:bg-destructive hover:text-white"
 				onclick={handleReportBroken}
 				disabled={streamingService.state.isReporting}
 			>

@@ -1,2451 +1,2176 @@
 {
-  "version": "6",
-  "dialect": "sqlite",
-  "id": "a58ff1a3-1efb-4b37-83f7-84446ac47edd",
-  "prevId": "1bb77f42-96fe-460f-9ee9-fb903e6bd066",
-  "tables": {
-    "cache": {
-      "name": "cache",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "data": {
-          "name": "data",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "expiresAt": {
-          "name": "expiresAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_cache_expiresAt": {
-          "name": "idx_cache_expiresAt",
-          "columns": [
-            "expiresAt"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "collections": {
-      "name": "collections",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "slug": {
-          "name": "slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "collections_name_unique": {
-          "name": "collections_name_unique",
-          "columns": [
-            "name"
-          ],
-          "isUnique": true
-        },
-        "collections_slug_unique": {
-          "name": "collections_slug_unique",
-          "columns": [
-            "slug"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "episode_watch_status": {
-      "name": "episode_watch_status",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "episode_id": {
-          "name": "episode_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "watched": {
-          "name": "watched",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "watch_time": {
-          "name": "watch_time",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "total_time": {
-          "name": "total_time",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_episode_watch_status_user_id": {
-          "name": "idx_episode_watch_status_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_episode_watch_status_episode_id": {
-          "name": "idx_episode_watch_status_episode_id",
-          "columns": [
-            "episode_id"
-          ],
-          "isUnique": false
-        },
-        "idx_episode_watch_status_watched": {
-          "name": "idx_episode_watch_status_watched",
-          "columns": [
-            "watched"
-          ],
-          "isUnique": false
-        },
-        "unq_episode_watch_status_user_episode": {
-          "name": "unq_episode_watch_status_user_episode",
-          "columns": [
-            "user_id",
-            "episode_id"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "episode_watch_status_user_id_users_id_fk": {
-          "name": "episode_watch_status_user_id_users_id_fk",
-          "tableFrom": "episode_watch_status",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "episode_watch_status_episode_id_episodes_id_fk": {
-          "name": "episode_watch_status_episode_id_episodes_id_fk",
-          "tableFrom": "episode_watch_status",
-          "tableTo": "episodes",
-          "columnsFrom": [
-            "episode_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "episodes": {
-      "name": "episodes",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "tv_show_id": {
-          "name": "tv_show_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "season_id": {
-          "name": "season_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "episode_number": {
-          "name": "episode_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "overview": {
-          "name": "overview",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "still_path": {
-          "name": "still_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "air_date": {
-          "name": "air_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "runtime_minutes": {
-          "name": "runtime_minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "tmdb_id": {
-          "name": "tmdb_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "imdb_id": {
-          "name": "imdb_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "guest_stars": {
-          "name": "guest_stars",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "crew": {
-          "name": "crew",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_episodes_tv_show_id": {
-          "name": "idx_episodes_tv_show_id",
-          "columns": [
-            "tv_show_id"
-          ],
-          "isUnique": false
-        },
-        "idx_episodes_season_id": {
-          "name": "idx_episodes_season_id",
-          "columns": [
-            "season_id"
-          ],
-          "isUnique": false
-        },
-        "idx_episodes_episode_number": {
-          "name": "idx_episodes_episode_number",
-          "columns": [
-            "episode_number"
-          ],
-          "isUnique": false
-        },
-        "idx_episodes_air_date": {
-          "name": "idx_episodes_air_date",
-          "columns": [
-            "air_date"
-          ],
-          "isUnique": false
-        },
-        "idx_episodes_tmdb_id": {
-          "name": "idx_episodes_tmdb_id",
-          "columns": [
-            "tmdb_id"
-          ],
-          "isUnique": false
-        },
-        "unq_episodes_show_season_number": {
-          "name": "unq_episodes_show_season_number",
-          "columns": [
-            "tv_show_id",
-            "season_id",
-            "episode_number"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "episodes_tv_show_id_tv_shows_id_fk": {
-          "name": "episodes_tv_show_id_tv_shows_id_fk",
-          "tableFrom": "episodes",
-          "tableTo": "tv_shows",
-          "columnsFrom": [
-            "tv_show_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "episodes_season_id_seasons_id_fk": {
-          "name": "episodes_season_id_seasons_id_fk",
-          "tableFrom": "episodes",
-          "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "genres": {
-      "name": "genres",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "genres_name_unique": {
-          "name": "genres_name_unique",
-          "columns": [
-            "name"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "movie_people": {
-      "name": "movie_people",
-      "columns": {
-        "movieId": {
-          "name": "movieId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "personId": {
-          "name": "personId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "character": {
-          "name": "character",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "job": {
-          "name": "job",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_movie_people_movie": {
-          "name": "idx_movie_people_movie",
-          "columns": [
-            "movieId"
-          ],
-          "isUnique": false
-        },
-        "idx_movie_people_person": {
-          "name": "idx_movie_people_person",
-          "columns": [
-            "personId"
-          ],
-          "isUnique": false
-        },
-        "idx_movie_people_role": {
-          "name": "idx_movie_people_role",
-          "columns": [
-            "role"
-          ],
-          "isUnique": false
-        },
-        "idx_movie_people_order": {
-          "name": "idx_movie_people_order",
-          "columns": [
-            "order"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "movie_people_movieId_movies_id_fk": {
-          "name": "movie_people_movieId_movies_id_fk",
-          "tableFrom": "movie_people",
-          "tableTo": "movies",
-          "columnsFrom": [
-            "movieId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "movie_people_personId_people_id_fk": {
-          "name": "movie_people_personId_people_id_fk",
-          "tableFrom": "movie_people",
-          "tableTo": "people",
-          "columnsFrom": [
-            "personId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "movie_people_movieId_personId_role_pk": {
-          "columns": [
-            "movieId",
-            "personId",
-            "role"
-          ],
-          "name": "movie_people_movieId_personId_role_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "movies": {
-      "name": "movies",
-      "columns": {
-        "numericId": {
-          "name": "numericId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "tmdbId": {
-          "name": "tmdbId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "overview": {
-          "name": "overview",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "posterPath": {
-          "name": "posterPath",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "backdropPath": {
-          "name": "backdropPath",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "releaseDate": {
-          "name": "releaseDate",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "rating": {
-          "name": "rating",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "durationMinutes": {
-          "name": "durationMinutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "is4K": {
-          "name": "is4K",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "isHD": {
-          "name": "isHD",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "language": {
-          "name": "language",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "popularity": {
-          "name": "popularity",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "collectionId": {
-          "name": "collectionId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "trailerUrl": {
-          "name": "trailerUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "imdbId": {
-          "name": "imdbId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "canonicalPath": {
-          "name": "canonicalPath",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "addedAt": {
-          "name": "addedAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "mediaType": {
-          "name": "mediaType",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'movie'"
-        },
-        "streamingProviders": {
-          "name": "streamingProviders",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "movies_id_unique": {
-          "name": "movies_id_unique",
-          "columns": [
-            "id"
-          ],
-          "isUnique": true
-        },
-        "movies_tmdbId_unique": {
-          "name": "movies_tmdbId_unique",
-          "columns": [
-            "tmdbId"
-          ],
-          "isUnique": true
-        },
-        "idx_movies_tmdbId": {
-          "name": "idx_movies_tmdbId",
-          "columns": [
-            "tmdbId"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_collectionId": {
-          "name": "idx_movies_collectionId",
-          "columns": [
-            "collectionId"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_rating": {
-          "name": "idx_movies_rating",
-          "columns": [
-            "rating"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_language": {
-          "name": "idx_movies_language",
-          "columns": [
-            "language"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_popularity": {
-          "name": "idx_movies_popularity",
-          "columns": [
-            "popularity"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_releaseDate": {
-          "name": "idx_movies_releaseDate",
-          "columns": [
-            "releaseDate"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_durationMinutes": {
-          "name": "idx_movies_durationMinutes",
-          "columns": [
-            "durationMinutes"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_mediaType": {
-          "name": "idx_movies_mediaType",
-          "columns": [
-            "mediaType"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_addedAt": {
-          "name": "idx_movies_addedAt",
-          "columns": [
-            "addedAt"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_imdbId": {
-          "name": "idx_movies_imdbId",
-          "columns": [
-            "imdbId"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_trailerUrl": {
-          "name": "idx_movies_trailerUrl",
-          "columns": [
-            "trailerUrl"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_common_sort": {
-          "name": "idx_movies_common_sort",
-          "columns": [
-            "rating",
-            "releaseDate",
-            "title"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "movies_collectionId_collections_id_fk": {
-          "name": "movies_collectionId_collections_id_fk",
-          "tableFrom": "movies",
-          "tableTo": "collections",
-          "columnsFrom": [
-            "collectionId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "movies_genres": {
-      "name": "movies_genres",
-      "columns": {
-        "movieId": {
-          "name": "movieId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "genreId": {
-          "name": "genreId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_movies_genres_movie": {
-          "name": "idx_movies_genres_movie",
-          "columns": [
-            "movieId"
-          ],
-          "isUnique": false
-        },
-        "idx_movies_genres_genre": {
-          "name": "idx_movies_genres_genre",
-          "columns": [
-            "genreId"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "movies_genres_movieId_movies_id_fk": {
-          "name": "movies_genres_movieId_movies_id_fk",
-          "tableFrom": "movies_genres",
-          "tableTo": "movies",
-          "columnsFrom": [
-            "movieId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "movies_genres_genreId_genres_id_fk": {
-          "name": "movies_genres_genreId_genres_id_fk",
-          "tableFrom": "movies_genres",
-          "tableTo": "genres",
-          "columnsFrom": [
-            "genreId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "movies_genres_movieId_genreId_pk": {
-          "columns": [
-            "movieId",
-            "genreId"
-          ],
-          "name": "movies_genres_movieId_genreId_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "people": {
-      "name": "people",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "tmdbId": {
-          "name": "tmdbId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "biography": {
-          "name": "biography",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "birthday": {
-          "name": "birthday",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "deathday": {
-          "name": "deathday",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "placeOfBirth": {
-          "name": "placeOfBirth",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "profilePath": {
-          "name": "profilePath",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "popularity": {
-          "name": "popularity",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "knownForDepartment": {
-          "name": "knownForDepartment",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "people_tmdbId_unique": {
-          "name": "people_tmdbId_unique",
-          "columns": [
-            "tmdbId"
-          ],
-          "isUnique": true
-        },
-        "idx_people_tmdbId": {
-          "name": "idx_people_tmdbId",
-          "columns": [
-            "tmdbId"
-          ],
-          "isUnique": false
-        },
-        "idx_people_name": {
-          "name": "idx_people_name",
-          "columns": [
-            "name"
-          ],
-          "isUnique": false
-        },
-        "idx_people_popularity": {
-          "name": "idx_people_popularity",
-          "columns": [
-            "popularity"
-          ],
-          "isUnique": false
-        },
-        "idx_people_knownForDepartment": {
-          "name": "idx_people_knownForDepartment",
-          "columns": [
-            "knownForDepartment"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "playback_progress": {
-      "name": "playback_progress",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "media_id": {
-          "name": "media_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "media_type": {
-          "name": "media_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "progress": {
-          "name": "progress",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "duration": {
-          "name": "duration",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "season_number": {
-          "name": "season_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "episode_number": {
-          "name": "episode_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_playback_progress_user": {
-          "name": "idx_playback_progress_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_playback_progress_media": {
-          "name": "idx_playback_progress_media",
-          "columns": [
-            "media_id"
-          ],
-          "isUnique": false
-        },
-        "idx_playback_progress_updated": {
-          "name": "idx_playback_progress_updated",
-          "columns": [
-            "updated_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "playback_progress_user_id_users_id_fk": {
-          "name": "playback_progress_user_id_users_id_fk",
-          "tableFrom": "playback_progress",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "schema_info": {
-      "name": "schema_info",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "value": {
-          "name": "value",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "search_history": {
-      "name": "search_history",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "query": {
-          "name": "query",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "filters": {
-          "name": "filters",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "searched_at": {
-          "name": "searched_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_search_history_user": {
-          "name": "idx_search_history_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_search_history_searched_at": {
-          "name": "idx_search_history_searched_at",
-          "columns": [
-            "searched_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "search_history_user_id_users_id_fk": {
-          "name": "search_history_user_id_users_id_fk",
-          "tableFrom": "search_history",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "season_watch_status": {
-      "name": "season_watch_status",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "season_id": {
-          "name": "season_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "episodes_watched": {
-          "name": "episodes_watched",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "total_episodes": {
-          "name": "total_episodes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_season_watch_status_user_id": {
-          "name": "idx_season_watch_status_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_season_watch_status_season_id": {
-          "name": "idx_season_watch_status_season_id",
-          "columns": [
-            "season_id"
-          ],
-          "isUnique": false
-        },
-        "unq_season_watch_status_user_season": {
-          "name": "unq_season_watch_status_user_season",
-          "columns": [
-            "user_id",
-            "season_id"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "season_watch_status_user_id_users_id_fk": {
-          "name": "season_watch_status_user_id_users_id_fk",
-          "tableFrom": "season_watch_status",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "season_watch_status_season_id_seasons_id_fk": {
-          "name": "season_watch_status_season_id_seasons_id_fk",
-          "tableFrom": "season_watch_status",
-          "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "seasons": {
-      "name": "seasons",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "tv_show_id": {
-          "name": "tv_show_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "season_number": {
-          "name": "season_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "overview": {
-          "name": "overview",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "poster_path": {
-          "name": "poster_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "air_date": {
-          "name": "air_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "episode_count": {
-          "name": "episode_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_seasons_tv_show_id": {
-          "name": "idx_seasons_tv_show_id",
-          "columns": [
-            "tv_show_id"
-          ],
-          "isUnique": false
-        },
-        "idx_seasons_season_number": {
-          "name": "idx_seasons_season_number",
-          "columns": [
-            "season_number"
-          ],
-          "isUnique": false
-        },
-        "idx_seasons_air_date": {
-          "name": "idx_seasons_air_date",
-          "columns": [
-            "air_date"
-          ],
-          "isUnique": false
-        },
-        "unq_seasons_show_number": {
-          "name": "unq_seasons_show_number",
-          "columns": [
-            "tv_show_id",
-            "season_number"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "seasons_tv_show_id_tv_shows_id_fk": {
-          "name": "seasons_tv_show_id_tv_shows_id_fk",
-          "tableFrom": "seasons",
-          "tableTo": "tv_shows",
-          "columnsFrom": [
-            "tv_show_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "sessions": {
-      "name": "sessions",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "sessions_user_id_users_id_fk": {
-          "name": "sessions_user_id_users_id_fk",
-          "tableFrom": "sessions",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "tv_show_watch_status": {
-      "name": "tv_show_watch_status",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "tv_show_id": {
-          "name": "tv_show_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'watching'"
-        },
-        "seasons_completed": {
-          "name": "seasons_completed",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "total_seasons": {
-          "name": "total_seasons",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "episodes_watched": {
-          "name": "episodes_watched",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "total_episodes": {
-          "name": "total_episodes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "rating": {
-          "name": "rating",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_tv_show_watch_status_user_id": {
-          "name": "idx_tv_show_watch_status_user_id",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_tv_show_watch_status_tv_show_id": {
-          "name": "idx_tv_show_watch_status_tv_show_id",
-          "columns": [
-            "tv_show_id"
-          ],
-          "isUnique": false
-        },
-        "idx_tv_show_watch_status_status": {
-          "name": "idx_tv_show_watch_status_status",
-          "columns": [
-            "status"
-          ],
-          "isUnique": false
-        },
-        "unq_tv_show_watch_status_user_show": {
-          "name": "unq_tv_show_watch_status_user_show",
-          "columns": [
-            "user_id",
-            "tv_show_id"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "tv_show_watch_status_user_id_users_id_fk": {
-          "name": "tv_show_watch_status_user_id_users_id_fk",
-          "tableFrom": "tv_show_watch_status",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "tv_show_watch_status_tv_show_id_tv_shows_id_fk": {
-          "name": "tv_show_watch_status_tv_show_id_tv_shows_id_fk",
-          "tableFrom": "tv_show_watch_status",
-          "tableTo": "tv_shows",
-          "columnsFrom": [
-            "tv_show_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "tv_shows": {
-      "name": "tv_shows",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "tmdb_id": {
-          "name": "tmdb_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "imdb_id": {
-          "name": "imdb_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "overview": {
-          "name": "overview",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "poster_path": {
-          "name": "poster_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "backdrop_path": {
-          "name": "backdrop_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "first_air_date": {
-          "name": "first_air_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "rating": {
-          "name": "rating",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "episode_run_time": {
-          "name": "episode_run_time",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "number_of_seasons": {
-          "name": "number_of_seasons",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "number_of_episodes": {
-          "name": "number_of_episodes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "production_companies": {
-          "name": "production_companies",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "streamingProviders": {
-          "name": "streamingProviders",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "tv_shows_tmdb_id_unique": {
-          "name": "tv_shows_tmdb_id_unique",
-          "columns": [
-            "tmdb_id"
-          ],
-          "isUnique": true
-        },
-        "idx_tv_shows_tmdb_id": {
-          "name": "idx_tv_shows_tmdb_id",
-          "columns": [
-            "tmdb_id"
-          ],
-          "isUnique": false
-        },
-        "idx_tv_shows_imdb_id": {
-          "name": "idx_tv_shows_imdb_id",
-          "columns": [
-            "imdb_id"
-          ],
-          "isUnique": false
-        },
-        "idx_tv_shows_title": {
-          "name": "idx_tv_shows_title",
-          "columns": [
-            "title"
-          ],
-          "isUnique": false
-        },
-        "idx_tv_shows_first_air_date": {
-          "name": "idx_tv_shows_first_air_date",
-          "columns": [
-            "first_air_date"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "tv_shows_genres": {
-      "name": "tv_shows_genres",
-      "columns": {
-        "tv_show_id": {
-          "name": "tv_show_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "genre_id": {
-          "name": "genre_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_tv_shows_genres_tv_show": {
-          "name": "idx_tv_shows_genres_tv_show",
-          "columns": [
-            "tv_show_id"
-          ],
-          "isUnique": false
-        },
-        "idx_tv_shows_genres_genre": {
-          "name": "idx_tv_shows_genres_genre",
-          "columns": [
-            "genre_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "tv_shows_genres_tv_show_id_tv_shows_id_fk": {
-          "name": "tv_shows_genres_tv_show_id_tv_shows_id_fk",
-          "tableFrom": "tv_shows_genres",
-          "tableTo": "tv_shows",
-          "columnsFrom": [
-            "tv_show_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "tv_shows_genres_genre_id_genres_id_fk": {
-          "name": "tv_shows_genres_genre_id_genres_id_fk",
-          "tableFrom": "tv_shows_genres",
-          "tableTo": "genres",
-          "columnsFrom": [
-            "genre_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "tv_shows_genres_tv_show_id_genre_id_pk": {
-          "columns": [
-            "tv_show_id",
-            "genre_id"
-          ],
-          "name": "tv_shows_genres_tv_show_id_genre_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "users": {
-      "name": "users",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "username": {
-          "name": "username",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'USER'"
-        }
-      },
-      "indexes": {
-        "users_username_unique": {
-          "name": "users_username_unique",
-          "columns": [
-            "username"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "watch_history": {
-      "name": "watch_history",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "movie_id": {
-          "name": "movie_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "movie_data": {
-          "name": "movie_data",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "watched_at": {
-          "name": "watched_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_history_user": {
-          "name": "idx_history_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_history_watchedAt": {
-          "name": "idx_history_watchedAt",
-          "columns": [
-            "watched_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "watch_history_user_id_users_id_fk": {
-          "name": "watch_history_user_id_users_id_fk",
-          "tableFrom": "watch_history",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "watchlist": {
-      "name": "watchlist",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "movie_id": {
-          "name": "movie_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "movie_data": {
-          "name": "movie_data",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "added_at": {
-          "name": "added_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "folder_id": {
-          "name": "folder_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_watchlist_user": {
-          "name": "idx_watchlist_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_watchlist_addedAt": {
-          "name": "idx_watchlist_addedAt",
-          "columns": [
-            "added_at"
-          ],
-          "isUnique": false
-        },
-        "idx_watchlist_folder": {
-          "name": "idx_watchlist_folder",
-          "columns": [
-            "folder_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "watchlist_user_id_users_id_fk": {
-          "name": "watchlist_user_id_users_id_fk",
-          "tableFrom": "watchlist",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "watchlist_folder_id_watchlist_folders_id_fk": {
-          "name": "watchlist_folder_id_watchlist_folders_id_fk",
-          "tableFrom": "watchlist",
-          "tableTo": "watchlist_folders",
-          "columnsFrom": [
-            "folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "watchlist_user_id_movie_id_pk": {
-          "columns": [
-            "user_id",
-            "movie_id"
-          ],
-          "name": "watchlist_user_id_movie_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "watchlist_folders": {
-      "name": "watchlist_folders",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "color": {
-          "name": "color",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_watchlist_folders_user": {
-          "name": "idx_watchlist_folders_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_watchlist_folders_name": {
-          "name": "idx_watchlist_folders_name",
-          "columns": [
-            "name"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "watchlist_folders_user_id_users_id_fk": {
-          "name": "watchlist_folders_user_id_users_id_fk",
-          "tableFrom": "watchlist_folders",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "watchlist_item_tags": {
-      "name": "watchlist_item_tags",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "movie_id": {
-          "name": "movie_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "tag_id": {
-          "name": "tag_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_watchlist_item_tags_user": {
-          "name": "idx_watchlist_item_tags_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_watchlist_item_tags_movie": {
-          "name": "idx_watchlist_item_tags_movie",
-          "columns": [
-            "movie_id"
-          ],
-          "isUnique": false
-        },
-        "idx_watchlist_item_tags_tag": {
-          "name": "idx_watchlist_item_tags_tag",
-          "columns": [
-            "tag_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "watchlist_item_tags_user_id_users_id_fk": {
-          "name": "watchlist_item_tags_user_id_users_id_fk",
-          "tableFrom": "watchlist_item_tags",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "watchlist_item_tags_user_id_movie_id_tag_id_pk": {
-          "columns": [
-            "user_id",
-            "movie_id",
-            "tag_id"
-          ],
-          "name": "watchlist_item_tags_user_id_movie_id_tag_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "watchlist_tags": {
-      "name": "watchlist_tags",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "color": {
-          "name": "color",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_watchlist_tags_user": {
-          "name": "idx_watchlist_tags_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "idx_watchlist_tags_name": {
-          "name": "idx_watchlist_tags_name",
-          "columns": [
-            "name"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "watchlist_tags_user_id_users_id_fk": {
-          "name": "watchlist_tags_user_id_users_id_fk",
-          "tableFrom": "watchlist_tags",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    }
-  },
-  "views": {},
-  "enums": {},
-  "_meta": {
-    "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "indexes": {}
-  }
+	"version": "6",
+	"dialect": "sqlite",
+	"id": "a58ff1a3-1efb-4b37-83f7-84446ac47edd",
+	"prevId": "1bb77f42-96fe-460f-9ee9-fb903e6bd066",
+	"tables": {
+		"cache": {
+			"name": "cache",
+			"columns": {
+				"key": {
+					"name": "key",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"data": {
+					"name": "data",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expiresAt": {
+					"name": "expiresAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_cache_expiresAt": {
+					"name": "idx_cache_expiresAt",
+					"columns": ["expiresAt"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"collections": {
+			"name": "collections",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"slug": {
+					"name": "slug",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"collections_name_unique": {
+					"name": "collections_name_unique",
+					"columns": ["name"],
+					"isUnique": true
+				},
+				"collections_slug_unique": {
+					"name": "collections_slug_unique",
+					"columns": ["slug"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"episode_watch_status": {
+			"name": "episode_watch_status",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"episode_id": {
+					"name": "episode_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"watched": {
+					"name": "watched",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"watch_time": {
+					"name": "watch_time",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"total_time": {
+					"name": "total_time",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"completed_at": {
+					"name": "completed_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_episode_watch_status_user_id": {
+					"name": "idx_episode_watch_status_user_id",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_episode_watch_status_episode_id": {
+					"name": "idx_episode_watch_status_episode_id",
+					"columns": ["episode_id"],
+					"isUnique": false
+				},
+				"idx_episode_watch_status_watched": {
+					"name": "idx_episode_watch_status_watched",
+					"columns": ["watched"],
+					"isUnique": false
+				},
+				"unq_episode_watch_status_user_episode": {
+					"name": "unq_episode_watch_status_user_episode",
+					"columns": ["user_id", "episode_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"episode_watch_status_user_id_users_id_fk": {
+					"name": "episode_watch_status_user_id_users_id_fk",
+					"tableFrom": "episode_watch_status",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"episode_watch_status_episode_id_episodes_id_fk": {
+					"name": "episode_watch_status_episode_id_episodes_id_fk",
+					"tableFrom": "episode_watch_status",
+					"tableTo": "episodes",
+					"columnsFrom": ["episode_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"episodes": {
+			"name": "episodes",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"tv_show_id": {
+					"name": "tv_show_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"season_id": {
+					"name": "season_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"episode_number": {
+					"name": "episode_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"overview": {
+					"name": "overview",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"still_path": {
+					"name": "still_path",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"air_date": {
+					"name": "air_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"runtime_minutes": {
+					"name": "runtime_minutes",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"tmdb_id": {
+					"name": "tmdb_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"imdb_id": {
+					"name": "imdb_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"guest_stars": {
+					"name": "guest_stars",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"crew": {
+					"name": "crew",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_episodes_tv_show_id": {
+					"name": "idx_episodes_tv_show_id",
+					"columns": ["tv_show_id"],
+					"isUnique": false
+				},
+				"idx_episodes_season_id": {
+					"name": "idx_episodes_season_id",
+					"columns": ["season_id"],
+					"isUnique": false
+				},
+				"idx_episodes_episode_number": {
+					"name": "idx_episodes_episode_number",
+					"columns": ["episode_number"],
+					"isUnique": false
+				},
+				"idx_episodes_air_date": {
+					"name": "idx_episodes_air_date",
+					"columns": ["air_date"],
+					"isUnique": false
+				},
+				"idx_episodes_tmdb_id": {
+					"name": "idx_episodes_tmdb_id",
+					"columns": ["tmdb_id"],
+					"isUnique": false
+				},
+				"unq_episodes_show_season_number": {
+					"name": "unq_episodes_show_season_number",
+					"columns": ["tv_show_id", "season_id", "episode_number"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"episodes_tv_show_id_tv_shows_id_fk": {
+					"name": "episodes_tv_show_id_tv_shows_id_fk",
+					"tableFrom": "episodes",
+					"tableTo": "tv_shows",
+					"columnsFrom": ["tv_show_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"episodes_season_id_seasons_id_fk": {
+					"name": "episodes_season_id_seasons_id_fk",
+					"tableFrom": "episodes",
+					"tableTo": "seasons",
+					"columnsFrom": ["season_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"genres": {
+			"name": "genres",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"genres_name_unique": {
+					"name": "genres_name_unique",
+					"columns": ["name"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"movie_people": {
+			"name": "movie_people",
+			"columns": {
+				"movieId": {
+					"name": "movieId",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"personId": {
+					"name": "personId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"role": {
+					"name": "role",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"character": {
+					"name": "character",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"job": {
+					"name": "job",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"order": {
+					"name": "order",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_movie_people_movie": {
+					"name": "idx_movie_people_movie",
+					"columns": ["movieId"],
+					"isUnique": false
+				},
+				"idx_movie_people_person": {
+					"name": "idx_movie_people_person",
+					"columns": ["personId"],
+					"isUnique": false
+				},
+				"idx_movie_people_role": {
+					"name": "idx_movie_people_role",
+					"columns": ["role"],
+					"isUnique": false
+				},
+				"idx_movie_people_order": {
+					"name": "idx_movie_people_order",
+					"columns": ["order"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"movie_people_movieId_movies_id_fk": {
+					"name": "movie_people_movieId_movies_id_fk",
+					"tableFrom": "movie_people",
+					"tableTo": "movies",
+					"columnsFrom": ["movieId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"movie_people_personId_people_id_fk": {
+					"name": "movie_people_personId_people_id_fk",
+					"tableFrom": "movie_people",
+					"tableTo": "people",
+					"columnsFrom": ["personId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"movie_people_movieId_personId_role_pk": {
+					"columns": ["movieId", "personId", "role"],
+					"name": "movie_people_movieId_personId_role_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"movies": {
+			"name": "movies",
+			"columns": {
+				"numericId": {
+					"name": "numericId",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tmdbId": {
+					"name": "tmdbId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"overview": {
+					"name": "overview",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"posterPath": {
+					"name": "posterPath",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"backdropPath": {
+					"name": "backdropPath",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"releaseDate": {
+					"name": "releaseDate",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"rating": {
+					"name": "rating",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"durationMinutes": {
+					"name": "durationMinutes",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"is4K": {
+					"name": "is4K",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"isHD": {
+					"name": "isHD",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"language": {
+					"name": "language",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"popularity": {
+					"name": "popularity",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"collectionId": {
+					"name": "collectionId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"trailerUrl": {
+					"name": "trailerUrl",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"imdbId": {
+					"name": "imdbId",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"canonicalPath": {
+					"name": "canonicalPath",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"addedAt": {
+					"name": "addedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"mediaType": {
+					"name": "mediaType",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'movie'"
+				},
+				"streamingProviders": {
+					"name": "streamingProviders",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"movies_id_unique": {
+					"name": "movies_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"movies_tmdbId_unique": {
+					"name": "movies_tmdbId_unique",
+					"columns": ["tmdbId"],
+					"isUnique": true
+				},
+				"idx_movies_tmdbId": {
+					"name": "idx_movies_tmdbId",
+					"columns": ["tmdbId"],
+					"isUnique": false
+				},
+				"idx_movies_collectionId": {
+					"name": "idx_movies_collectionId",
+					"columns": ["collectionId"],
+					"isUnique": false
+				},
+				"idx_movies_rating": {
+					"name": "idx_movies_rating",
+					"columns": ["rating"],
+					"isUnique": false
+				},
+				"idx_movies_language": {
+					"name": "idx_movies_language",
+					"columns": ["language"],
+					"isUnique": false
+				},
+				"idx_movies_popularity": {
+					"name": "idx_movies_popularity",
+					"columns": ["popularity"],
+					"isUnique": false
+				},
+				"idx_movies_releaseDate": {
+					"name": "idx_movies_releaseDate",
+					"columns": ["releaseDate"],
+					"isUnique": false
+				},
+				"idx_movies_durationMinutes": {
+					"name": "idx_movies_durationMinutes",
+					"columns": ["durationMinutes"],
+					"isUnique": false
+				},
+				"idx_movies_mediaType": {
+					"name": "idx_movies_mediaType",
+					"columns": ["mediaType"],
+					"isUnique": false
+				},
+				"idx_movies_addedAt": {
+					"name": "idx_movies_addedAt",
+					"columns": ["addedAt"],
+					"isUnique": false
+				},
+				"idx_movies_imdbId": {
+					"name": "idx_movies_imdbId",
+					"columns": ["imdbId"],
+					"isUnique": false
+				},
+				"idx_movies_trailerUrl": {
+					"name": "idx_movies_trailerUrl",
+					"columns": ["trailerUrl"],
+					"isUnique": false
+				},
+				"idx_movies_common_sort": {
+					"name": "idx_movies_common_sort",
+					"columns": ["rating", "releaseDate", "title"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"movies_collectionId_collections_id_fk": {
+					"name": "movies_collectionId_collections_id_fk",
+					"tableFrom": "movies",
+					"tableTo": "collections",
+					"columnsFrom": ["collectionId"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"movies_genres": {
+			"name": "movies_genres",
+			"columns": {
+				"movieId": {
+					"name": "movieId",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"genreId": {
+					"name": "genreId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_movies_genres_movie": {
+					"name": "idx_movies_genres_movie",
+					"columns": ["movieId"],
+					"isUnique": false
+				},
+				"idx_movies_genres_genre": {
+					"name": "idx_movies_genres_genre",
+					"columns": ["genreId"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"movies_genres_movieId_movies_id_fk": {
+					"name": "movies_genres_movieId_movies_id_fk",
+					"tableFrom": "movies_genres",
+					"tableTo": "movies",
+					"columnsFrom": ["movieId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"movies_genres_genreId_genres_id_fk": {
+					"name": "movies_genres_genreId_genres_id_fk",
+					"tableFrom": "movies_genres",
+					"tableTo": "genres",
+					"columnsFrom": ["genreId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"movies_genres_movieId_genreId_pk": {
+					"columns": ["movieId", "genreId"],
+					"name": "movies_genres_movieId_genreId_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"people": {
+			"name": "people",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"tmdbId": {
+					"name": "tmdbId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"biography": {
+					"name": "biography",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"birthday": {
+					"name": "birthday",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"deathday": {
+					"name": "deathday",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"placeOfBirth": {
+					"name": "placeOfBirth",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"profilePath": {
+					"name": "profilePath",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"popularity": {
+					"name": "popularity",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"knownForDepartment": {
+					"name": "knownForDepartment",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"people_tmdbId_unique": {
+					"name": "people_tmdbId_unique",
+					"columns": ["tmdbId"],
+					"isUnique": true
+				},
+				"idx_people_tmdbId": {
+					"name": "idx_people_tmdbId",
+					"columns": ["tmdbId"],
+					"isUnique": false
+				},
+				"idx_people_name": {
+					"name": "idx_people_name",
+					"columns": ["name"],
+					"isUnique": false
+				},
+				"idx_people_popularity": {
+					"name": "idx_people_popularity",
+					"columns": ["popularity"],
+					"isUnique": false
+				},
+				"idx_people_knownForDepartment": {
+					"name": "idx_people_knownForDepartment",
+					"columns": ["knownForDepartment"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"playback_progress": {
+			"name": "playback_progress",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"media_id": {
+					"name": "media_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"media_type": {
+					"name": "media_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"progress": {
+					"name": "progress",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"duration": {
+					"name": "duration",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"season_number": {
+					"name": "season_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"episode_number": {
+					"name": "episode_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_playback_progress_user": {
+					"name": "idx_playback_progress_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_playback_progress_media": {
+					"name": "idx_playback_progress_media",
+					"columns": ["media_id"],
+					"isUnique": false
+				},
+				"idx_playback_progress_updated": {
+					"name": "idx_playback_progress_updated",
+					"columns": ["updated_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"playback_progress_user_id_users_id_fk": {
+					"name": "playback_progress_user_id_users_id_fk",
+					"tableFrom": "playback_progress",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"schema_info": {
+			"name": "schema_info",
+			"columns": {
+				"key": {
+					"name": "key",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"value": {
+					"name": "value",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"search_history": {
+			"name": "search_history",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"query": {
+					"name": "query",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"filters": {
+					"name": "filters",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"searched_at": {
+					"name": "searched_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_search_history_user": {
+					"name": "idx_search_history_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_search_history_searched_at": {
+					"name": "idx_search_history_searched_at",
+					"columns": ["searched_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"search_history_user_id_users_id_fk": {
+					"name": "search_history_user_id_users_id_fk",
+					"tableFrom": "search_history",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"season_watch_status": {
+			"name": "season_watch_status",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"season_id": {
+					"name": "season_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"episodes_watched": {
+					"name": "episodes_watched",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"total_episodes": {
+					"name": "total_episodes",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"completed_at": {
+					"name": "completed_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_season_watch_status_user_id": {
+					"name": "idx_season_watch_status_user_id",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_season_watch_status_season_id": {
+					"name": "idx_season_watch_status_season_id",
+					"columns": ["season_id"],
+					"isUnique": false
+				},
+				"unq_season_watch_status_user_season": {
+					"name": "unq_season_watch_status_user_season",
+					"columns": ["user_id", "season_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"season_watch_status_user_id_users_id_fk": {
+					"name": "season_watch_status_user_id_users_id_fk",
+					"tableFrom": "season_watch_status",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"season_watch_status_season_id_seasons_id_fk": {
+					"name": "season_watch_status_season_id_seasons_id_fk",
+					"tableFrom": "season_watch_status",
+					"tableTo": "seasons",
+					"columnsFrom": ["season_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"seasons": {
+			"name": "seasons",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"tv_show_id": {
+					"name": "tv_show_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"season_number": {
+					"name": "season_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"overview": {
+					"name": "overview",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"poster_path": {
+					"name": "poster_path",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"air_date": {
+					"name": "air_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"episode_count": {
+					"name": "episode_count",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_seasons_tv_show_id": {
+					"name": "idx_seasons_tv_show_id",
+					"columns": ["tv_show_id"],
+					"isUnique": false
+				},
+				"idx_seasons_season_number": {
+					"name": "idx_seasons_season_number",
+					"columns": ["season_number"],
+					"isUnique": false
+				},
+				"idx_seasons_air_date": {
+					"name": "idx_seasons_air_date",
+					"columns": ["air_date"],
+					"isUnique": false
+				},
+				"unq_seasons_show_number": {
+					"name": "unq_seasons_show_number",
+					"columns": ["tv_show_id", "season_number"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"seasons_tv_show_id_tv_shows_id_fk": {
+					"name": "seasons_tv_show_id_tv_shows_id_fk",
+					"tableFrom": "seasons",
+					"tableTo": "tv_shows",
+					"columnsFrom": ["tv_show_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"sessions": {
+			"name": "sessions",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"sessions_user_id_users_id_fk": {
+					"name": "sessions_user_id_users_id_fk",
+					"tableFrom": "sessions",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"tv_show_watch_status": {
+			"name": "tv_show_watch_status",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tv_show_id": {
+					"name": "tv_show_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"status": {
+					"name": "status",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'watching'"
+				},
+				"seasons_completed": {
+					"name": "seasons_completed",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"total_seasons": {
+					"name": "total_seasons",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"episodes_watched": {
+					"name": "episodes_watched",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"total_episodes": {
+					"name": "total_episodes",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"rating": {
+					"name": "rating",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"started_at": {
+					"name": "started_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"completed_at": {
+					"name": "completed_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_tv_show_watch_status_user_id": {
+					"name": "idx_tv_show_watch_status_user_id",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_tv_show_watch_status_tv_show_id": {
+					"name": "idx_tv_show_watch_status_tv_show_id",
+					"columns": ["tv_show_id"],
+					"isUnique": false
+				},
+				"idx_tv_show_watch_status_status": {
+					"name": "idx_tv_show_watch_status_status",
+					"columns": ["status"],
+					"isUnique": false
+				},
+				"unq_tv_show_watch_status_user_show": {
+					"name": "unq_tv_show_watch_status_user_show",
+					"columns": ["user_id", "tv_show_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"tv_show_watch_status_user_id_users_id_fk": {
+					"name": "tv_show_watch_status_user_id_users_id_fk",
+					"tableFrom": "tv_show_watch_status",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"tv_show_watch_status_tv_show_id_tv_shows_id_fk": {
+					"name": "tv_show_watch_status_tv_show_id_tv_shows_id_fk",
+					"tableFrom": "tv_show_watch_status",
+					"tableTo": "tv_shows",
+					"columnsFrom": ["tv_show_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"tv_shows": {
+			"name": "tv_shows",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"tmdb_id": {
+					"name": "tmdb_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"imdb_id": {
+					"name": "imdb_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"overview": {
+					"name": "overview",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"poster_path": {
+					"name": "poster_path",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"backdrop_path": {
+					"name": "backdrop_path",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"first_air_date": {
+					"name": "first_air_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"rating": {
+					"name": "rating",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"episode_run_time": {
+					"name": "episode_run_time",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"number_of_seasons": {
+					"name": "number_of_seasons",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"number_of_episodes": {
+					"name": "number_of_episodes",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"status": {
+					"name": "status",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"production_companies": {
+					"name": "production_companies",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"streamingProviders": {
+					"name": "streamingProviders",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"tv_shows_tmdb_id_unique": {
+					"name": "tv_shows_tmdb_id_unique",
+					"columns": ["tmdb_id"],
+					"isUnique": true
+				},
+				"idx_tv_shows_tmdb_id": {
+					"name": "idx_tv_shows_tmdb_id",
+					"columns": ["tmdb_id"],
+					"isUnique": false
+				},
+				"idx_tv_shows_imdb_id": {
+					"name": "idx_tv_shows_imdb_id",
+					"columns": ["imdb_id"],
+					"isUnique": false
+				},
+				"idx_tv_shows_title": {
+					"name": "idx_tv_shows_title",
+					"columns": ["title"],
+					"isUnique": false
+				},
+				"idx_tv_shows_first_air_date": {
+					"name": "idx_tv_shows_first_air_date",
+					"columns": ["first_air_date"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"tv_shows_genres": {
+			"name": "tv_shows_genres",
+			"columns": {
+				"tv_show_id": {
+					"name": "tv_show_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"genre_id": {
+					"name": "genre_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_tv_shows_genres_tv_show": {
+					"name": "idx_tv_shows_genres_tv_show",
+					"columns": ["tv_show_id"],
+					"isUnique": false
+				},
+				"idx_tv_shows_genres_genre": {
+					"name": "idx_tv_shows_genres_genre",
+					"columns": ["genre_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"tv_shows_genres_tv_show_id_tv_shows_id_fk": {
+					"name": "tv_shows_genres_tv_show_id_tv_shows_id_fk",
+					"tableFrom": "tv_shows_genres",
+					"tableTo": "tv_shows",
+					"columnsFrom": ["tv_show_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"tv_shows_genres_genre_id_genres_id_fk": {
+					"name": "tv_shows_genres_genre_id_genres_id_fk",
+					"tableFrom": "tv_shows_genres",
+					"tableTo": "genres",
+					"columnsFrom": ["genre_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"tv_shows_genres_tv_show_id_genre_id_pk": {
+					"columns": ["tv_show_id", "genre_id"],
+					"name": "tv_shows_genres_tv_show_id_genre_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"users": {
+			"name": "users",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"username": {
+					"name": "username",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"password_hash": {
+					"name": "password_hash",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"role": {
+					"name": "role",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'USER'"
+				}
+			},
+			"indexes": {
+				"users_username_unique": {
+					"name": "users_username_unique",
+					"columns": ["username"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"watch_history": {
+			"name": "watch_history",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"movie_id": {
+					"name": "movie_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"movie_data": {
+					"name": "movie_data",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"watched_at": {
+					"name": "watched_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_history_user": {
+					"name": "idx_history_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_history_watchedAt": {
+					"name": "idx_history_watchedAt",
+					"columns": ["watched_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"watch_history_user_id_users_id_fk": {
+					"name": "watch_history_user_id_users_id_fk",
+					"tableFrom": "watch_history",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"watchlist": {
+			"name": "watchlist",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"movie_id": {
+					"name": "movie_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"movie_data": {
+					"name": "movie_data",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"added_at": {
+					"name": "added_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"folder_id": {
+					"name": "folder_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_watchlist_user": {
+					"name": "idx_watchlist_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_watchlist_addedAt": {
+					"name": "idx_watchlist_addedAt",
+					"columns": ["added_at"],
+					"isUnique": false
+				},
+				"idx_watchlist_folder": {
+					"name": "idx_watchlist_folder",
+					"columns": ["folder_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"watchlist_user_id_users_id_fk": {
+					"name": "watchlist_user_id_users_id_fk",
+					"tableFrom": "watchlist",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"watchlist_folder_id_watchlist_folders_id_fk": {
+					"name": "watchlist_folder_id_watchlist_folders_id_fk",
+					"tableFrom": "watchlist",
+					"tableTo": "watchlist_folders",
+					"columnsFrom": ["folder_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"watchlist_user_id_movie_id_pk": {
+					"columns": ["user_id", "movie_id"],
+					"name": "watchlist_user_id_movie_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"watchlist_folders": {
+			"name": "watchlist_folders",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"color": {
+					"name": "color",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_watchlist_folders_user": {
+					"name": "idx_watchlist_folders_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_watchlist_folders_name": {
+					"name": "idx_watchlist_folders_name",
+					"columns": ["name"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"watchlist_folders_user_id_users_id_fk": {
+					"name": "watchlist_folders_user_id_users_id_fk",
+					"tableFrom": "watchlist_folders",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"watchlist_item_tags": {
+			"name": "watchlist_item_tags",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"movie_id": {
+					"name": "movie_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tag_id": {
+					"name": "tag_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_watchlist_item_tags_user": {
+					"name": "idx_watchlist_item_tags_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_watchlist_item_tags_movie": {
+					"name": "idx_watchlist_item_tags_movie",
+					"columns": ["movie_id"],
+					"isUnique": false
+				},
+				"idx_watchlist_item_tags_tag": {
+					"name": "idx_watchlist_item_tags_tag",
+					"columns": ["tag_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"watchlist_item_tags_user_id_users_id_fk": {
+					"name": "watchlist_item_tags_user_id_users_id_fk",
+					"tableFrom": "watchlist_item_tags",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"watchlist_item_tags_user_id_movie_id_tag_id_pk": {
+					"columns": ["user_id", "movie_id", "tag_id"],
+					"name": "watchlist_item_tags_user_id_movie_id_tag_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"watchlist_tags": {
+			"name": "watchlist_tags",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"color": {
+					"name": "color",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"idx_watchlist_tags_user": {
+					"name": "idx_watchlist_tags_user",
+					"columns": ["user_id"],
+					"isUnique": false
+				},
+				"idx_watchlist_tags_name": {
+					"name": "idx_watchlist_tags_name",
+					"columns": ["name"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"watchlist_tags_user_id_users_id_fk": {
+					"name": "watchlist_tags_user_id_users_id_fk",
+					"tableFrom": "watchlist_tags",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		}
+	},
+	"views": {},
+	"enums": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"indexes": {}
+	}
 }

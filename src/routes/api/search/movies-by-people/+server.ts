@@ -60,9 +60,9 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		const results = await withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 			const mediaItems = await searchMediaByPeople(personTmdbIds, roles, limit);
-			
+
 			// Map to LibraryMedia format
-			return mediaItems.map(m => ({
+			return mediaItems.map((m) => ({
 				...m,
 				canonicalPath: (() => {
 					const type = m.mediaType || 'movie';

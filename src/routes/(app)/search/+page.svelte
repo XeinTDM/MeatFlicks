@@ -7,10 +7,7 @@
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import type { LibraryMedia } from '$lib/types/library';
 	import { onDestroy, onMount } from 'svelte';
-	import {
-		addToSearchHistory,
-		type SortOption
-	} from '$lib/utils/searchUtils';
+	import { addToSearchHistory, type SortOption } from '$lib/utils/searchUtils';
 	import type { MovieFilters } from '$lib/types/filters';
 	import { page as pageState } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -45,12 +42,24 @@
 
 	let filters = $state<MovieFilters>({
 		genres: pageState.url.searchParams.get('genres')?.split(',').filter(Boolean) || [],
-		minRating: pageState.url.searchParams.get('minRating') ? Number(pageState.url.searchParams.get('minRating')) : undefined,
-		maxRating: pageState.url.searchParams.get('maxRating') ? Number(pageState.url.searchParams.get('maxRating')) : undefined,
-		yearFrom: pageState.url.searchParams.get('yearFrom') ? Number(pageState.url.searchParams.get('yearFrom')) : undefined,
-		yearTo: pageState.url.searchParams.get('yearTo') ? Number(pageState.url.searchParams.get('yearTo')) : undefined,
-		runtimeMin: pageState.url.searchParams.get('runtimeMin') ? Number(pageState.url.searchParams.get('runtimeMin')) : undefined,
-		runtimeMax: pageState.url.searchParams.get('runtimeMax') ? Number(pageState.url.searchParams.get('runtimeMax')) : undefined,
+		minRating: pageState.url.searchParams.get('minRating')
+			? Number(pageState.url.searchParams.get('minRating'))
+			: undefined,
+		maxRating: pageState.url.searchParams.get('maxRating')
+			? Number(pageState.url.searchParams.get('maxRating'))
+			: undefined,
+		yearFrom: pageState.url.searchParams.get('yearFrom')
+			? Number(pageState.url.searchParams.get('yearFrom'))
+			: undefined,
+		yearTo: pageState.url.searchParams.get('yearTo')
+			? Number(pageState.url.searchParams.get('yearTo'))
+			: undefined,
+		runtimeMin: pageState.url.searchParams.get('runtimeMin')
+			? Number(pageState.url.searchParams.get('runtimeMin'))
+			: undefined,
+		runtimeMax: pageState.url.searchParams.get('runtimeMax')
+			? Number(pageState.url.searchParams.get('runtimeMax'))
+			: undefined,
 		language: pageState.url.searchParams.get('language') || undefined
 	});
 
@@ -59,7 +68,9 @@
 	);
 
 	let sortBy = $state<SortOption>((pageState.url.searchParams.get('sort') as any) || 'relevance');
-	let sortOrder = $state<'asc' | 'desc'>((pageState.url.searchParams.get('order') as any) || 'desc');
+	let sortOrder = $state<'asc' | 'desc'>(
+		(pageState.url.searchParams.get('order') as any) || 'desc'
+	);
 
 	let totalItems = $state(0);
 	let sentinel: HTMLDivElement | null = $state(null);
@@ -82,7 +93,7 @@
 			if (searchTerm) params.set('q', searchTerm);
 			params.set('offset', String((pageToLoad - 1) * API_FETCH_LIMIT));
 			params.set('limit', String(API_FETCH_LIMIT));
-			
+
 			if (filters.genres?.length) params.set('genres', filters.genres.join(','));
 			if (filters.minRating) params.set('minRating', String(filters.minRating));
 			if (filters.maxRating) params.set('maxRating', String(filters.maxRating));
@@ -92,7 +103,7 @@
 			if (filters.runtimeMax) params.set('runtimeMax', String(filters.runtimeMax));
 			if (filters.language) params.set('language', filters.language);
 			if (mediaType) params.set('mediaType', mediaType);
-			
+
 			params.set('sortBy', sortBy);
 			params.set('sortOrder', sortOrder);
 
@@ -106,7 +117,7 @@
 			if (pageToLoad === 1) {
 				items = data.results;
 				totalItems = data.total;
-				
+
 				// Update facets
 				availableGenres = data.genres || [];
 				availableYears = data.years || [];
@@ -122,16 +133,16 @@
 
 			page = pageToLoad;
 			hasMore = items.length < totalItems;
-			
+
 			// Update URL without navigation
 			if (browser) {
 				const newUrl = new URL(window.location.href);
 				if (searchTerm) newUrl.searchParams.set('q', searchTerm);
 				else newUrl.searchParams.delete('q');
-				
+
 				if (filters.genres?.length) newUrl.searchParams.set('genres', filters.genres.join(','));
 				else newUrl.searchParams.delete('genres');
-				
+
 				if (mediaType) newUrl.searchParams.set('type', mediaType);
 				else newUrl.searchParams.delete('type');
 
@@ -243,8 +254,12 @@
 				<div class="sticky top-24 space-y-6">
 					<FilterPanel
 						{filters}
-						availableGenres={availableGenres}
-						include_anime={mediaType === 'anime' ? 'only' : mediaType === 'tv' ? 'exclude' : 'include'}
+						{availableGenres}
+						include_anime={mediaType === 'anime'
+							? 'only'
+							: mediaType === 'tv'
+								? 'exclude'
+								: 'include'}
 						onFiltersChange={handleFiltersChange}
 						onClearAll={clearAllFilters}
 					/>
@@ -269,10 +284,14 @@
 						{/if}
 					</div>
 
-					<ActiveFilters {filters} {mediaType} onRemove={(updates) => {
-						if ('mediaType' in updates) mediaType = undefined;
-						else handleFiltersChange({ ...filters, ...updates });
-					}} />
+					<ActiveFilters
+						{filters}
+						{mediaType}
+						onRemove={(updates) => {
+							if ('mediaType' in updates) mediaType = undefined;
+							else handleFiltersChange({ ...filters, ...updates });
+						}}
+					/>
 
 					{#if error}
 						<Alert variant="destructive" class="border-destructive/40 bg-destructive/10">
@@ -309,7 +328,7 @@
 							</AlertDescription>
 						</Alert>
 					{/if}
-					
+
 					<div bind:this={sentinel} class="h-10 w-full"></div>
 				</div>
 			</div>

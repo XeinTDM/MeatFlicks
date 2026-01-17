@@ -787,7 +787,9 @@ export async function fetchTmdbRecommendations(
 	});
 }
 
-export async function fetchTmdbPersonDetails(personId: string | number): Promise<TmdbPersonDetails> {
+export async function fetchTmdbPersonDetails(
+	personId: string | number
+): Promise<TmdbPersonDetails> {
 	const cacheKey = buildCacheKey('tmdb', 'person', personId);
 
 	return withCache(cacheKey, DETAILS_TTL, async () => {

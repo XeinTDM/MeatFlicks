@@ -53,7 +53,9 @@ export async function syncPeopleBatch(tmdbIds: number[]): Promise<Map<number, Pe
 				})
 			);
 
-			const validMissingPeople = missingPeopleResults.filter((p): p is NonNullable<typeof p> => p !== null);
+			const validMissingPeople = missingPeopleResults.filter(
+				(p): p is NonNullable<typeof p> => p !== null
+			);
 
 			if (validMissingPeople.length > 0) {
 				await executeWithRetry(() =>
@@ -61,7 +63,15 @@ export async function syncPeopleBatch(tmdbIds: number[]): Promise<Map<number, Pe
 				);
 
 				const newlyInserted = await executeWithRetry(() =>
-					db.select().from(people).where(inArray(people.tmdbId, validMissingPeople.map(p => p.tmdbId)))
+					db
+						.select()
+						.from(people)
+						.where(
+							inArray(
+								people.tmdbId,
+								validMissingPeople.map((p) => p.tmdbId)
+							)
+						)
 				);
 
 				for (const p of newlyInserted) {

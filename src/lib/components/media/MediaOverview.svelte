@@ -78,7 +78,11 @@
 							<Card class="p-3">
 								<div class="flex items-center gap-2">
 									{#if company.logoPath}
-										<img src={getImageUrl(company.logoPath, 'w185')} alt={company.name} class="h-6 object-contain" />
+										<img
+											src={getImageUrl(company.logoPath, 'w185')}
+											alt={company.name}
+											class="h-6 object-contain"
+										/>
 									{/if}
 									<span class="text-sm font-medium">{company.name}</span>
 								</div>
@@ -90,7 +94,11 @@
 		</div>
 		<div class="flex flex-col items-center lg:w-[30%] lg:items-end">
 			{#if posterPath}
-				<img src={getImageUrl(posterPath, 'w500')} alt={title} class="mb-4 w-full max-w-sm rounded-lg object-cover" />
+				<img
+					src={getImageUrl(posterPath, 'w500')}
+					alt={title}
+					class="mb-4 w-full max-w-sm rounded-lg object-cover"
+				/>
 			{/if}
 			<div class="w-full max-w-sm">
 				<h2 class="text-xl font-semibold">Overview</h2>

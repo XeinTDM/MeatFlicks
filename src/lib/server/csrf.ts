@@ -88,9 +88,62 @@ export function createSecureCsrfCookie(tokenData: {
 	};
 }
 
-/**
- * Validate CSRF token from request
- */
+type CsrfRequest = {
+	headers: Headers;
+	clone?: () => CsrfRequest;
+	formData?: () => Promise<FormData>;
+	json?: () => Promise<Record<string, unknown>>;
+};
+
+async function readCsrfTokenFromBody(request: CsrfRequest): Promise<string | null> {
+	const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
+	if (!contentType) {
+		return null;
+	}
+
+	try {
+		if (contentType.includes('application/x-www-form-urlencoded')) {
+			if (typeof request.formData !== 'function') return null;
+			const formData = await request.formData();
+			const token = formData.get('csrf_token');
+			return typeof token === 'string' ? token : null;
+		}
+
+		if (contentType.includes('multipart/form-data')) {
+			if (typeof request.formData !== 'function') return null;
+			const formData = await request.formData();
+			const token = formData.get('csrf_token');
+			return typeof token === 'string' ? token : null;
+		}
+
+		if (contentType.includes('application/json')) {
+			if (typeof request.json !== 'function') return null;
+			const body = await request.json().catch((error) => {
+				logger.error({ jsonError: error }, 'Failed to parse JSON for CSRF validation');
+				return null;
+			});
+			if (body && typeof body === 'object') {
+				const token = (body as Record<string, unknown>).csrf_token;
+				return typeof token === 'string' ? token : null;
+			}
+		}
+	} catch (error) {
+		logger.error({ error }, 'Failed to parse request body for CSRF token');
+	}
+
+	return null;
+}
+
+async function extractCsrfTokenFromRequest(request: CsrfRequest): Promise<string | null> {
+	const headerToken = request.headers.get(CSRF_HEADER_NAME);
+	if (headerToken) {
+		return headerToken;
+	}
+
+	const reader = typeof request.clone === 'function' ? request.clone() : request;
+	return readCsrfTokenFromBody(reader);
+}
+
 export async function validateCsrfToken(
 	event: any,
 	requiredMethods: string[] = ['POST', 'PUT', 'PATCH', 'DELETE']
@@ -108,30 +161,7 @@ export async function validateCsrfToken(
 		};
 	}
 
-	let requestToken: string | null = null;
-	requestToken = event.request.headers.get(CSRF_HEADER_NAME) || null;
-
-	if (!requestToken) {
-		try {
-			const contentType = event.request.headers.get('content-type');
-			if (contentType && contentType.includes('application/x-www-form-urlencoded')) {
-				const formData = await event.request.formData();
-				requestToken = formData.get('csrf_token') as string | null;
-			} else if (contentType && contentType.includes('multipart/form-data')) {
-				const formData = await event.request.formData();
-				requestToken = formData.get('csrf_token') as string | null;
-			} else if (contentType && contentType.includes('application/json')) {
-				try {
-					const jsonData = await event.request.json();
-					requestToken = jsonData.csrf_token as string | null;
-				} catch (jsonError) {
-					logger.error({ jsonError }, 'Failed to parse JSON for CSRF validation');
-				}
-			}
-		} catch (error) {
-			logger.error({ error }, 'Failed to parse form data for CSRF validation');
-		}
-	}
+	const requestToken = await extractCsrfTokenFromRequest(event.request as CsrfRequest);
 
 	if (!requestToken) {
 		logger.warn('CSRF validation failed: No CSRF token in request');
@@ -155,9 +185,6 @@ export async function validateCsrfToken(
 	};
 }
 
-/**
- * Validate secure CSRF token with signature and expiration
- */
 export async function validateSecureCsrfToken(
 	event: any,
 	requiredMethods: string[] = ['POST', 'PUT', 'PATCH', 'DELETE']
@@ -190,30 +217,7 @@ export async function validateSecureCsrfToken(
 			};
 		}
 
-		let requestToken: string | null = null;
-		requestToken = event.request.headers.get(CSRF_HEADER_NAME) || null;
-
-		if (!requestToken) {
-			try {
-				const contentType = event.request.headers.get('content-type');
-				if (contentType && contentType.includes('application/x-www-form-urlencoded')) {
-					const formData = await event.request.formData();
-					requestToken = formData.get('csrf_token') as string | null;
-				} else if (contentType && contentType.includes('multipart/form-data')) {
-					const formData = await event.request.formData();
-					requestToken = formData.get('csrf_token') as string | null;
-				} else if (contentType && contentType.includes('application/json')) {
-					try {
-						const jsonData = await event.request.json();
-						requestToken = jsonData.csrf_token as string | null;
-					} catch (jsonError) {
-						logger.error({ jsonError }, 'Failed to parse JSON for CSRF validation');
-					}
-				}
-			} catch (error) {
-				logger.error({ error }, 'Failed to parse form data for CSRF validation');
-			}
-		}
+		const requestToken = await extractCsrfTokenFromRequest(event.request as CsrfRequest);
 
 		if (!requestToken) {
 			logger.warn('CSRF validation failed: No CSRF token in request');
@@ -244,9 +248,6 @@ export async function validateSecureCsrfToken(
 	}
 }
 
-/**
- * CSRF Middleware for SvelteKit
- */
 export function csrfMiddleware() {
 	return {
 		name: 'csrf',
@@ -293,9 +294,6 @@ export function csrfMiddleware() {
 	};
 }
 
-/**
- * Get CSRF token for use in forms
- */
 export function getCsrfToken(event: any): string | null {
 	try {
 		const csrfCookie = event.cookies.get(CSRF_COOKIE_NAME);
@@ -308,17 +306,10 @@ export function getCsrfToken(event: any): string | null {
 	}
 }
 
-/**
- * Get CSRF token for API requests
- */
 export function getCsrfHeader(event: any): string | null {
 	return getCsrfToken(event);
 }
 
-/**
- * CSRF Protection Helper for Forms
- * Returns HTML input element with CSRF token
- */
 export function csrfInput(event: any): string {
 	const token = getCsrfToken(event);
 	if (!token) {
@@ -327,10 +318,6 @@ export function csrfInput(event: any): string {
 	return `<input type="hidden" name="csrf_token" value="${token}" />`;
 }
 
-/**
- * CSRF Protection Helper for API requests
- * Returns object with CSRF header
- */
 export function csrfHeaders(event: any): Record<string, string> {
 	const token = getCsrfToken(event);
 	if (!token) {
@@ -341,10 +328,6 @@ export function csrfHeaders(event: any): Record<string, string> {
 	};
 }
 
-/**
- * Validate CSRF token for API requests
- * Throws UnauthorizedError if validation fails
- */
 export async function validateCsrfForApi(event: any): Promise<void> {
 	const validation = await validateSecureCsrfToken(event);
 	if (!validation.valid) {

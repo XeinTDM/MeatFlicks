@@ -47,7 +47,9 @@ const sanitizeEntry = (candidate: unknown): HistoryEntry | null => {
 	const id = typeof payload.id === 'string' ? payload.id : String(payload.id ?? '');
 	const title = typeof payload.title === 'string' ? payload.title : String(payload.title ?? '');
 	const watchedAt =
-		typeof payload.watchedAt === 'string' ? payload.watchedAt : String(payload.watchedAt ?? new Date().toISOString());
+		typeof payload.watchedAt === 'string'
+			? payload.watchedAt
+			: String(payload.watchedAt ?? new Date().toISOString());
 
 	if (!id) {
 		return null;
@@ -139,9 +141,15 @@ class HistoryStore {
 		}
 	}
 
-	get entries() { return this.#entries; }
-	get loading() { return this.#loading; }
-	get error() { return this.#error; }
+	get entries() {
+		return this.#entries;
+	}
+	get loading() {
+		return this.#loading;
+	}
+	get error() {
+		return this.#error;
+	}
 
 	async syncFromServer() {
 		if (typeof window === 'undefined') return;
@@ -178,7 +186,9 @@ class HistoryStore {
 		if (!entry) return;
 
 		// Optimistic update
-		this.#entries = [entry, ...this.#entries.filter(e => e.id !== entry.id)].sort((a, b) => (a.watchedAt > b.watchedAt ? -1 : 1));
+		this.#entries = [entry, ...this.#entries.filter((e) => e.id !== entry.id)].sort((a, b) =>
+			a.watchedAt > b.watchedAt ? -1 : 1
+		);
 		persist(this.#entries);
 
 		if (!page.data.user) return;

@@ -48,7 +48,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			CACHE_TTL_SEARCH_SECONDS,
 			async () => {
 				const [mediaItems, people] = await Promise.all([
-					(types.includes('movies') || types.includes('media')) ? searchMediaByQuery(query, limit) : Promise.resolve([]),
+					types.includes('movies') || types.includes('media')
+						? searchMediaByQuery(query, limit)
+						: Promise.resolve([]),
 					types.includes('people')
 						? personRepository.searchPeople({
 								query,

@@ -21,8 +21,17 @@ export type EpisodeService = {
 	episodesList: Episode[];
 	isLoadingEpisodes: boolean;
 	fetchEpisodes: (tmdbId: number | null, seasonNumber: number) => Promise<void>;
-	getNextEpisodeLabel: (seasons: Season[] | undefined, mediaType: MediaType, selectedSeason: number, selectedEpisode: number) => string;
-	getNextEpisode: (seasons: Season[] | undefined, selectedSeason: number, selectedEpisode: number) => { season: number; episode: number } | null;
+	getNextEpisodeLabel: (
+		seasons: Season[] | undefined,
+		mediaType: MediaType,
+		selectedSeason: number,
+		selectedEpisode: number
+	) => string;
+	getNextEpisode: (
+		seasons: Season[] | undefined,
+		selectedSeason: number,
+		selectedEpisode: number
+	) => { season: number; episode: number } | null;
 };
 
 export function createEpisodeService(): EpisodeService {
@@ -62,7 +71,12 @@ export function createEpisodeService(): EpisodeService {
 				isLoadingEpisodes = false;
 			}
 		},
-		getNextEpisodeLabel: (seasons: Season[] | undefined, mediaType: MediaType, selectedSeason: number, selectedEpisode: number) => {
+		getNextEpisodeLabel: (
+			seasons: Season[] | undefined,
+			mediaType: MediaType,
+			selectedSeason: number,
+			selectedEpisode: number
+		) => {
 			if (!seasons || mediaType !== 'tv') return 'Next Episode';
 
 			const currentSeasonData = seasons.find((s) => s.seasonNumber === selectedSeason);
@@ -78,7 +92,11 @@ export function createEpisodeService(): EpisodeService {
 			}
 			return 'Next Episode';
 		},
-		getNextEpisode: (seasons: Season[] | undefined, selectedSeason: number, selectedEpisode: number): { season: number; episode: number } | null => {
+		getNextEpisode: (
+			seasons: Season[] | undefined,
+			selectedSeason: number,
+			selectedEpisode: number
+		): { season: number; episode: number } | null => {
 			if (!seasons) return null;
 
 			const currentSeasonData = seasons.find((s) => s.seasonNumber === selectedSeason);

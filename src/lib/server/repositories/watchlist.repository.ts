@@ -14,7 +14,7 @@ export const watchlistRepository = {
 				.where(eq(watchlist.userId, userId))
 				.orderBy(desc(watchlist.addedAt));
 
-			const mediaRows = rows.map(r => r.media);
+			const mediaRows = rows.map((r) => r.media);
 			return await mapRowsToSummaries(mediaRows as MediaRow[]);
 		} catch (error) {
 			console.error('Error fetching watchlist:', error);

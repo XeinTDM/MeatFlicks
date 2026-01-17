@@ -70,7 +70,7 @@ const runInitSql = async (client: Client) => {
 
 		// Optimization
 		await client.execute('PRAGMA optimize');
-		
+
 		logger.info('Database initialization and optimization completed successfully');
 	} catch (err) {
 		logger.error({ err }, 'Failed to initialize database extensions');

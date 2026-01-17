@@ -26,7 +26,10 @@ export const media = sqliteTable(
 	'media',
 	{
 		numericId: integer('numericId').primaryKey({ autoIncrement: true }),
-		id: text('id').notNull().unique().$defaultFn(() => createId()),
+		id: text('id')
+			.notNull()
+			.unique()
+			.$defaultFn(() => createId()),
 		tmdbId: integer('tmdbId').notNull().unique(),
 		imdbId: text('imdbId'),
 		title: text('title').notNull(),
@@ -48,7 +51,7 @@ export const media = sqliteTable(
 		addedAt: integer('addedAt'),
 		mediaType: text('mediaType').notNull().default('movie'), // 'movie', 'tv', 'anime'
 		streamingProviders: text('streamingProviders'),
-		
+
 		// TV Specific columns
 		status: text('status'),
 		numberOfSeasons: integer('numberOfSeasons'),
@@ -173,8 +176,12 @@ export const watchlistItemTags = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
-		tagId: integer('tag_id').notNull().references(() => watchlistTags.id, { onDelete: 'cascade' }),
+		mediaId: text('media_id')
+			.notNull()
+			.references(() => media.id, { onDelete: 'cascade' }),
+		tagId: integer('tag_id')
+			.notNull()
+			.references(() => watchlistTags.id, { onDelete: 'cascade' }),
 		createdAt: integer('created_at')
 			.notNull()
 			.$defaultFn(() => Date.now())
@@ -193,7 +200,9 @@ export const watchlist = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
+		mediaId: text('media_id')
+			.notNull()
+			.references(() => media.id, { onDelete: 'cascade' }),
 		addedAt: integer('added_at')
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -214,7 +223,9 @@ export const watchHistory = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
+		mediaId: text('media_id')
+			.notNull()
+			.references(() => media.id, { onDelete: 'cascade' }),
 		watchedAt: integer('watched_at').notNull()
 	},
 	(table) => [
@@ -249,7 +260,9 @@ export const playbackProgress = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		mediaId: text('media_id').notNull().references(() => media.id, { onDelete: 'cascade' }),
+		mediaId: text('media_id')
+			.notNull()
+			.references(() => media.id, { onDelete: 'cascade' }),
 		mediaType: text('media_type').notNull(),
 		progress: integer('progress').notNull(),
 		duration: integer('duration').notNull(),
@@ -269,7 +282,9 @@ export const playbackProgress = sqliteTable(
 export const people = sqliteTable(
 	'people',
 	{
-		id: text('id').primaryKey().$defaultFn(() => createId()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => createId()),
 		tmdbId: integer('tmdbId').notNull().unique(),
 		name: text('name').notNull(),
 		biography: text('biography'),
@@ -376,7 +391,9 @@ export const mediaPeopleRelations = relations(mediaPeople, ({ one }) => ({
 export const seasons = sqliteTable(
 	'seasons',
 	{
-		id: text('id').primaryKey().$defaultFn(() => createId()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => createId()),
 		mediaId: text('media_id')
 			.notNull()
 			.references(() => media.id, { onDelete: 'cascade' }),
@@ -404,7 +421,9 @@ export const seasons = sqliteTable(
 export const episodes = sqliteTable(
 	'episodes',
 	{
-		id: text('id').primaryKey().$defaultFn(() => createId()),
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => createId()),
 		mediaId: text('media_id')
 			.notNull()
 			.references(() => media.id, { onDelete: 'cascade' }),

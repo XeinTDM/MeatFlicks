@@ -2,10 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { playbackProgressRepository } from '$lib/server/repositories/playback-progress.repository';
 import { z } from 'zod';
-import {
-	validateRequestBody,
-	validateQueryParams
-} from '$lib/server/validation';
+import { validateRequestBody, validateQueryParams } from '$lib/server/validation';
 import { errorHandler, UnauthorizedError } from '$lib/server';
 
 const saveProgressSchema = z.object({

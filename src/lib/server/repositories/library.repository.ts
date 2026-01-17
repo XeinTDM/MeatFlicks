@@ -28,8 +28,6 @@ const normalizeOffset = (value: number | undefined): number => {
 	return Math.floor(value);
 };
 
-
-
 export type CollectionWithMovies = CollectionRecord & { movies: MediaSummary[] };
 
 export const libraryRepository = {
@@ -59,10 +57,7 @@ export const libraryRepository = {
 	async findMoviesByIds(ids: string[]): Promise<MediaSummary[]> {
 		if (ids.length === 0) return [];
 		try {
-			const rows = await db
-				.select()
-				.from(media)
-				.where(inArray(media.id, ids));
+			const rows = await db.select().from(media).where(inArray(media.id, ids));
 			return await mapRowsToSummaries(rows as MediaRow[]);
 		} catch (error) {
 			console.error('Error fetching media by ids:', error);
@@ -242,7 +237,13 @@ export const libraryRepository = {
 		filters: MovieFilters,
 		idMap: Map<string, number>,
 		mediaType: 'movie' | 'tv' = 'movie',
-		include_anime: 'include' | 'exclude' | 'only' | 'include_anime' | 'exclude_anime' | 'only_anime' = 'include'
+		include_anime:
+			| 'include'
+			| 'exclude'
+			| 'only'
+			| 'include_anime'
+			| 'exclude_anime'
+			| 'only_anime' = 'include'
 	) {
 		let mediaTypeCondition;
 		const animeMode = (include_anime as string).includes('anime')
@@ -326,12 +327,17 @@ export const libraryRepository = {
 				return this.applyFilters(base, conditions, filters, idMap, mediaType, include_anime);
 			};
 
-			const countBase = createBaseQuery(db.select({ count: sql<number>`count(DISTINCT ${media.id})` }).from(media));
+			const countBase = createBaseQuery(
+				db.select({ count: sql<number>`count(DISTINCT ${media.id})` }).from(media)
+			);
 			const itemsBase = createBaseQuery(db.select({ media }).from(media));
 
 			const [totalItemsRes, rows] = await db.batch([
 				countBase,
-				(itemsBase as any).orderBy(...orderByClause).limit(pagination.pageSize).offset(offset)
+				(itemsBase as any)
+					.orderBy(...orderByClause)
+					.limit(pagination.pageSize)
+					.offset(offset)
 			]);
 
 			const totalItems = totalItemsRes[0]?.count || 0;

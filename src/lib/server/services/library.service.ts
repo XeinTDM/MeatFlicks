@@ -142,9 +142,7 @@ const buildFallbackHomeLibrary = async (limit: number): Promise<HomeLibrary | nu
 const buildExtrasMap = async (
 	items: LibraryMedia[]
 ): Promise<Map<number, { imdbId: string | null; trailerUrl: string | null }>> => {
-	const itemsMissingData = items.filter(
-		(m) => m.tmdbId && (!m.imdbId || !m.trailerUrl)
-	);
+	const itemsMissingData = items.filter((m) => m.tmdbId && (!m.imdbId || !m.trailerUrl));
 
 	const uniqueIds = Array.from(
 		new Set(

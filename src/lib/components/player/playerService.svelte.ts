@@ -55,10 +55,10 @@ export class PlayerService {
 			type: 'subtitleChange',
 			subtitle: subtitle
 				? {
-					url: subtitle.url,
-					language: subtitle.language,
-					label: subtitle.label
-				}
+						url: subtitle.url,
+						language: subtitle.language,
+						label: subtitle.label
+					}
 				: null
 		});
 	};

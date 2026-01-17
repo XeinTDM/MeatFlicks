@@ -145,4 +145,3 @@ export const GET: RequestHandler = async ({ url }) => {
 		return json(body, { status });
 	}
 };
-

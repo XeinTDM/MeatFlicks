@@ -19,29 +19,38 @@ import type {
 
 export class TVShowRepository {
 	async createTVShow(showData: any): Promise<any> {
-		const [result] = await db.insert(media).values({ ...showData, mediaType: 'tv' }).returning();
+		const [result] = await db
+			.insert(media)
+			.values({ ...showData, mediaType: 'tv' })
+			.returning();
 		return result;
 	}
 
 	async getTVShowById(id: string): Promise<any | null> {
-		const [result] = await db.select().from(media).where(and(eq(media.id, id), eq(media.mediaType, 'tv')));
+		const [result] = await db
+			.select()
+			.from(media)
+			.where(and(eq(media.id, id), eq(media.mediaType, 'tv')));
 		return result || null;
 	}
 
 	async getTVShowByTmdbId(tmdbId: number): Promise<any | null> {
-		const [result] = await db.select().from(media).where(and(eq(media.tmdbId, tmdbId), eq(media.mediaType, 'tv')));
+		const [result] = await db
+			.select()
+			.from(media)
+			.where(and(eq(media.tmdbId, tmdbId), eq(media.mediaType, 'tv')));
 		return result || null;
 	}
 
 	async getTVShowByImdbId(imdbId: string): Promise<any | null> {
-		const [result] = await db.select().from(media).where(and(eq(media.imdbId, imdbId), eq(media.mediaType, 'tv')));
+		const [result] = await db
+			.select()
+			.from(media)
+			.where(and(eq(media.imdbId, imdbId), eq(media.mediaType, 'tv')));
 		return result || null;
 	}
 
-	async updateTVShow(
-		id: string,
-		updateData: any
-	): Promise<any> {
+	async updateTVShow(id: string, updateData: any): Promise<any> {
 		const [result] = await db
 			.update(media)
 			.set({ ...updateData, updatedAt: Date.now() })
@@ -474,10 +483,10 @@ export class TVShowRepository {
 		};
 
 		const totalShows =
-			Number(stat.watching || 0) + 
-			Number(stat.completed || 0) + 
-			Number(stat.onHold || 0) + 
-			Number(stat.dropped || 0) + 
+			Number(stat.watching || 0) +
+			Number(stat.completed || 0) +
+			Number(stat.onHold || 0) +
+			Number(stat.dropped || 0) +
 			Number(stat.planToWatch || 0);
 
 		return {

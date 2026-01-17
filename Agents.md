@@ -8,7 +8,6 @@ A **website** built with **Svelte 5 runes mode**, **TypeScript**, **TailwindCSS 
 
 **Bun** is used as the runtime, package manager, and task runner across all projects.
 
-
 # Code Style & Conventions
 
 **Language**: TypeScript in strict mode.
@@ -102,6 +101,7 @@ Run tests before committing:
 - Never expose private APIs or keys in client-side code.
 
 ## Critical Thinking
+
 - Fix root cause (not band-aid).
 - Unsure: read more code; if still stuck, ask w/ short options.
 - Conflicts: call out; pick safer path.

@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-12 animate-pulse">
+<div class="flex animate-pulse flex-col gap-12">
 	<!-- Hero Skeleton -->
 	<div class="relative min-h-[60vh] w-full bg-muted/30 md:min-h-[65vh] lg:min-h-[70vh]">
 		<div class="absolute inset-0 flex items-end px-[10%] py-12">

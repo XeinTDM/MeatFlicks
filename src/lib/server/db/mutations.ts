@@ -76,10 +76,7 @@ export const bulkUpsertMovies = async (payloads: UpsertMoviePayload[]): Promise<
 			}
 
 			const tmdbIds = payloads.map((p) => p.tmdbId);
-			const existingMedia = await tx
-				.select()
-				.from(media)
-				.where(inArray(media.tmdbId, tmdbIds));
+			const existingMedia = await tx.select().from(media).where(inArray(media.tmdbId, tmdbIds));
 
 			const mediaMap = new Map();
 			for (const m of existingMedia) {

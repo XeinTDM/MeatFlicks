@@ -1,9 +1,5 @@
 import { db } from '$lib/server/db';
-import {
-	genres,
-	tvShows as tvShowsSchema,
-	tvShowsGenres
-} from '$lib/server/db/schema';
+import { genres, tvShows as tvShowsSchema, tvShowsGenres } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { GenreRecord, MovieRecord, MovieRow } from '$lib/server/db';
 import { mapRowsToRecords } from '$lib/server/db/movie-select';

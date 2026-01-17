@@ -54,7 +54,8 @@ const buildCanonicalPath = (
 	const imdbId = typeof payload.imdbId === 'string' ? payload.imdbId.trim() : '';
 	if (imdbId) return `${prefix}${imdbId}`;
 
-	const tmdbId = typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId) ? payload.tmdbId : null;
+	const tmdbId =
+		typeof payload.tmdbId === 'number' && Number.isFinite(payload.tmdbId) ? payload.tmdbId : null;
 	if (tmdbId) return `${prefix}${tmdbId}`;
 
 	return `${prefix}${id}`;
@@ -149,9 +150,15 @@ class WatchlistStore {
 		}
 	}
 
-	get items() { return this.#watchlist; }
-	get loading() { return this.#loading; }
-	get error() { return this.#error; }
+	get items() {
+		return this.#watchlist;
+	}
+	get loading() {
+		return this.#loading;
+	}
+	get error() {
+		return this.#error;
+	}
 
 	async syncFromServer() {
 		if (typeof window === 'undefined') return;
@@ -193,7 +200,10 @@ class WatchlistStore {
 		const existingIndex = this.#watchlist.findIndex((item) => item.id === sanitized.id);
 
 		if (existingIndex >= 0) {
-			this.#watchlist[existingIndex] = { ...sanitized, addedAt: this.#watchlist[existingIndex].addedAt };
+			this.#watchlist[existingIndex] = {
+				...sanitized,
+				addedAt: this.#watchlist[existingIndex].addedAt
+			};
 		} else {
 			this.#watchlist.push(sanitized);
 		}

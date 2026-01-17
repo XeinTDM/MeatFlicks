@@ -15,7 +15,13 @@ import {
 	fetchTmdbTvDetails,
 	lookupTmdbIdByImdbId
 } from '$lib/server/services/tmdb.service';
-import { errorHandler, NotFoundError, ValidationError, UnauthorizedError, getEnv } from '$lib/server';
+import {
+	errorHandler,
+	NotFoundError,
+	ValidationError,
+	UnauthorizedError,
+	getEnv
+} from '$lib/server';
 import { z } from 'zod';
 import {
 	validatePathParams,
@@ -148,11 +154,8 @@ async function resolveMediaByIdentifier(identifier: string, queryMode: 'id' | 't
 		case 'id':
 		default: {
 			const cacheKey = buildCacheKey('media', 'id', identifier);
-			const record = await fetchMediaWithCache(
-				cacheKey,
-				{ kind: 'id', value: identifier },
-				(m) =>
-					isValidTmdbId(m.tmdbId) ? [buildCacheKey('media', 'tmdb', m.tmdbId)] : []
+			const record = await fetchMediaWithCache(cacheKey, { kind: 'id', value: identifier }, (m) =>
+				isValidTmdbId(m.tmdbId) ? [buildCacheKey('media', 'tmdb', m.tmdbId)] : []
 			);
 
 			return { media: record, tmdbId: record?.tmdbId ?? null } as const;
@@ -195,7 +198,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 			} catch (e) {
 				await mediaSyncService.performSync(effectiveTmdbId, 'tv');
 			}
-			
+
 			// Reload from DB
 			record = await loadMedia({ kind: 'tmdb', value: effectiveTmdbId });
 		}
@@ -231,7 +234,8 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 
 		const payload = {
 			...record,
-			releaseDate: record.releaseDate ?? (extras?.releaseDate ? new Date(extras.releaseDate) : null),
+			releaseDate:
+				record.releaseDate ?? (extras?.releaseDate ? new Date(extras.releaseDate) : null),
 			durationMinutes: record.durationMinutes ?? extras?.runtime ?? null,
 			imdbId: extras?.imdbId ?? record.imdbId ?? null,
 			cast: (extras?.cast ?? [])

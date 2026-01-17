@@ -3,7 +3,12 @@ import { movies, genres, collections, moviesGenres, people, moviePeople } from '
 import { sql, eq, and, isNotNull, ne, desc, asc, inArray, getTableColumns } from 'drizzle-orm';
 import { mapRowsToSummaries } from '../db/movie-select';
 import { logger } from '../logger';
-import { withCache, buildCacheKey, CACHE_TTL_LONG_SECONDS, CACHE_TTL_MEDIUM_SECONDS } from '../cache';
+import {
+	withCache,
+	buildCacheKey,
+	CACHE_TTL_LONG_SECONDS,
+	CACHE_TTL_MEDIUM_SECONDS
+} from '../cache';
 import type { GenreRecord, MovieRow } from '../db/types';
 import type { LibraryMovie } from '../../types/library';
 
@@ -58,11 +63,7 @@ export async function enhanceMovieMetadata(
 	const { includeCast = true, includeTrailers = true } = options;
 
 	try {
-		const movieRow = await db
-			.select()
-			.from(movies)
-			.where(eq(movies.id, mediaId))
-			.get();
+		const movieRow = await db.select().from(movies).where(eq(movies.id, mediaId)).get();
 
 		if (!movieRow) {
 			throw new Error(`Movie not found: ${mediaId}`);
@@ -104,12 +105,23 @@ export async function getEnhancedMovies(
 		offset = 0
 	} = options;
 
-	const cacheKey = buildCacheKey('metadata', 'enhanced-movies', limit, offset, includeCast, includeTrailers, includeGenres, includeCollections);
+	const cacheKey = buildCacheKey(
+		'metadata',
+		'enhanced-movies',
+		limit,
+		offset,
+		includeCast,
+		includeTrailers,
+		includeGenres,
+		includeCollections
+	);
 
 	return withCache(cacheKey, CACHE_TTL_MEDIUM_SECONDS, async () => {
 		try {
 			const [movieRows, totalCountResult] = await db.batch([
-				db.select().from(movies)
+				db
+					.select()
+					.from(movies)
 					.orderBy(sql`(rating IS NULL) ASC`, desc(movies.rating), desc(movies.popularity))
 					.limit(limit)
 					.offset(offset),
@@ -280,7 +292,13 @@ export async function getMoviesByMetadata(
 	},
 	options: { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' } = {}
 ): Promise<EnhancedMetadataResult> {
-	const { mediaType, hasTrailer, hasImdbId, genres: genreIds = [], collections: collectionIds = [] } = filters;
+	const {
+		mediaType,
+		hasTrailer,
+		hasImdbId,
+		genres: genreIds = [],
+		collections: collectionIds = []
+	} = filters;
 	const { limit = 20, offset = 0, sortBy = 'rating', sortOrder = 'desc' } = options;
 
 	const cacheKey = buildCacheKey(
@@ -311,7 +329,10 @@ export async function getMoviesByMetadata(
 			}
 			if (genreIds.length > 0) {
 				conditions.push(sql`${movies.id} IN (
-					SELECT mediaId FROM movies_genres WHERE genreId IN (${sql.join(genreIds.map(id => sql`${id}`), sql`, `)})
+					SELECT mediaId FROM movies_genres WHERE genreId IN (${sql.join(
+						genreIds.map((id) => sql`${id}`),
+						sql`, `
+					)})
 				)`);
 			}
 			if (collectionIds.length > 0) {
@@ -336,12 +357,17 @@ export async function getMoviesByMetadata(
 			}
 
 			const [movieRows, totalCountResult] = await db.batch([
-				db.select().from(movies)
+				db
+					.select()
+					.from(movies)
 					.where(where)
-					.orderBy(...orderBy as any)
+					.orderBy(...(orderBy as any))
 					.limit(limit)
 					.offset(offset),
-				db.select({ count: sql<number>`count(*)` }).from(movies).where(where)
+				db
+					.select({ count: sql<number>`count(*)` })
+					.from(movies)
+					.where(where)
 			]);
 
 			const moviesResult = await mapRowsToSummaries(movieRows as any[]);
@@ -418,12 +444,14 @@ export async function getMetadataStatistics(): Promise<{
 	return withCache(cacheKey, CACHE_TTL_LONG_SECONDS, async () => {
 		try {
 			const [stats, genreCount, collectionCount] = await db.batch([
-				db.select({
-					movieCount: sql<number>`COUNT(*)`,
-					moviesWithTrailers: sql<number>`SUM(CASE WHEN trailerUrl IS NOT NULL AND trailerUrl != '' THEN 1 ELSE 0 END)`,
-					moviesWithImdbId: sql<number>`SUM(CASE WHEN imdbId IS NOT NULL AND imdbId != '' THEN 1 ELSE 0 END)`,
-					moviesWithCanonicalPath: sql<number>`SUM(CASE WHEN canonicalPath IS NOT NULL AND canonicalPath != '' THEN 1 ELSE 0 END)`
-				}).from(movies),
+				db
+					.select({
+						movieCount: sql<number>`COUNT(*)`,
+						moviesWithTrailers: sql<number>`SUM(CASE WHEN trailerUrl IS NOT NULL AND trailerUrl != '' THEN 1 ELSE 0 END)`,
+						moviesWithImdbId: sql<number>`SUM(CASE WHEN imdbId IS NOT NULL AND imdbId != '' THEN 1 ELSE 0 END)`,
+						moviesWithCanonicalPath: sql<number>`SUM(CASE WHEN canonicalPath IS NOT NULL AND canonicalPath != '' THEN 1 ELSE 0 END)`
+					})
+					.from(movies),
 				db.select({ count: sql<number>`COUNT(*)` }).from(genres),
 				db.select({ count: sql<number>`COUNT(*)` }).from(collections)
 			]);

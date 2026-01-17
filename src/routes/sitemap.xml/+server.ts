@@ -30,7 +30,7 @@ export async function GET() {
 		const mediaEntries = recentMedia
 			.map((item) => {
 				const lastmod = item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined;
-				
+
 				// Determine the correct route based on media type
 				let typePath = 'movie';
 				if (item.mediaType === 'tv') typePath = 'tv';

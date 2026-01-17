@@ -60,7 +60,7 @@ export interface MediaRow {
 	canonicalPath: string | null;
 	addedAt: number | null;
 	mediaType: string;
-	
+
 	// TV specific
 	status?: string | null;
 	numberOfSeasons?: number | null;
@@ -98,7 +98,7 @@ export type MediaSummary = Omit<
 	genres: GenreRecord[] | string[];
 	is4K?: boolean;
 	isHD?: boolean;
-	
+
 	// TV fields
 	status?: string | null;
 	numberOfSeasons?: number | null;

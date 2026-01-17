@@ -1,7 +1,17 @@
-import { collectStreamingSources, resolveStreamingSource, listStreamingProviders } from '$lib/streaming';
+import {
+	collectStreamingSources,
+	resolveStreamingSource,
+	listStreamingProviders
+} from '$lib/streaming';
 import type { MediaType } from '$lib/streaming';
 import type { ProviderResolution } from '$lib/streaming/provider-registry';
-import { withCache, buildCacheKey, CACHE_TTL_SHORT_SECONDS, getCachedValue, setCachedValue } from '$lib/server/cache';
+import {
+	withCache,
+	buildCacheKey,
+	CACHE_TTL_SHORT_SECONDS,
+	getCachedValue,
+	setCachedValue
+} from '$lib/server/cache';
 import { logger } from '$lib/server/logger';
 
 export interface ResolveStreamingInput {
@@ -65,7 +75,7 @@ export async function resolveStreaming(
 
 		// Get all available providers
 		const providers = listStreamingProviders();
-		
+
 		// Fetch failure counts for each provider
 		const providerScores = await Promise.all(
 			providers.map(async (p) => {
@@ -77,14 +87,13 @@ export async function resolveStreaming(
 		);
 
 		// Sort providers by score DESC
-		const sortedProviderIds = providerScores
-			.sort((a, b) => b.score - a.score)
-			.map(p => p.id);
+		const sortedProviderIds = providerScores.sort((a, b) => b.score - a.score).map((p) => p.id);
 
 		// If no preferred providers were passed, use our scored order
-		const effectivePreferred = input.preferredProviders && input.preferredProviders.length > 0 
-			? input.preferredProviders 
-			: sortedProviderIds;
+		const effectivePreferred =
+			input.preferredProviders && input.preferredProviders.length > 0
+				? input.preferredProviders
+				: sortedProviderIds;
 
 		const source = await resolveStreamingSource(context, effectivePreferred);
 
@@ -113,12 +122,15 @@ export async function resolveStreaming(
 export async function reportBrokenLink(providerId: string) {
 	const failKey = buildCacheKey('provider-failure', providerId);
 	const currentFails = (await getCachedValue<number>(failKey)) || 0;
-	
-	logger.warn({ providerId, currentFails }, '[streaming] Provider reported broken, incrementing failure count');
-	
+
+	logger.warn(
+		{ providerId, currentFails },
+		'[streaming] Provider reported broken, incrementing failure count'
+	);
+
 	// Increment failure count and cache for 1 hour
 	await setCachedValue(failKey, currentFails + 1, FAILURE_TTL);
-	
+
 	// Invalidate ALL streaming caches so providers are re-ordered
 	await invalidateStreamingCache();
 }

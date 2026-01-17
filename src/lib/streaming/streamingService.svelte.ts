@@ -45,9 +45,7 @@ export class StreamingService {
 		episodeInfo: {}
 	});
 
-	isResolved = $derived(
-		Boolean(this.state.source?.embedUrl ?? this.state.source?.streamUrl)
-	);
+	isResolved = $derived(Boolean(this.state.source?.embedUrl ?? this.state.source?.streamUrl));
 
 	hasResolutions = $derived(this.state.resolutions.length > 0);
 
@@ -148,13 +146,15 @@ export class StreamingService {
 
 			if (response.ok) {
 				// Successfully reported, now let's try to find another provider automatically
-				const nextAvailable = this.state.resolutions.find(r => r.success && r.providerId !== providerId);
+				const nextAvailable = this.state.resolutions.find(
+					(r) => r.success && r.providerId !== providerId
+				);
 				if (nextAvailable) {
 					// We'll let the component handle the re-selection or just mark this one as failed locally
-					this.state.resolutions = this.state.resolutions.map(r => 
+					this.state.resolutions = this.state.resolutions.map((r) =>
 						r.providerId === providerId ? { ...r, success: false, error: 'Reported as broken' } : r
 					);
-					
+
 					// Trigger a re-resolve without this provider
 					if (this.currentMedia.tmdbId && this.currentMedia.mediaType) {
 						await this.resolveProvider('', {

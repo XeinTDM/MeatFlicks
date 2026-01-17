@@ -139,7 +139,9 @@
 
 	const isInWatchlist = $derived(activeMovie ? watchlist.isInWatchlist(activeMovie.id) : false);
 
-	const backgroundImageUrl = $derived(getImageUrl(activeMovie?.backdropPath || activeMovie?.posterPath, 'original'));
+	const backgroundImageUrl = $derived(
+		getImageUrl(activeMovie?.backdropPath || activeMovie?.posterPath, 'original')
+	);
 
 	function goToSlide(index: number) {
 		if (!slides.length) return;

@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 		const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 50;
 		const history = await libraryRepository.getWatchHistory(user.id, limit);
-		
+
 		return json(history);
 	} catch (error) {
 		const { status, body } = errorHandler.handleError(error);

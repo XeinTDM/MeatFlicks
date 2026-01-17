@@ -149,16 +149,16 @@ export const streamingRateLimiter = new RateLimiter({
 	penaltyMs: 60000
 });
 
-/**
- * Create a rate limiter with specific configuration
- */
+export const reportBrokenRateLimiter = new RateLimiter({
+	maxRequests: 1,
+	windowMs: 5 * 60 * 1000,
+	penaltyMs: 5 * 60 * 1000
+});
+
 export function createRateLimiter(config: RateLimitConfig): RateLimiter {
 	return new RateLimiter(config);
 }
 
-/**
- * Get rate limit information for monitoring
- */
 export function getRateLimitInfo(limiter: RateLimiter): Promise<{
 	activeLimiters: number;
 	penaltyCount: number;

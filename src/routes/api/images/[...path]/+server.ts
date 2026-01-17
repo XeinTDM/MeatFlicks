@@ -13,8 +13,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	}
 
 	const width = url.searchParams.get('w') || 'original';
-	const size = ALLOWED_SIZES.includes(width) ? width : (width.startsWith('w') ? width : `w${width}`);
-	
+	const size = ALLOWED_SIZES.includes(width) ? width : width.startsWith('w') ? width : `w${width}`;
+
 	// Normalize path (SvelteKit might pass it with or without leading slash depending on how it's called)
 	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 	const tmdbUrl = `${TMDB_IMAGE_BASE}${size}${normalizedPath}`;
@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 	try {
 		const cached = await getCachedValue<{ contentType: string; data: string }>(cacheKey);
-		
+
 		if (cached) {
 			const buffer = Buffer.from(cached.data, 'base64');
 			return new Response(buffer, {

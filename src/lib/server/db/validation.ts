@@ -63,47 +63,101 @@ export const uuidType = customType<{ data: string; driverData: string }>({
 });
 
 export const userValidationChecks = [
-	check('users_username_check', sql`length(trim(${users.username})) >= 1 AND length(trim(${users.username})) <= 39 AND ${users.username} REGEXP '^[a-zA-Z0-9-]+$'`)
+	check(
+		'users_username_check',
+		sql`length(trim(${users.username})) >= 1 AND length(trim(${users.username})) <= 39 AND ${users.username} REGEXP '^[a-zA-Z0-9-]+$'`
+	)
 ];
 
 export const tvShowValidationChecks = [
 	check('tv_shows_title_check', sql`length(trim(${tvShows.title})) > 0`),
 	check('tv_shows_tmdb_id_check', sql`${tvShows.tmdbId} > 0`),
-	check('tv_shows_rating_check', sql`${tvShows.rating} IS NULL OR (${tvShows.rating} >= 0 AND ${tvShows.rating} <= 10)`),
-	check('tv_shows_episode_runtime_check', sql`${tvShows.durationMinutes} IS NULL OR ${tvShows.durationMinutes} > 0`),
-	check('tv_shows_seasons_check', sql`${tvShows.numberOfSeasons} IS NULL OR ${tvShows.numberOfSeasons} >= 0`),
-	check('tv_shows_episodes_check', sql`${tvShows.numberOfEpisodes} IS NULL OR ${tvShows.numberOfEpisodes} >= 0`),
-	check('tv_shows_first_air_date_check', sql`${tvShows.releaseDate} IS NULL OR ${tvShows.releaseDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
-	check('tv_shows_imdb_id_check', sql`${tvShows.imdbId} IS NULL OR ${tvShows.imdbId} REGEXP '^tt\d{7,8}$'`),
-	check('tv_shows_poster_check', sql`${tvShows.posterPath} IS NULL OR ${tvShows.posterPath} LIKE 'https://%'`),
-	check('tv_shows_backdrop_check', sql`${tvShows.backdropPath} IS NULL OR ${tvShows.backdropPath} LIKE 'https://%'`)
+	check(
+		'tv_shows_rating_check',
+		sql`${tvShows.rating} IS NULL OR (${tvShows.rating} >= 0 AND ${tvShows.rating} <= 10)`
+	),
+	check(
+		'tv_shows_episode_runtime_check',
+		sql`${tvShows.durationMinutes} IS NULL OR ${tvShows.durationMinutes} > 0`
+	),
+	check(
+		'tv_shows_seasons_check',
+		sql`${tvShows.numberOfSeasons} IS NULL OR ${tvShows.numberOfSeasons} >= 0`
+	),
+	check(
+		'tv_shows_episodes_check',
+		sql`${tvShows.numberOfEpisodes} IS NULL OR ${tvShows.numberOfEpisodes} >= 0`
+	),
+	check(
+		'tv_shows_first_air_date_check',
+		sql`${tvShows.releaseDate} IS NULL OR ${tvShows.releaseDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`
+	),
+	check(
+		'tv_shows_imdb_id_check',
+		sql`${tvShows.imdbId} IS NULL OR ${tvShows.imdbId} REGEXP '^tt\d{7,8}$'`
+	),
+	check(
+		'tv_shows_poster_check',
+		sql`${tvShows.posterPath} IS NULL OR ${tvShows.posterPath} LIKE 'https://%'`
+	),
+	check(
+		'tv_shows_backdrop_check',
+		sql`${tvShows.backdropPath} IS NULL OR ${tvShows.backdropPath} LIKE 'https://%'`
+	)
 ];
 
 export const seasonValidationChecks = [
 	check('seasons_name_check', sql`length(trim(${seasons.name})) > 0`),
 	check('seasons_number_check', sql`${seasons.seasonNumber} >= 0`),
 	check('seasons_episode_count_check', sql`${seasons.episodeCount} >= 0`),
-	check('seasons_air_date_check', sql`${seasons.airDate} IS NULL OR ${seasons.airDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
-	check('seasons_poster_check', sql`${seasons.posterPath} IS NULL OR ${seasons.posterPath} LIKE 'https://%'`)
+	check(
+		'seasons_air_date_check',
+		sql`${seasons.airDate} IS NULL OR ${seasons.airDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`
+	),
+	check(
+		'seasons_poster_check',
+		sql`${seasons.posterPath} IS NULL OR ${seasons.posterPath} LIKE 'https://%'`
+	)
 ];
 
 export const episodeValidationChecks = [
 	check('episodes_name_check', sql`length(trim(${episodes.name})) > 0`),
 	check('episodes_number_check', sql`${episodes.episodeNumber} > 0`),
-	check('episodes_runtime_check', sql`${episodes.runtimeMinutes} IS NULL OR ${episodes.runtimeMinutes} > 0`),
+	check(
+		'episodes_runtime_check',
+		sql`${episodes.runtimeMinutes} IS NULL OR ${episodes.runtimeMinutes} > 0`
+	),
 	check('episodes_tmdb_id_check', sql`${episodes.tmdbId} IS NULL OR ${episodes.tmdbId} > 0`),
-	check('episodes_imdb_id_check', sql`${episodes.imdbId} IS NULL OR ${episodes.imdbId} REGEXP '^tt\d{7,8}$'`),
-	check('episodes_air_date_check', sql`${episodes.airDate} IS NULL OR ${episodes.airDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
-	check('episodes_still_check', sql`${episodes.stillPath} IS NULL OR ${episodes.stillPath} LIKE 'https://%'`)
+	check(
+		'episodes_imdb_id_check',
+		sql`${episodes.imdbId} IS NULL OR ${episodes.imdbId} REGEXP '^tt\d{7,8}$'`
+	),
+	check(
+		'episodes_air_date_check',
+		sql`${episodes.airDate} IS NULL OR ${episodes.airDate} REGEXP '^\d{4}-\d{2}-\d{2}$'`
+	),
+	check(
+		'episodes_still_check',
+		sql`${episodes.stillPath} IS NULL OR ${episodes.stillPath} LIKE 'https://%'`
+	)
 ];
 
 export const personValidationChecks = [
 	check('people_name_check', sql`length(trim(${people.name})) > 0`),
 	check('people_tmdb_id_check', sql`${people.tmdbId} > 0`),
 	check('people_popularity_check', sql`${people.popularity} IS NULL OR ${people.popularity} >= 0`),
-	check('people_birthday_check', sql`${people.birthday} IS NULL OR ${people.birthday} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
-	check('people_deathday_check', sql`${people.deathday} IS NULL OR ${people.deathday} REGEXP '^\d{4}-\d{2}-\d{2}$'`),
-	check('people_profile_check', sql`${people.profilePath} IS NULL OR ${people.profilePath} LIKE 'https://%'`)
+	check(
+		'people_birthday_check',
+		sql`${people.birthday} IS NULL OR ${people.birthday} REGEXP '^\d{4}-\d{2}-\d{2}$'`
+	),
+	check(
+		'people_deathday_check',
+		sql`${people.deathday} IS NULL OR ${people.deathday} REGEXP '^\d{4}-\d{2}-\d{2}$'`
+	),
+	check(
+		'people_profile_check',
+		sql`${people.profilePath} IS NULL OR ${people.profilePath} LIKE 'https://%'`
+	)
 ];
 
 export const watchlistValidationChecks = [
@@ -111,21 +165,36 @@ export const watchlistValidationChecks = [
 ];
 
 export const playbackProgressValidationChecks = [
-	check('playback_progress_check', sql`${playbackProgress.progress} >= 0 AND ${playbackProgress.progress} <= ${playbackProgress.duration}`),
+	check(
+		'playback_progress_check',
+		sql`${playbackProgress.progress} >= 0 AND ${playbackProgress.progress} <= ${playbackProgress.duration}`
+	),
 	check('playback_duration_check', sql`${playbackProgress.duration} > 0`),
-	check('playback_media_type_check', sql`${playbackProgress.mediaType} IN ('movie', 'tv', 'episode')`),
-	check('playback_season_episode_check', sql`(${playbackProgress.mediaType} != 'episode') OR (${playbackProgress.seasonNumber} IS NOT NULL AND ${playbackProgress.episodeNumber} IS NOT NULL)`),
+	check(
+		'playback_media_type_check',
+		sql`${playbackProgress.mediaType} IN ('movie', 'tv', 'episode')`
+	),
+	check(
+		'playback_season_episode_check',
+		sql`(${playbackProgress.mediaType} != 'episode') OR (${playbackProgress.seasonNumber} IS NOT NULL AND ${playbackProgress.episodeNumber} IS NOT NULL)`
+	),
 	check('playback_updated_at_check', sql`${playbackProgress.updatedAt} > 0`)
 ];
 
 export const searchHistoryValidationChecks = [
-	check('search_history_query_check', sql`length(trim(${searchHistory.query})) > 0 AND length(trim(${searchHistory.query})) <= 200`),
+	check(
+		'search_history_query_check',
+		sql`length(trim(${searchHistory.query})) > 0 AND length(trim(${searchHistory.query})) <= 200`
+	),
 	check('search_history_searched_at_check', sql`${searchHistory.searchedAt} > 0`)
 ];
 
 export const collectionsValidationChecks = [
 	check('collections_name_check', sql`length(trim(${collections.name})) > 0`),
-	check('collections_slug_check', sql`length(trim(${collections.slug})) > 0 AND ${collections.slug} REGEXP '^[a-z0-9-]+$'`)
+	check(
+		'collections_slug_check',
+		sql`length(trim(${collections.slug})) > 0 AND ${collections.slug} REGEXP '^[a-z0-9-]+$'`
+	)
 ];
 
 export const genresValidationChecks = [
@@ -135,7 +204,10 @@ export const genresValidationChecks = [
 export const watchlistFoldersValidationChecks = [
 	check('watchlist_folders_name_check', sql`length(trim(${watchlistFolders.name})) > 0`),
 	check('watchlist_folders_created_at_check', sql`${watchlistFolders.createdAt} > 0`),
-	check('watchlist_folders_updated_at_check', sql`${watchlistFolders.updatedAt} >= ${watchlistFolders.createdAt}`)
+	check(
+		'watchlist_folders_updated_at_check',
+		sql`${watchlistFolders.updatedAt} >= ${watchlistFolders.createdAt}`
+	)
 ];
 
 export const watchlistTagsValidationChecks = [
@@ -250,9 +322,7 @@ export function validateMovieData(data: {
 	}
 }
 
-export function validateUserData(data: {
-	username: string;
-}): void {
+export function validateUserData(data: { username: string }): void {
 	validateUsername(data.username);
 }
 

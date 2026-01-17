@@ -292,7 +292,11 @@
 								>
 									<div class="h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
 										{#if movie.posterPath}
-											<img src={getImageUrl(movie.posterPath, 'w154')} alt="" class="h-full w-full object-cover" />
+											<img
+												src={getImageUrl(movie.posterPath, 'w154')}
+												alt=""
+												class="h-full w-full object-cover"
+											/>
 										{/if}
 									</div>
 									<div class="min-w-0 flex-1">
