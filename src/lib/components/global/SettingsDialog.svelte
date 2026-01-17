@@ -1,184 +1,104 @@
 <script lang="ts">
-	import { toggleMode } from 'mode-watcher';
-	import { Button } from '$lib/components/ui/button';
-	import {
-		Dialog,
-		DialogContent,
-		DialogDescription,
-		DialogHeader,
-		DialogTitle
-	} from '$lib/components/ui/dialog';
-	import { Label } from '$lib/components/ui/label';
-	import { Separator } from '$lib/components/ui/separator';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Input } from '$lib/components/ui/input';
-	import { Sun, Moon, Download, Upload, ListX, Trash2 } from '@lucide/svelte';
-	import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
-	import { watchHistory } from '$lib/state/stores/historyStore';
-	import type { Movie } from '$lib/state/stores/watchlistStore.svelte';
-	import type { HistoryEntry } from '$lib/state/stores/historyStore';
+import { onDestroy } from 'svelte';
+import { toggleMode } from 'mode-watcher';
+import { Button } from '$lib/components/ui/button';
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle
+} from '$lib/components/ui/dialog';
+import { Label } from '$lib/components/ui/label';
+import { Separator } from '$lib/components/ui/separator';
+import { Switch } from '$lib/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+import { Input } from '$lib/components/ui/input';
+import { Sun, Moon, Download, Upload, ListX, Trash2 } from '@lucide/svelte';
+import { watchlist } from '$lib/state/stores/watchlistStore.svelte';
+import { watchHistory } from '$lib/state/stores/historyStore';
+import { preferences, type AppPreferences, DEFAULT_PREFERENCES } from '$lib/state/stores/preferencesStore';
+import {
+	appearanceToggles,
+	bandwidthToggles,
+	dataToggles,
+	downloadNetworkToggles,
+	downloadSmartToggles,
+	downloadStorageToggles,
+	handleBooleanPreferenceChange,
+	notificationAlertToggles,
+	notificationUpdateToggles,
+	playbackEnhancementToggles,
+	playbackFlowToggles,
+	playbackQualityOptions,
+	updatePlaybackQuality
+} from './settings/settings.preferences';
+import {
+	clearWatchHistoryData,
+	clearWatchlistData,
+	exportUserData,
+	importUserData,
+	resetPreferencesData
+} from './settings/settings.actions';
+import type { DataNotice } from './settings/settings.actions';
+import type { SettingsTab, BooleanPreferenceKey } from './settings/settings.preferences';
 
-	type DataNotice = { text: string; tone: 'success' | 'error' };
-	type SettingsTab = 'appearance' | 'playback' | 'notifications' | 'downloads' | 'data';
-	type PlaybackQuality = 'auto' | 'high' | 'medium' | 'low';
+let { open = $bindable(false) } = $props<{ open?: boolean }>();
 
-	let { open = $bindable(false) } = $props<{ open?: boolean }>();
+let importInput = $state<HTMLInputElement | null>(null);
+let settingsTab = $state<SettingsTab>('appearance');
+let dataNotice = $state<DataNotice | null>(null);
+let preferencesSnapshot = $state<AppPreferences>(DEFAULT_PREFERENCES);
+const unsubscribePreferences = preferences.subscribe((value) => {
+	preferencesSnapshot = value;
+});
+onDestroy(() => {
+	unsubscribePreferences();
+});
 
-	let importInput = $state<HTMLInputElement | null>(null);
-	let settingsTab = $state<SettingsTab>('appearance');
-	let dataNotice = $state<DataNotice | null>(null);
-	let autoplayNext = $state(true);
-	let autoplayTrailers = $state(false);
-	let limitCellularData = $state(true);
-	let emailUpdates = $state(true);
-	let pushReminders = $state(false);
-	let showBackdropAnimations = $state(true);
-	let emphasizeAccessibility = $state(false);
-	let showEpisodeBadges = $state(true);
-	let compactSidebar = $state(false);
-	let playbackQuality = $state<PlaybackQuality>('auto');
-	let skipIntros = $state(true);
-	let rememberPlaybackPosition = $state(true);
-	let adaptiveAudio = $state(false);
-	let wifiOnlyDownloads = $state(true);
-	let autoDownloadNewEpisodes = $state(false);
-	let autoDeleteFinishedDownloads = $state(false);
-	let backgroundRefresh = $state(true);
-	let weeklyDigest = $state(false);
-	let watchlistAlerts = $state(true);
-	let productAnnouncements = $state(false);
+const watchlistState = $derived(watchlist.items);
+const historyCount = $derived(watchHistory.entries.length);
+const watchlistCount = $derived(watchlistState.length);
 
-	const playbackQualityOptions = [
-		{
-			value: 'auto',
-			label: 'Auto',
-			description: 'Balance quality with bandwidth automatically.'
-		},
-		{
-			value: 'high',
-			label: 'High',
-			description: 'Prioritize resolution for large screens (uses more data).'
-		},
-		{
-			value: 'medium',
-			label: 'Medium',
-			description: 'Good compromise for shared connections.'
-		},
-		{
-			value: 'low',
-			label: 'Low',
-			description: 'Cap quality to reduce data usage on slower networks.'
-		}
-	] as const;
+const prefInputId = (key: BooleanPreferenceKey) => `settings-${key}`;
+const prefDescriptionId = (key: BooleanPreferenceKey) => `${prefInputId(key)}-description`;
 
-	const watchlistState = $derived(watchlist.items);
-	const historyCount = $derived(watchHistory.entries.length);
-	const watchlistCount = $derived(watchlistState.length);
+const resetPreferences = () => {
+	dataNotice = resetPreferencesData();
+};
 
-	const resetPreferences = () => {
-		autoplayNext = true;
-		autoplayTrailers = false;
-		limitCellularData = true;
-		emailUpdates = true;
-		pushReminders = false;
-		showBackdropAnimations = true;
-		emphasizeAccessibility = false;
-		showEpisodeBadges = true;
-		compactSidebar = false;
-		playbackQuality = 'auto';
-		skipIntros = true;
-		rememberPlaybackPosition = true;
-		adaptiveAudio = false;
-		wifiOnlyDownloads = true;
-		autoDownloadNewEpisodes = false;
-		autoDeleteFinishedDownloads = false;
-		backgroundRefresh = true;
-		weeklyDigest = false;
-		watchlistAlerts = true;
-		productAnnouncements = false;
-		dataNotice = { text: 'Preferences reset to defaults.', tone: 'success' };
-	};
+const clearWatchlist = () => {
+	dataNotice = clearWatchlistData();
+};
 
-	const clearWatchlist = () => {
-		watchlist.clear();
-		dataNotice = { text: 'Watchlist cleared.', tone: 'success' };
-	};
+const clearWatchHistory = () => {
+	dataNotice = clearWatchHistoryData();
+};
 
-	const clearWatchHistory = () => {
-		watchHistory.clear();
-		dataNotice = { text: 'Watch history cleared.', tone: 'success' };
-	};
+const handleExport = async () => {
+	dataNotice = await exportUserData();
+};
 
-	const handleExport = () => {
-		try {
-			const payload = {
-				version: 1,
-				generatedAt: new Date().toISOString(),
-				watchlist: watchlist.exportData(),
-				history: watchHistory.exportData()
-			};
+const triggerImport = () => {
+	dataNotice = null;
+	importInput?.click();
+};
 
-			const blob = new Blob([JSON.stringify(payload, null, 2)], {
-				type: 'application/json'
-			});
+const handleImport = async (event: Event) => {
+	const input = event.currentTarget as HTMLInputElement;
+	const file = input.files?.[0];
 
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement('a');
-			link.href = url;
-			link.download = 'meatflicks-data.json';
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-			URL.revokeObjectURL(url);
+	if (!file) return;
 
-			dataNotice = { text: 'Data exported successfully.', tone: 'success' };
-		} catch (error) {
-			console.error('Failed to export data:', error);
-			dataNotice = { text: 'Failed to export data. Please try again.', tone: 'error' };
-		}
-	};
-
-	const triggerImport = () => {
-		dataNotice = null;
-		importInput?.click();
-	};
-
-	const handleImport = async (event: Event) => {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-
-		if (!file) return;
-
-		try {
-			const text = await file.text();
-			const parsed = JSON.parse(text) as Record<string, unknown>;
-
-			if ('watchlist' in parsed && Array.isArray(parsed.watchlist)) {
-				watchlist.replaceAll(parsed.watchlist as Movie[]);
-			}
-
-			if ('history' in parsed && Array.isArray(parsed.history)) {
-				watchHistory.replaceAll(parsed.history as HistoryEntry[]);
-			}
-
-			dataNotice = { text: 'Data imported successfully.', tone: 'success' };
-		} catch (error) {
-			console.error('Failed to import data:', error);
-			dataNotice = {
-				text: 'Failed to import data. Ensure the file is valid JSON.',
-				tone: 'error'
-			};
-		} finally {
-			input.value = '';
-		}
-	};
+	dataNotice = await importUserData(file);
+	input.value = '';
+};
 </script>
 
 <Dialog bind:open>
 	<DialogContent
 		id="settings-dialog"
-		class="grid h-[80vh] w-[96vw] max-w-[1280px] grid-rows-[auto,1fr] overflow-hidden border border-border bg-card text-foreground sm:w-[760px] md:w-[980px] lg:w-[1160px] xl:w-[1240px]"
+		class="grid h-[85vh] w-[min(96vw,1200px)] max-w-300 grid-rows-[auto,1fr] overflow-hidden border border-border bg-card text-foreground sm:w-[min(94vw,1400px)] lg:w-[min(90vw,1600px)]"
 	>
 		<div class="flex h-full flex-col">
 			<DialogHeader class="space-y-1">
@@ -217,6 +137,9 @@
 								<span class="sr-only">Toggle theme</span>
 							</Button>
 						</div>
+						<p class="text-xs text-muted-foreground">
+							MeatFlicks loads in dark mode by default; toggle to switch back to light.
+						</p>
 					</section>
 
 					<Separator />
@@ -226,74 +149,30 @@
 							Interface
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="show-animations" class="text-sm font-medium text-foreground">
-										Backdrop animations
-									</Label>
-									<p id="show-animations-description" class="text-xs text-muted-foreground">
-										Enable ambient motion on hero art and collection pages.
-									</p>
+							{#each appearanceToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="show-animations"
-									bind:checked={showBackdropAnimations}
-									aria-describedby="show-animations-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="show-badges" class="text-sm font-medium text-foreground">
-										Show episode badges
-									</Label>
-									<p id="show-badges-description" class="text-xs text-muted-foreground">
-										Display badges for new, expiring, and trending episodes.
-									</p>
-								</div>
-								<Switch
-									id="show-badges"
-									bind:checked={showEpisodeBadges}
-									aria-describedby="show-badges-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="compact-sidebar" class="text-sm font-medium text-foreground">
-										Compact sidebar
-									</Label>
-									<p id="compact-sidebar-description" class="text-xs text-muted-foreground">
-										Tighten navigation spacing to see more categories at a glance.
-									</p>
-								</div>
-								<Switch
-									id="compact-sidebar"
-									bind:checked={compactSidebar}
-									aria-describedby="compact-sidebar-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="accessibility-mode" class="text-sm font-medium text-foreground">
-										Accessibility emphasis
-									</Label>
-									<p id="accessibility-mode-description" class="text-xs text-muted-foreground">
-										Increase contrast and motion reduction for accessible viewing.
-									</p>
-								</div>
-								<Switch
-									id="accessibility-mode"
-									bind:checked={emphasizeAccessibility}
-									aria-describedby="accessibility-mode-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 
@@ -312,77 +191,64 @@
 							Playback flow
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="autoplay-next" class="text-sm font-medium text-foreground">
-										Autoplay next episode
-									</Label>
-									<p id="autoplay-next-description" class="text-xs text-muted-foreground">
-										Start the next episode automatically after finishing.
-									</p>
-								</div>
-								<Switch
-									id="autoplay-next"
-									bind:checked={autoplayNext}
-									aria-describedby="autoplay-next-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div
-									class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-								>
+							{#each playbackFlowToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
 									<div class="space-y-1">
-										<Label for="autoplay-trailers" class="text-sm font-medium text-foreground">
-											Autoplay trailers
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
 										</Label>
-
-										<p id="autoplay-trailers-description" class="text-xs text-muted-foreground">
-											Play previews while browsing titles.
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
 										</p>
 									</div>
-
 									<Switch
-										id="autoplay-trailers"
-										bind:checked={autoplayTrailers}
-										aria-describedby="autoplay-trailers-description"
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
 									/>
 								</div>
+							{/each}
+						</div>
+					</section>
 
-								<div class="space-y-1">
-									<Label for="skip-intros" class="text-sm font-medium text-foreground">
-										Skip intros automatically
-									</Label>
-									<p id="skip-intros-description" class="text-xs text-muted-foreground">
-										Jump past opening credits when available.
-									</p>
+					<Separator />
+
+					<section class="space-y-4">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
+							Playback enhancements
+						</h4>
+						<div class="space-y-3">
+							{#each playbackEnhancementToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="skip-intros"
-									bind:checked={skipIntros}
-									aria-describedby="skip-intros-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="remember-position" class="text-sm font-medium text-foreground">
-										Remember playback position
-									</Label>
-									<p id="remember-position-description" class="text-xs text-muted-foreground">
-										Pick up where you left off across devices.
-									</p>
-								</div>
-								<Switch
-									id="remember-position"
-									bind:checked={rememberPlaybackPosition}
-									aria-describedby="remember-position-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 
@@ -399,10 +265,14 @@
 							{#each playbackQualityOptions as option (option.value)}
 								<Button
 									type="button"
-									variant={playbackQuality === option.value ? 'secondary' : 'outline'}
+									variant={
+										preferencesSnapshot.playbackQuality === option.value
+											? 'secondary'
+											: 'outline'
+									}
 									class="flex h-auto flex-col items-start gap-1 text-left whitespace-normal"
-									aria-pressed={playbackQuality === option.value}
-									onclick={() => (playbackQuality = option.value)}
+									aria-pressed={preferencesSnapshot.playbackQuality === option.value}
+									onclick={() => updatePlaybackQuality(option.value)}
 								>
 									<span class="text-sm font-medium">{option.label}</span>
 									<span class="text-xs text-muted-foreground">{option.description}</span>
@@ -418,40 +288,30 @@
 							Bandwidth
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="limit-cellular" class="text-sm font-medium text-foreground">
-										Limit cellular data
-									</Label>
-									<p id="limit-cellular-description" class="text-xs text-muted-foreground">
-										Cap streaming quality automatically on mobile networks.
-									</p>
+							{#each bandwidthToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="limit-cellular"
-									bind:checked={limitCellularData}
-									aria-describedby="limit-cellular-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="adaptive-audio" class="text-sm font-medium text-foreground">
-										Adaptive audio
-									</Label>
-									<p id="adaptive-audio-description" class="text-xs text-muted-foreground">
-										Dynamically adjust audio bitrate to avoid buffering.
-									</p>
-								</div>
-								<Switch
-									id="adaptive-audio"
-									bind:checked={adaptiveAudio}
-									aria-describedby="adaptive-audio-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 				</TabsContent>
@@ -462,40 +322,30 @@
 							Email &amp; push
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="email-updates" class="text-sm font-medium text-foreground">
-										Email updates
-									</Label>
-									<p id="email-updates-description" class="text-xs text-muted-foreground">
-										Get new release emails tailored to your watchlist.
-									</p>
+							{#each notificationUpdateToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="email-updates"
-									bind:checked={emailUpdates}
-									aria-describedby="email-updates-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="push-reminders" class="text-sm font-medium text-foreground">
-										Push reminders
-									</Label>
-									<p id="push-reminders-description" class="text-xs text-muted-foreground">
-										Receive reminders when new episodes go live.
-									</p>
-								</div>
-								<Switch
-									id="push-reminders"
-									bind:checked={pushReminders}
-									aria-describedby="push-reminders-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 
@@ -506,57 +356,30 @@
 							Personalized alerts
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="weekly-digest" class="text-sm font-medium text-foreground">
-										Weekly digest
-									</Label>
-									<p id="weekly-digest-description" class="text-xs text-muted-foreground">
-										A curated recap of releases and recommendations every Friday.
-									</p>
+							{#each notificationAlertToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="weekly-digest"
-									bind:checked={weeklyDigest}
-									aria-describedby="weekly-digest-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="watchlist-alerts" class="text-sm font-medium text-foreground">
-										Watchlist alerts
-									</Label>
-									<p id="watchlist-alerts-description" class="text-xs text-muted-foreground">
-										Notify me when shows from my watchlist start streaming.
-									</p>
-								</div>
-								<Switch
-									id="watchlist-alerts"
-									bind:checked={watchlistAlerts}
-									aria-describedby="watchlist-alerts-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="product-announcements" class="text-sm font-medium text-foreground">
-										Product announcements
-									</Label>
-									<p id="product-announcements-description" class="text-xs text-muted-foreground">
-										Hear about new features, betas, and community events.
-									</p>
-								</div>
-								<Switch
-									id="product-announcements"
-									bind:checked={productAnnouncements}
-									aria-describedby="product-announcements-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 				</TabsContent>
@@ -567,40 +390,64 @@
 							Smart downloads
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="auto-download" class="text-sm font-medium text-foreground">
-										Auto download next episodes
-									</Label>
-									<p id="auto-download-description" class="text-xs text-muted-foreground">
-										Keep the next episode ready while you finish the current one.
-									</p>
+							{#each downloadSmartToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="auto-download"
-									bind:checked={autoDownloadNewEpisodes}
-									aria-describedby="auto-download-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="auto-delete" class="text-sm font-medium text-foreground">
-										Auto delete finished downloads
-									</Label>
-									<p id="auto-delete-description" class="text-xs text-muted-foreground">
-										Free up space after you complete an episode or film.
-									</p>
+							{/each}
+						</div>
+					</section>
+
+					<Separator />
+
+					<section class="space-y-4">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
+							Storage optimization
+						</h4>
+						<div class="space-y-3">
+							{#each downloadStorageToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="auto-delete"
-									bind:checked={autoDeleteFinishedDownloads}
-									aria-describedby="auto-delete-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 
@@ -611,40 +458,30 @@
 							Network usage
 						</h4>
 						<div class="space-y-3">
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="wifi-only" class="text-sm font-medium text-foreground">
-										Wi-Fi only downloads
-									</Label>
-									<p id="wifi-only-description" class="text-xs text-muted-foreground">
-										Prevent downloads from starting on cellular networks.
-									</p>
+							{#each downloadNetworkToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
 								</div>
-								<Switch
-									id="wifi-only"
-									bind:checked={wifiOnlyDownloads}
-									aria-describedby="wifi-only-description"
-								/>
-							</div>
-							<div
-								class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4"
-							>
-								<div class="space-y-1">
-									<Label for="background-refresh" class="text-sm font-medium text-foreground">
-										Background refresh
-									</Label>
-									<p id="background-refresh-description" class="text-xs text-muted-foreground">
-										Sync downloads and continue unfinished transfers in the background.
-									</p>
-								</div>
-								<Switch
-									id="background-refresh"
-									bind:checked={backgroundRefresh}
-									aria-describedby="background-refresh-description"
-								/>
-							</div>
+							{/each}
 						</div>
 					</section>
 				</TabsContent>
@@ -689,6 +526,40 @@
 							class="hidden"
 							onchange={handleImport}
 						/>
+					</section>
+
+					<Separator />
+
+					<section class="space-y-3">
+						<h4 class="text-xs font-semibold tracking-wider text-foreground uppercase">
+							Data syncing
+						</h4>
+						<div class="space-y-3">
+							{#each dataToggles as toggle (toggle.key)}
+								<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-background p-4">
+									<div class="space-y-1">
+										<Label
+											for={prefInputId(toggle.key)}
+											class="text-sm font-medium text-foreground"
+										>
+											{toggle.label}
+										</Label>
+										<p
+											id={prefDescriptionId(toggle.key)}
+											class="text-xs text-muted-foreground"
+										>
+											{toggle.description}
+										</p>
+									</div>
+									<Switch
+										id={prefInputId(toggle.key)}
+										checked={preferencesSnapshot[toggle.key]}
+										onCheckedChange={handleBooleanPreferenceChange(toggle.key)}
+										aria-describedby={prefDescriptionId(toggle.key)}
+									/>
+								</div>
+							{/each}
+						</div>
 					</section>
 
 					<Separator />

@@ -1,4 +1,5 @@
 import { untrack } from 'svelte';
+import { page } from '$app/state';
 import type { ProviderResolution } from './provider-registry';
 import type { StreamingSource, VideoQuality, SubtitleTrack, MediaType } from './types';
 
@@ -17,6 +18,15 @@ type StreamingState = {
 type EpisodeInfo = {
 	season?: number;
 	episode?: number;
+};
+
+const buildJsonHeadersWithCsrf = (overrideToken?: string) => {
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+	const token = overrideToken ?? page.data.csrfToken;
+	if (token) {
+		headers['X-CSRF-Token'] = token;
+	}
+	return headers;
 };
 
 type CurrentMedia = {
@@ -76,10 +86,7 @@ export class StreamingService {
 		this.state.error = null;
 
 		try {
-			const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-			if (options.csrfToken) {
-				headers['X-CSRF-Token'] = options.csrfToken;
-			}
+			const headers = buildJsonHeadersWithCsrf(options.csrfToken);
 
 			const response = await fetch('/api/streaming', {
 				method: 'POST',
@@ -137,9 +144,11 @@ export class StreamingService {
 
 		this.state.isReporting = true;
 		try {
+			const headers = buildJsonHeadersWithCsrf();
+
 			const response = await fetch('/api/streaming/report-broken', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers,
 				body: JSON.stringify({ providerId }),
 				credentials: 'include'
 			});

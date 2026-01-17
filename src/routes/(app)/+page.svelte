@@ -1,12 +1,14 @@
 <script lang="ts">
-	import Hero from '$lib/components/home/Hero.svelte';
-	import { PersonalizedRows } from '$lib/components/home';
-	import { MediaScrollContainer } from '$lib/components/media';
-	import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
-	import type { PageData } from './$types';
-	import type { HomeLibrary } from '$lib/types/library';
-	import { SEOHead } from '$lib/components/seo';
-	import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad.svelte';
+import Hero from '$lib/components/home/Hero.svelte';
+import { PersonalizedRows } from '$lib/components/home';
+import { MediaScrollContainer } from '$lib/components/media';
+import HomePageSkeleton from '$lib/components/skeletons/HomePageSkeleton.svelte';
+import type { PageData } from './$types';
+import type { HomeLibrary } from '$lib/types/library';
+import { SEOHead } from '$lib/components/seo';
+import { useLazyComponentOnVisible } from '$lib/utils/lazyLoad.svelte';
+import { Button } from '$lib/components/ui/button';
+import { Loader2, RefreshCw } from '@lucide/svelte';
 
 	let continueWatchingRef = $state({ value: null as HTMLElement | null });
 	let trendingMediaRef = $state({ value: null as HTMLElement | null });
@@ -149,6 +151,30 @@
 						{@const featuredItem = trendingMovies.at(0) ?? null}
 
 						<Hero movie={featuredItem} movies={trendingMovies} />
+
+						<div class="flex flex-wrap items-center gap-3 px-[5%] pb-6 text-sm text-muted-foreground sm:px-5">
+							<Button
+								type="button"
+								variant="outline"
+								class="gap-2"
+								onclick={refreshHomeLibrary}
+								disabled={isRefreshing}
+								aria-live="polite"
+								aria-busy={isRefreshing}
+							>
+								{#if isRefreshing}
+									<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+								{:else}
+									<RefreshCw class="h-4 w-4" aria-hidden="true" />
+								{/if}
+								Refresh library
+							</Button>
+							<p class="text-xs text-foreground/70">
+								{isRefreshing
+									? 'Refreshing curated selections…'
+									: 'Tap refresh for the latest spotlight without reloading.'}
+							</p>
+						</div>
 
 						{#if refreshError}
 							<p class="px-[5%] text-sm text-destructive sm:px-5">{refreshError}</p>

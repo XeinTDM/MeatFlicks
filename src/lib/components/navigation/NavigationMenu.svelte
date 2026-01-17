@@ -32,7 +32,7 @@
 	{#each items as item (item.href ?? item.label)}
 		<SidebarMenuItem>
 			<SidebarMenuButton
-				class="cursor-pointer justify-center gap-5 p-2 text-base [&>svg]:!size-6"
+				class="cursor-pointer justify-center gap-5 p-2 text-base [&>svg]:size-6!"
 				isActive={isActive(item)}
 				onclick={() => onItemSelected(item)}
 				tooltipContent={item.label}

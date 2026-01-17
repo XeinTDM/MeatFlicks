@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {
 		CalendarDays,
-		Filter,
+		ListFilter,
 		LayoutGrid,
 		List,
 		Search,
@@ -371,7 +371,7 @@
 				<div class="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2 md:grid-cols-4">
 					<div class="rounded-lg border border-border bg-background/60 p-4">
 						<p class="mb-1 flex items-center gap-2 font-semibold text-foreground">
-							<Filter class="size-3" />
+							<ListFilter class="size-3" />
 							Titles
 						</p>
 						<p class="text-2xl font-bold text-foreground">{numberFormatter.format(stats.total)}</p>

@@ -34,6 +34,14 @@ type WatchlistCandidate = LibraryMedia | Media | (Partial<Media> & Record<string
 const STORAGE_KEY = 'meatflicks.watchlist';
 const hasStorage = typeof localStorage !== 'undefined';
 
+const buildJsonHeadersWithCsrf = () => {
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+	if (page.data.csrfToken) {
+		headers['X-CSRF-Token'] = page.data.csrfToken;
+	}
+	return headers;
+};
+
 const normalizeDateString = (value: unknown): string | null => {
 	if (typeof value !== 'string') return null;
 	const parsed = Date.parse(value);
@@ -224,7 +232,7 @@ class WatchlistStore {
 		try {
 			const response = await fetch('/api/watchlist', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: buildJsonHeadersWithCsrf(),
 				body: JSON.stringify({ mediaId: sanitized.id }),
 				credentials: 'include'
 			});
@@ -260,7 +268,7 @@ class WatchlistStore {
 		try {
 			const response = await fetch('/api/watchlist', {
 				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+				headers: buildJsonHeadersWithCsrf(),
 				body: JSON.stringify({ mediaId }),
 				credentials: 'include'
 			});
@@ -283,7 +291,7 @@ class WatchlistStore {
 		try {
 			await fetch('/api/watchlist', {
 				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+				headers: buildJsonHeadersWithCsrf(),
 				body: JSON.stringify({ clearAll: true }),
 				credentials: 'include'
 			});

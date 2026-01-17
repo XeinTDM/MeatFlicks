@@ -19,7 +19,6 @@ import {
 	errorHandler,
 	NotFoundError,
 	ValidationError,
-	UnauthorizedError,
 	getEnv
 } from '$lib/server';
 import { z } from 'zod';
@@ -167,12 +166,8 @@ const isValidTmdbId = (value: unknown): value is number => {
 	return typeof value === 'number' && Number.isFinite(value) && value > 0;
 };
 
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	try {
-		if (!locals.user) {
-			throw new UnauthorizedError('Unauthorized access to media API');
-		}
-
 		const pathParams = validatePathParams(movieIdentifierSchema, { id: params.id ?? '' });
 		const queryParams = validateQueryParams(
 			z.object({ by: queryModeSchema.optional() }),

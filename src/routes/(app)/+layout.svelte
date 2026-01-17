@@ -32,7 +32,7 @@
 	/>
 </svelte:head>
 
-<ModeWatcher />
+<ModeWatcher defaultMode="dark" themeColors={{ dark: '#030712', light: '#f8fafc' }} />
 <ThemeContext>
 	<WatchlistContext>
 		<ErrorContext>

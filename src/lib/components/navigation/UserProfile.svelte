@@ -4,14 +4,23 @@
 	import { SidebarMenuButton } from '$lib/components/ui/sidebar';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
-	import { History, Bookmark, Settings, LogIn } from '@lucide/svelte';
+	import { History, Bookmark, Settings, LogIn, LogOut } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 
 	let { onOpenSettings } = $props<{ onOpenSettings: () => void }>();
 
 	let pfpUrl = $state('');
-	let isAuthenticated = $state(false);
+	type UserRecord = Record<string, unknown> | null | undefined;
+	const resolveDisplayName = (user: UserRecord) => {
+		if (!user) return 'Guest';
+		const candidate =
+			(typeof user.name === 'string' && user.name) ||
+			(typeof user.username === 'string' && user.username) ||
+			(typeof user.email === 'string' && user.email);
+		return candidate || 'User';
+	};
 
 	onMount(() => {
 		const storedPfp = localStorage.getItem('userParams');
@@ -39,6 +48,9 @@
 </script>
 
 <Popover.Root>
+	{@const currentUser = page.data.user as UserRecord}
+	{@const isAuthenticated = Boolean(currentUser)}
+	{@const displayName = resolveDisplayName(currentUser)}
 	<Popover.Trigger>
 		{#snippet child({ props })}
 			<SidebarMenuButton
@@ -59,9 +71,12 @@
 				<Avatar.Fallback>HU</Avatar.Fallback>
 			</Avatar.Root>
 			<div class="flex flex-col">
-				<span class="text-sm font-medium">{isAuthenticated ? 'User' : 'Guest'}</span>
-				{#if !isAuthenticated}<span class="text-xs text-muted-foreground">Sign in to sync</span
-					>{/if}
+				<span class="text-sm font-medium">{displayName}</span>
+				{#if isAuthenticated}
+					<span class="text-xs text-muted-foreground">Signed in</span>
+				{:else}
+					<span class="text-xs text-muted-foreground">Sign in to sync</span>
+				{/if}
 			</div>
 		</div>
 
@@ -75,8 +90,18 @@
 				<LogIn class="mr-2 h-4 w-4" />
 				Login
 			</Button>
-			<Separator class="my-2" />
+		{:else}
+			<form method="post" action="/auth/logout" class="mb-2 w-full">
+					{#if page.data.csrfToken}
+						<input type="hidden" name="csrf_token" value={page.data.csrfToken} />
+					{/if}
+				<Button variant="ghost" class="w-full justify-start" size="sm" type="submit">
+					<LogOut class="mr-2 h-4 w-4" />
+					Logout
+				</Button>
+			</form>
 		{/if}
+		<Separator class="my-2" />
 
 		<div class="grid gap-1">
 			<Button
